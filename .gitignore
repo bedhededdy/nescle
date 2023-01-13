@@ -1,0 +1,5 @@
+.vscode/
+logs/
+roms/
+x64/
+*vcxproj*
