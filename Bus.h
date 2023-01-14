@@ -42,6 +42,8 @@ void Bus_ClearMem(Bus* bus);        // Sets contents of RAM to a deterministic v
 void Bus_ClearMemRand(Bus* bus);
 uint8_t Bus_Read(Bus* bus, uint16_t addr);
 bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data);
+uint16_t Bus_Read16(Bus* bus, uint16_t addr);
+bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data);
 
 /* NES functions */
 void Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick

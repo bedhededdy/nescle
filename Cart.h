@@ -13,7 +13,7 @@ enum cart_mirror_mode {
 };
 
 // ROM file header in iNES (.nes) format
-struct rom_header {
+struct cart_rom_header {
     char name[4];           // Should always say NES followed by EOF
     uint8_t prg_rom_size;   // One chunk = 16kb
     uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom chunks means 1 chunk of chr_ram)
@@ -26,7 +26,7 @@ struct rom_header {
 };
 
 struct cart {
-    ROMHeader* metadata;
+    Cart_ROMHeader* metadata;
 
     const char* rom_path;
     Cart_MirrorMode mirror_mode;

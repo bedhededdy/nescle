@@ -350,6 +350,13 @@ void PPU_Clock(PPU* ppu) {
             if (ppu->control & PPU_CTRL_NMI)
                 ppu->nmi = true;
 
+            // see if triple buffering may be beneficial (frame buffer still rendering when I try to write to it)
+            /*if (SDL_TryLockMutex(ppu->frame_buffer_lock) == SDL_MUTEX_TIMEDOUT)
+                printf("Frame buffer is still being rendered\n");
+            else
+                SDL_UnlockMutex(ppu->frame_buffer_lock);*/
+
+
             // this is the point at which we are done rendering the frame, so we copy the current screen
             // to the frame buffer here
             // acquire lock (AcquireMutex blocks until getting the lock, so no looping)

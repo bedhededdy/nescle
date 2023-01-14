@@ -45,13 +45,13 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     uint8_t buf[4096];
 
     // Load header data (16 bytes) into the buffer
-    if (fread(buf, sizeof(uint8_t), sizeof(ROMHeader), rom) < sizeof(ROMHeader)) {
+    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom) < sizeof(Cart_ROMHeader)) {
         printf("Cart_LoadROM: header\n");
         return false;
     }
 
     // Copy data into header struct and allow the cart to reference it
-    ROMHeader* header = malloc(sizeof(ROMHeader));
+    Cart_ROMHeader* header = malloc(sizeof(Cart_ROMHeader));
     memcpy(header, buf, sizeof(header));    // THIS IS RISKY, BUT WORKS
 
     cart->metadata = header;

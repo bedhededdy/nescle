@@ -30,7 +30,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
         ret[i] = addr;
         uint8_t opcode = Bus_Read(cpu->bus, addr);
 
-        const Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
+        const CPU_Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
         addr += instr->bytes;
     }
     
@@ -45,7 +45,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
 
             uint8_t opcode = Bus_Read(cpu->bus, addr);
 
-            const Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
+            const CPU_Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
             addr += instr->bytes;
             ret[26] = addr;
 
@@ -60,7 +60,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     for (int i = 14; i < 27; i++) {
         uint8_t opcode = Bus_Read(cpu->bus, addr);
 
-        const Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
+        const CPU_Instr* instr = &isa[opcode >> 4][opcode & 0x0f];
         addr += instr->bytes;
         ret[i] = addr;
     }
@@ -84,7 +84,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
 
     // to be called before clocking
     uint8_t op = Bus_Read(cpu->bus, addr);          // read instruction (don't increment as we need to do this again in clock function)
-    const Instr* instr = &isa[op >> 4][op & 0x0f];  // index associated instruction
+    const CPU_Instr* instr = &isa[op >> 4][op & 0x0f];  // index associated instruction
 
     uint8_t opcode = op;
     uint8_t cycles_rem = instr->cycles;
@@ -125,19 +125,19 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
     // FIXME: IF YOU PERFORM A PPU READ, YOU HAVE INADVERTANTLY MODIFIED THE STATE OF THE PPU
     //        TO AVOID THIS I REFUSE TO READ IF THE ADDRESS IS IN THE PPU ADDRESSING RANGE
     switch (instr->addr_mode) {
-    case ADDR_MODE_ACC:
-        if (instr->op_type == OP_LSR || instr->op_type == OP_ASL || instr->op_type == OP_ROR || instr->op_type == OP_ROL)
+    case CPU_ADDRMODE_ACC:
+        if (instr->op_type == CPU_OP_LSR || instr->op_type == CPU_OP_ASL || instr->op_type == CPU_OP_ROR || instr->op_type == CPU_OP_ROL)
             ptr += sprintf(ptr, "A");
         else
             ptr += sprintf(ptr, "#$%02X", b2);
         break;
-    case ADDR_MODE_IMM:
+    case CPU_ADDRMODE_IMM:
         ptr += sprintf(ptr, "#$%02X", b2);
         break;
-    case ADDR_MODE_ABS:
+    case CPU_ADDRMODE_ABS:
         // NOTE: THERE IS A HACK HERE SO THAT I DON'T MODIFY THE PPU STATE IF I TRY TO READ FROM IT
         //       THERE MAY BE OTHER ADDR MODES THAT TRY THIS SHIT
-        if (instr->op_type == OP_JMP || instr->op_type == OP_JSR)
+        if (instr->op_type == CPU_OP_JMP || instr->op_type == CPU_OP_JSR)
             ptr += sprintf(ptr, "$%02X%02X", b3, b2);
         else {
             abcdef = ((uint16_t)b3 << 8) | b2;
@@ -147,35 +147,35 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
                 ptr += sprintf(ptr, "$%02X%02X = %02X", b3, b2, Bus_Read(cpu->bus, ((uint16_t)b3 << 8) | b2));
         }
         break;
-    case ADDR_MODE_ZPG:
+    case CPU_ADDRMODE_ZPG:
         ptr += sprintf(ptr, "$%02X = %02X", b2, Bus_Read(cpu->bus, b2));
         break;
-    case ADDR_MODE_ZPX:
+    case CPU_ADDRMODE_ZPX:
         ptr += sprintf(ptr, "$%02X,X @ %02X = %02X", b2, (uint8_t)(b2 + cpu->x), Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->x)));
         break;
-    case ADDR_MODE_ZPY:
+    case CPU_ADDRMODE_ZPY:
         ptr += sprintf(ptr, "$%02X,Y @ %02X = %02X", b2, (uint8_t)(b2 + cpu->y), Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->y)));
         break;
-    case ADDR_MODE_ABX:
+    case CPU_ADDRMODE_ABX:
         a1 = (((uint16_t)b3 << 8) | b2) + cpu->x;
         ptr += sprintf(ptr, "$%02X%02X,X @ %04X = %02X", b3, b2, a1, Bus_Read(cpu->bus, a1));
         break;
-    case ADDR_MODE_ABY:
+    case CPU_ADDRMODE_ABY:
         a2 = (((uint16_t)b3 << 8) | b2) + cpu->y;
         ptr += sprintf(ptr, "$%02X%02X,Y @ %04X = %02X", b3, b2, a2, Bus_Read(cpu->bus, a2));
         break;
-    case ADDR_MODE_IMP:
+    case CPU_ADDRMODE_IMP:
         //ptr += sprintf(ptr, "$%02X%02X", b3, b2);
         break;
-    case ADDR_MODE_REL:
+    case CPU_ADDRMODE_REL:
         ptr += sprintf(ptr, "$%04X", addr + 2 + b2);
         break;
-    case ADDR_MODE_IDX:
+    case CPU_ADDRMODE_IDX:
         addr_ptr = b2 + cpu->x;
         addr_eff = ((uint16_t)Bus_Read(cpu->bus, (uint8_t)(addr_ptr + 1)) << 8) | Bus_Read(cpu->bus, addr_ptr);
         ptr += sprintf(ptr, "($%02X,X) @ %02X = %04X = %02X", b2, addr_ptr, addr_eff, Bus_Read(cpu->bus, addr_eff));
         break;
-    case ADDR_MODE_IDY:
+    case CPU_ADDRMODE_IDY:
         off = b2;
 
         // perform addition on 8-bit variable to force desired overflow (wrap around) behavior
@@ -187,7 +187,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
         // to it's subtraction causing and underflow and making final_addr not fit in the space it should
         ptr += sprintf(ptr, "($%02X),Y = %04X @ %04X = %02X", b2, (uint16_t)(final_addr - cpu->y), final_addr, Bus_Read(cpu->bus, final_addr));
         break;
-    case ADDR_MODE_IND:
+    case CPU_ADDRMODE_IND:
         foobar = ((uint16_t)b3 << 8) | b2;
 
         if (b2 == 0xff)
@@ -224,7 +224,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
     return ret;
 }
 
-void CPU_Disassemble(CPU* cpu) {
+void CPU_DisassembleLog(CPU* cpu) {
     char* str = CPU_DisassembleString(cpu, cpu->pc-1);
     fprintf(nestest_log, "%s\n", str);
     free(str);
@@ -279,7 +279,7 @@ static uint8_t branch(CPU* cpu) {
 }
 #pragma endregion statics
 // constructor/destructor
-CPU* CPU_Construct() {
+CPU* CPU_Create() {
     return malloc(sizeof(CPU));
 }
 
@@ -295,7 +295,7 @@ void CPU_Clock(CPU* cpu) {
      * the rest of the cycles for the remaining execution time of the instruction */
     if (cpu->cycles_rem == 0) {
         uint8_t op = Bus_Read(cpu->bus, cpu->pc++);     // read new instruction and increment pc
-        const Instr* instr = &isa[op >> 4][op & 0x0f];  // index associated instruction
+        const CPU_Instr* instr = &isa[op >> 4][op & 0x0f];  // index associated instruction
 
         // set appropriate fields
         cpu->opcode = op;
@@ -304,12 +304,12 @@ void CPU_Clock(CPU* cpu) {
 
 
 #ifdef DISASSEMBLY_LOG
-        CPU_Disassemble(cpu);
+        CPU_DisassembleLog(cpu);
 #endif
         // set addressing mode and execute instruction, increasing cycle count as necessary
         uint8_t addrmode_extra_cycles = addr_mode_funcs[instr->addr_mode](cpu);
         // stores don't take the extra cycle on page cross
-        if (instr->op_type != OP_STA && instr->op_type != OP_STY && instr->op_type != OP_STX)
+        if (instr->op_type != CPU_OP_STA && instr->op_type != CPU_OP_STY && instr->op_type != CPU_OP_STX)
             cpu->cycles_rem += addrmode_extra_cycles;
         cpu->cycles_rem += op_funcs[instr->op_type](cpu);
     }

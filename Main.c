@@ -1023,6 +1023,7 @@ void render_ppu_gpu(SDL_Renderer* renderer, SDL_Texture* texture, PPU* ppu) {
         exit(1);
     }
 
+    // FIXME: INVESTIGATE DOING THIS AS A TEXTURE LOCK/UNLOCK
     SDL_UpdateTexture(texture, NULL, ppu->frame_buffer, PPU_RESOLUTION_X * sizeof(uint32_t));
 
     if (SDL_UnlockMutex(ppu->frame_buffer_lock)) {
@@ -1239,9 +1240,10 @@ void inspect_hw_mul() {
     * We have 2 threads, one for rendering another for emulation
     * The emulation thread completes 1 frame's worth of emulation, then waits until
     * 16ms have elapsed so that we run our NES emulation at 60hz
-    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that
-    * So we have the NES emulaiton signal when it has finished a frame so that the renderer knows it has
-    * new data to work with
+    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that since 
+    * the NES will be incapable of outputting more than 60fps without speeding up the game
+    * So we have the rendering thread wait on a signal from the emulation thread that a new frame is ready
+    * to be rendered
     * If for whatever reason the renderer was unable to finish rendering before the emulation finishes sleeping
     * the emulation will still begin its next frame's worth of emulation
     * This allows our emulation to run at the correct speed regardless of the speed of the renderer
@@ -1374,8 +1376,7 @@ void inspect_hw_mul() {
         // FIMXE: MAYBE I SHOULD WAIT UP HERE INSTEAD?
         render_ppu_gpu(renderer, ppu_texture, ppu);
 
-        // wait to render (mutex shit is necessary, but dumb)
-        // FIXME: breaks when trying to quit
+        // wait to render
         SDL_LockMutex(frame_ready_mutex);
         SDL_CondWait(signal_frame_ready, frame_ready_mutex);
         SDL_UnlockMutex(frame_ready_mutex);

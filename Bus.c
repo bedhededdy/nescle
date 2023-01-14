@@ -14,12 +14,12 @@
 /* Constructors/Destructors */
 Bus* Bus_CreateNES() {
     Bus* bus = malloc(sizeof(Bus));
-    CPU* cpu = CPU_Construct();
+    CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Construct();
     Cart* cart = Cart_Create();
 
     if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
-        printf("CreateNES: alloc failed\n");
+        printf("Bus_CreateNES: alloc failed\n");
         return NULL;
     }
 
@@ -110,6 +110,15 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     return false;
 }
 
+uint16_t Bus_Read16(Bus* bus, uint16_t addr) {
+    return ((uint16_t)Bus_Read(bus, addr + 1) << 8) | Bus_Read(bus, addr);
+}
+
+bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data) {
+    return Bus_Write(bus, addr, (uint8_t)data) 
+        && Bus_Write(bus, addr, data >> 8);
+}
+
 /* NES functions */
 void Bus_Clock(Bus* bus) {
     // PPU runs 3x faster than the CPU
@@ -131,9 +140,9 @@ void Bus_Clock(Bus* bus) {
 
 void Bus_PowerOn(Bus* bus) {
     // Contents of RAM are initialized at powerup
+    Bus_ClearMem(bus);
     PPU_PowerOn(bus->ppu);
     CPU_PowerOn(bus->cpu);
-    Bus_ClearMem(bus);
     bus->clocks_count = 0;
 }
 
