@@ -1196,6 +1196,7 @@ struct emulation_thread_struct {
     Bus* bus;
     bool* run_emulation;
     bool* quit;
+    SDL_cond* signal_frame_ready;
 };
 
 int emulation_thread_func(void* data) {
@@ -1207,12 +1208,21 @@ int emulation_thread_func(void* data) {
                 Bus_Clock(emu->bus);
             emu->bus->ppu->frame_complete = false;
         }
+
+        // signal that a frame's worth of emulation has been done
+        // could probably get away using frame_ready boolean, but i've had issues in the past
+        // with signlaing with non conds and i already know this works so just leave it as is
+        SDL_CondSignal(emu->signal_frame_ready);
+
         uint64_t frametime = SDL_GetTicks64() - t0;
         if (frametime < 16)
             SDL_Delay((uint32_t)(16 - frametime));
         else
             printf("FRAME TOOK %ums TO RENDER\n", (uint32_t)frametime);
     }
+
+    // need to signal frame ready so main loop doesn't get stuck
+    SDL_CondSignal(emu->signal_frame_ready);
     printf("Emulation Thread exited\n");
     return 0;
 }
@@ -1225,16 +1235,18 @@ void inspect_hw_mul() {
     //        MULTITHREADED OPTIMIZATIONS
     //        OR TO ONLY ALLOW THE DEBUGGER TO RUN WHEN WE ARE NOT RUNNING AT FULL SPEED
 
-    // Basic premise is we have 2 threads
-    // We have one thread that goes as fast as it can that handles rendering and input
-    // The other thread handles running our emulation at 60hz (approx.)
-    // The rendering thread will render from a frame buffer inside the PPU
-    // So the PPU will write the a different buffer and then copy to the frame buffer
-    // Upon frame completion, PPU will lock the frame buffer and write to it
-    // Each time we render a frame to the screen, the rendering thread will also lock the 
-    // frame buffer
-    // Thus we need a way to communicate between our 2 threads, so our emulation thread
-    // knows when to run and when to quit (Based on user input)
+    /*
+    * We have 2 threads, one for rendering another for emulation
+    * The emulation thread completes 1 frame's worth of emulation, then waits until
+    * 16ms have elapsed so that we run our NES emulation at 60hz
+    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that
+    * So we have the NES emulaiton signal when it has finished a frame so that the renderer knows it has
+    * new data to work with
+    * If for whatever reason the renderer was unable to finish rendering before the emulation finishes sleeping
+    * the emulation will still begin its next frame's worth of emulation
+    * This allows our emulation to run at the correct speed regardless of the speed of the renderer
+    * In short, we prefer that the renderer drops frames than the emulation running at an inconsistent speed
+    */
 
     // Create the NES
     Bus* bus = Bus_CreateNES();
@@ -1301,7 +1313,8 @@ void inspect_hw_mul() {
     // Start emulation thread
     bool run_emulation = false;
     bool quit = false;
-    struct emulation_thread_struct arg = { bus, &run_emulation, &quit };
+    SDL_cond* signal_frame_ready = SDL_CreateCond();
+    struct emulation_thread_struct arg = { bus, &run_emulation, &quit, signal_frame_ready };
     SDL_Thread* emulation_thread = SDL_CreateThread(emulation_thread_func, "Emulation Thread", (void*)&arg);
     if (emulation_thread == NULL) return;
     
@@ -1309,6 +1322,7 @@ void inspect_hw_mul() {
     uint8_t palette = 0;
     uint64_t frame_counter = 0;
     uint64_t frame60_t0 = SDL_GetTicks64();
+    SDL_mutex* frame_ready_mutex = SDL_CreateMutex();
 
     while (!quit) {
         uint64_t t0 = SDL_GetTicks64();
@@ -1357,7 +1371,14 @@ void inspect_hw_mul() {
             break;
         }
 
+        // FIMXE: MAYBE I SHOULD WAIT UP HERE INSTEAD?
         render_ppu_gpu(renderer, ppu_texture, ppu);
+
+        // wait to render (mutex shit is necessary, but dumb)
+        // FIXME: breaks when trying to quit
+        SDL_LockMutex(frame_ready_mutex);
+        SDL_CondWait(signal_frame_ready, frame_ready_mutex);
+        SDL_UnlockMutex(frame_ready_mutex);
         SDL_RenderPresent(renderer);
 
         frame_counter++;
@@ -1374,6 +1395,8 @@ void inspect_hw_mul() {
  
     // Cleanup
     SDL_WaitThread(emulation_thread, NULL);
+    SDL_DestroyCond(signal_frame_ready);
+    SDL_DestroyMutex(frame_ready_mutex);
 
     free(char_set);
     Bus_DestroyNES(bus);
