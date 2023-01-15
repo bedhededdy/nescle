@@ -35,6 +35,7 @@ static void set_status(CPU* cpu, uint8_t flag, bool set) {
         cpu->status &= ~flag;
 }
 
+// TODO: REWRITE TO DIRECTLY MODIFY CYCLES_REM AND RETURN VOID
 static uint8_t branch(CPU* cpu) {
     // if branch was to different page, take 2 extra cycles
     // else take 1 extra cycle
@@ -857,7 +858,7 @@ static uint8_t op_tya(CPU* cpu) {
 }
 
 /* Constructors/Destructors */
-CPU* CPU_Create() {
+CPU* CPU_Create(void) {
     return malloc(sizeof(CPU));
 }
 

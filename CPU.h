@@ -90,7 +90,7 @@ struct cpu {
 };
 
 /* Constructors/Destructors */
-CPU* CPU_Create();
+CPU* CPU_Create(void);
 void CPU_Destroy(CPU* cpu);
 
 /* Interrupts */
@@ -114,76 +114,76 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu);        // Gets the starting add
 
 /* Addressing Modes */  // (return 1 if page boundary crossed(high byte changed), requiring extra cycle)
 /*
-uint8_t addr_mode_acc(CPU* cpu); // 1-byte,  reg,    operation occurs on accumulator
-uint8_t addr_mode_imm(CPU* cpu); // 2-bytes, op,     second byte contains the operand
-uint8_t addr_mode_abs(CPU* cpu); // 3-bytes, addr,   second byte contains lo bits, third byte contains hi bits
-uint8_t addr_mode_zpg(CPU* cpu); // 2-bytes, addr,   second byte is the offset from the zero page
-uint8_t addr_mode_zpx(CPU* cpu); // 2-bytes, addr,   zeropage but offset is indexed by x
-uint8_t addr_mode_zpy(CPU* cpu); // 2-bytes, addr,   zeropage but offset is indexed by y
-uint8_t addr_mode_abx(CPU* cpu); // 3-bytes, addr,   absolute address indexed by x
-uint8_t addr_mode_aby(CPU* cpu); // 3-bytes, addr,   absolute address indexed by y
-uint8_t addr_mode_imp(CPU* cpu); // 1-byte,  reg,    operation occurs on instruction's implied register
-uint8_t addr_mode_rel(CPU* cpu); // 2-bytes, rel,    second byte is pc offset after branch
-uint8_t addr_mode_idx(CPU* cpu); // 2-bytes, ptr,    second byte is added to x discarding carry pointing to mem addr containing lo bits of effective addr in zeropage
-uint8_t addr_mode_idy(CPU* cpu); // 2-bytes, ptr,    second byte points to addr in zeropage which we add to y, result is low order byte of effective addr, carry from result is added to next mem location for high byte
-uint8_t addr_mode_ind(CPU* cpu); // 3-bytes, ptr,    second byte contains lo bits, hi bits in third
+static uint8_t addr_mode_acc(CPU* cpu); // 1-byte,  reg,    operation occurs on accumulator
+static uint8_t addr_mode_imm(CPU* cpu); // 2-bytes, op,     second byte contains the operand
+static uint8_t addr_mode_abs(CPU* cpu); // 3-bytes, addr,   second byte contains lo bits, third byte contains hi bits
+static uint8_t addr_mode_zpg(CPU* cpu); // 2-bytes, addr,   second byte is the offset from the zero page
+static uint8_t addr_mode_zpx(CPU* cpu); // 2-bytes, addr,   zeropage but offset is indexed by x
+static uint8_t addr_mode_zpy(CPU* cpu); // 2-bytes, addr,   zeropage but offset is indexed by y
+static uint8_t addr_mode_abx(CPU* cpu); // 3-bytes, addr,   absolute address indexed by x
+static uint8_t addr_mode_aby(CPU* cpu); // 3-bytes, addr,   absolute address indexed by y
+static uint8_t addr_mode_imp(CPU* cpu); // 1-byte,  reg,    operation occurs on instruction's implied register
+static uint8_t addr_mode_rel(CPU* cpu); // 2-bytes, rel,    second byte is pc offset after branch
+static uint8_t addr_mode_idx(CPU* cpu); // 2-bytes, ptr,    second byte is added to x discarding carry pointing to mem addr containing lo bits of effective addr in zeropage
+static uint8_t addr_mode_idy(CPU* cpu); // 2-bytes, ptr,    second byte points to addr in zeropage which we add to y, result is low order byte of effective addr, carry from result is added to next mem location for high byte
+static uint8_t addr_mode_ind(CPU* cpu); // 3-bytes, ptr,    second byte contains lo bits, hi bits in third
 
 // isa (return 1 if operation requires extra cycles)                     FLAGS MODIFIED
 
-uint8_t op_adc(CPU* cpu);    // add memory to accumulator with carry     (N Z C V)
-uint8_t op_and(CPU* cpu);    // and memory with accumulator              (N Z)
-uint8_t op_asl(CPU* cpu);    // shift left 1 bit                         (N Z C)
-uint8_t op_bcc(CPU* cpu);    // branch on carry clear
-uint8_t op_bcs(CPU* cpu);    // branch on carry set
-uint8_t op_beq(CPU* cpu);    // branch on result 0
-uint8_t op_bit(CPU* cpu);    // test memory bits with accumulator        (N Z V)
-uint8_t op_bmi(CPU* cpu);    // branch on result minus
-uint8_t op_bne(CPU* cpu);    // branch on result not zero
-uint8_t op_bpl(CPU* cpu);    // branch on result plus
-uint8_t op_brk(CPU* cpu);    // force break                              (I B)
-uint8_t op_bvc(CPU* cpu);    // branch on overflow clear
-uint8_t op_bvs(CPU* cpu);    // branch on overflow set
-uint8_t op_clc(CPU* cpu);    // clear carry flag                         (C)
-uint8_t op_cld(CPU* cpu);    // clear decimal mode                       (D)
-uint8_t op_cli(CPU* cpu);    // clear interrupt disable bit              (I)
-uint8_t op_clv(CPU* cpu);    // clear overflow flag                      (V)
-uint8_t op_cmp(CPU* cpu);    // compare memory and accumulator           (N Z C)
-uint8_t op_cpx(CPU* cpu);    // compare memory and index x               (N Z C)
-uint8_t op_cpy(CPU* cpu);    // compare memory and index y               (N Z C)
-uint8_t op_dec(CPU* cpu);    // decrement by one                         (N Z)
-uint8_t op_dex(CPU* cpu);    // decrement index x by one                 (N Z)
-uint8_t op_dey(CPU* cpu);    // decrement index y by one                 (N Z)
-uint8_t op_eor(CPU* cpu);    // xor memory with accumulator              (N Z)
-uint8_t op_inc(CPU* cpu);    // increment by one                         (N Z)
-uint8_t op_inx(CPU* cpu);    // increment index x by one                 (N Z)
-uint8_t op_iny(CPU* cpu);    // increment index y by one                 (N Z)
-uint8_t op_jmp(CPU* cpu);    // jump to new location
-uint8_t op_jsr(CPU* cpu);    // jump to new location saving return addr
-uint8_t op_lda(CPU* cpu);    // load accumulator with memory             (N Z)
-uint8_t op_ldx(CPU* cpu);    // load index x with memory                 (N Z)
-uint8_t op_ldy(CPU* cpu);    // load index y with memory                 (N Z)
-uint8_t op_lsr(CPU* cpu);    // shift one bit right                      (N Z C)
-uint8_t op_nop(CPU* cpu);    // no operation
-uint8_t op_ora(CPU* cpu);    // or memory with accumulator               (N Z)
-uint8_t op_pha(CPU* cpu);    // push accumulator on stack
-uint8_t op_php(CPU* cpu);    // push processor status on stack
-uint8_t op_pla(CPU* cpu);    // pull accumulator from stack              (N Z)
-uint8_t op_plp(CPU* cpu);    // pull processor status from stack         (N Z C I D V)
-uint8_t op_rol(CPU* cpu);    // rotate one bit left                      (N Z C)
-uint8_t op_ror(CPU* cpu);    // rotate one bit right                     (N Z C)
-uint8_t op_rti(CPU* cpu);    // return from interrupt                    (N Z C I D V)
-uint8_t op_rts(CPU* cpu);    // return from subroutine
-uint8_t op_sbc(CPU* cpu);    // subtract from accumulator with borrow    (N Z C V)
-uint8_t op_sec(CPU* cpu);    // set carry flag                           (C)
-uint8_t op_sed(CPU* cpu);    // set decimal mode                         (D)
-uint8_t op_sei(CPU* cpu);    // set interrupt disable bit                (I)
-uint8_t op_sta(CPU* cpu);    // store accumulator in memory
-uint8_t op_stx(CPU* cpu);    // store index x in memory
-uint8_t op_sty(CPU* cpu);    // store index y in memory
-uint8_t op_tax(CPU* cpu);    // transfer accumulator to index x          (N Z)
-uint8_t op_tay(CPU* cpu);    // transfer accumulator to index y          (N Z)
-uint8_t op_tsx(CPU* cpu);    // transfer stack pointer to index x        (N Z)
-uint8_t op_txa(CPU* cpu);    // transfer index x to accumulator          (N Z)
-uint8_t op_txs(CPU* cpu);    // transfer index x to stack pointer
-uint8_t op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
+static uint8_t op_adc(CPU* cpu);    // add memory to accumulator with carry     (N Z C V)
+static uint8_t op_and(CPU* cpu);    // and memory with accumulator              (N Z)
+static uint8_t op_asl(CPU* cpu);    // shift left 1 bit                         (N Z C)
+static uint8_t op_bcc(CPU* cpu);    // branch on carry clear
+static uint8_t op_bcs(CPU* cpu);    // branch on carry set
+static uint8_t op_beq(CPU* cpu);    // branch on result 0
+static uint8_t op_bit(CPU* cpu);    // test memory bits with accumulator        (N Z V)
+static uint8_t op_bmi(CPU* cpu);    // branch on result minus
+static uint8_t op_bne(CPU* cpu);    // branch on result not zero
+static uint8_t op_bpl(CPU* cpu);    // branch on result plus
+static uint8_t op_brk(CPU* cpu);    // force break                              (I B)
+static uint8_t op_bvc(CPU* cpu);    // branch on overflow clear
+static uint8_t op_bvs(CPU* cpu);    // branch on overflow set
+static uint8_t op_clc(CPU* cpu);    // clear carry flag                         (C)
+static uint8_t op_cld(CPU* cpu);    // clear decimal mode                       (D)
+static uint8_t op_cli(CPU* cpu);    // clear interrupt disable bit              (I)
+static uint8_t op_clv(CPU* cpu);    // clear overflow flag                      (V)
+static uint8_t op_cmp(CPU* cpu);    // compare memory and accumulator           (N Z C)
+static uint8_t op_cpx(CPU* cpu);    // compare memory and index x               (N Z C)
+static uint8_t op_cpy(CPU* cpu);    // compare memory and index y               (N Z C)
+static uint8_t op_dec(CPU* cpu);    // decrement by one                         (N Z)
+static uint8_t op_dex(CPU* cpu);    // decrement index x by one                 (N Z)
+static uint8_t op_dey(CPU* cpu);    // decrement index y by one                 (N Z)
+static uint8_t op_eor(CPU* cpu);    // xor memory with accumulator              (N Z)
+static uint8_t op_inc(CPU* cpu);    // increment by one                         (N Z)
+static uint8_t op_inx(CPU* cpu);    // increment index x by one                 (N Z)
+static uint8_t op_iny(CPU* cpu);    // increment index y by one                 (N Z)
+static uint8_t op_jmp(CPU* cpu);    // jump to new location
+static uint8_t op_jsr(CPU* cpu);    // jump to new location saving return addr
+static uint8_t op_lda(CPU* cpu);    // load accumulator with memory             (N Z)
+static uint8_t op_ldx(CPU* cpu);    // load index x with memory                 (N Z)
+static uint8_t op_ldy(CPU* cpu);    // load index y with memory                 (N Z)
+static uint8_t op_lsr(CPU* cpu);    // shift one bit right                      (N Z C)
+static uint8_t op_nop(CPU* cpu);    // no operation
+static uint8_t op_ora(CPU* cpu);    // or memory with accumulator               (N Z)
+static uint8_t op_pha(CPU* cpu);    // push accumulator on stack
+static uint8_t op_php(CPU* cpu);    // push processor status on stack
+static uint8_t op_pla(CPU* cpu);    // pull accumulator from stack              (N Z)
+static uint8_t op_plp(CPU* cpu);    // pull processor status from stack         (N Z C I D V)
+static uint8_t op_rol(CPU* cpu);    // rotate one bit left                      (N Z C)
+static uint8_t op_ror(CPU* cpu);    // rotate one bit right                     (N Z C)
+static uint8_t op_rti(CPU* cpu);    // return from interrupt                    (N Z C I D V)
+static uint8_t op_rts(CPU* cpu);    // return from subroutine
+static uint8_t op_sbc(CPU* cpu);    // subtract from accumulator with borrow    (N Z C V)
+static uint8_t op_sec(CPU* cpu);    // set carry flag                           (C)
+static uint8_t op_sed(CPU* cpu);    // set decimal mode                         (D)
+static uint8_t op_sei(CPU* cpu);    // set interrupt disable bit                (I)
+static uint8_t op_sta(CPU* cpu);    // store accumulator in memory
+static uint8_t op_stx(CPU* cpu);    // store index x in memory
+static uint8_t op_sty(CPU* cpu);    // store index y in memory
+static uint8_t op_tax(CPU* cpu);    // transfer accumulator to index x          (N Z)
+static uint8_t op_tay(CPU* cpu);    // transfer accumulator to index y          (N Z)
+static uint8_t op_tsx(CPU* cpu);    // transfer stack pointer to index x        (N Z)
+static uint8_t op_txa(CPU* cpu);    // transfer index x to accumulator          (N Z)
+static uint8_t op_txs(CPU* cpu);    // transfer index x to stack pointer
+static uint8_t op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
 */
