@@ -7,7 +7,7 @@
 #include "PPU.h"
 #include "Mapper.h"
 
-Cart* Cart_Create() {
+Cart* Cart_Create(void) {
     Cart* cart = malloc(sizeof(Cart));
     if (cart == NULL)
         return NULL;
@@ -140,12 +140,11 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     cart->mirror_mode = (header->mapper1 & 1) ? CART_MIRRORMODE_VERT : CART_MIRRORMODE_HORZ;
 
     // Initialize cart's mapper
-    cart->mapper = malloc(sizeof(Mapper));
+    cart->mapper = Mapper_Create(mapper_id, header->prg_rom_size, header->chr_rom_size);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
         return false;
     }
-    mapper_funcs[mapper_id](cart->mapper, header->prg_rom_size, header->chr_rom_size);
 
     // Fill in some fields
     cart->file_type = file_type;

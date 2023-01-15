@@ -4,15 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <SDL2/SDL_thread.h>
-
 #include "CPU.h"
 #include "Cart.h"
 #include "Mapper.h"
 #include "PPU.h"
 
 /* Constructors/Destructors */
-Bus* Bus_CreateNES() {
+Bus* Bus_CreateNES(void) {
     Bus* bus = malloc(sizeof(Bus));
     CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Construct();

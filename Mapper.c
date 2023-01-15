@@ -1,18 +1,43 @@
 #include "Mapper.h"
 #include <stdlib.h>
 
-// universal destructor
+/* General Constructor/Destructor */
+Mapper* Mapper_Create(uint8_t id, uint8_t rom_banks, uint8_t char_banks) {
+    static const void (*mapper_funcs[256])(Mapper*, uint8_t, uint8_t) = {
+        [0] = &Mapper000,[1] = &Mapper001,[2] = &Mapper002,[3] = &Mapper003,[4] = &Mapper004,[5] = &Mapper005,[6] = &Mapper006,[7] = &Mapper007,[8] = &Mapper008,[9] = &Mapper009,[10] = &Mapper010,[11] = &Mapper011,[12] = &Mapper012,[13] = &Mapper013,[14] = &Mapper014,[15] = &Mapper015,
+        [16] = &Mapper016,[17] = &Mapper017,[18] = &Mapper018,[19] = &Mapper019,[20] = &Mapper020,[21] = &Mapper021,[22] = &Mapper022,[23] = &Mapper023,[24] = &Mapper024,[25] = &Mapper025,[26] = &Mapper026,[27] = &Mapper027,[28] = &Mapper028,[29] = &Mapper029,[30] = &Mapper030,[31] = &Mapper031,
+        [32] = &Mapper032,[33] = &Mapper033,[34] = &Mapper034,[35] = &Mapper035,[36] = &Mapper036,[37] = &Mapper037,[38] = &Mapper038,[39] = &Mapper039,[40] = &Mapper040,[41] = &Mapper041,[42] = &Mapper042,[43] = &Mapper043,[44] = &Mapper044,[45] = &Mapper045,[46] = &Mapper046,[47] = &Mapper047,
+        [48] = &Mapper048,[49] = &Mapper049,[50] = &Mapper050,[51] = &Mapper051,[52] = &Mapper052,[53] = &Mapper053,[54] = &Mapper054,[55] = &Mapper055,[56] = &Mapper056,[57] = &Mapper057,[58] = &Mapper058,[59] = &Mapper059,[60] = &Mapper060,[61] = &Mapper061,[62] = &Mapper062,[63] = &Mapper063,
+        [64] = &Mapper064,[65] = &Mapper065,[66] = &Mapper066,[67] = &Mapper067,[68] = &Mapper068,[69] = &Mapper069,[70] = &Mapper070,[71] = &Mapper071,[72] = &Mapper072,[73] = &Mapper073,[74] = &Mapper074,[75] = &Mapper075,[76] = &Mapper076,[77] = &Mapper077,[78] = &Mapper078,[79] = &Mapper079,
+        [80] = &Mapper080,[81] = &Mapper081,[82] = &Mapper082,[83] = &Mapper083,[84] = &Mapper084,[85] = &Mapper085,[86] = &Mapper086,[87] = &Mapper087,[88] = &Mapper088,[89] = &Mapper089,[90] = &Mapper090,[91] = &Mapper091,[92] = &Mapper092,[93] = &Mapper093,[94] = &Mapper094,[95] = &Mapper095,
+        [96] = &Mapper096,[97] = &Mapper097,[98] = &Mapper098,[99] = &Mapper099,[100] = &Mapper100,[101] = &Mapper101,[102] = &Mapper102,[103] = &Mapper103,[104] = &Mapper104,[105] = &Mapper105,[106] = &Mapper106,[107] = &Mapper107,[108] = &Mapper108,[109] = &Mapper109,[110] = &Mapper110,[111] = &Mapper111,
+        [112] = &Mapper112,[113] = &Mapper113,[114] = &Mapper114,[115] = &Mapper115,[116] = &Mapper116,[117] = &Mapper117,[118] = &Mapper118,[119] = &Mapper119,[120] = &Mapper120,[121] = &Mapper121,[122] = &Mapper122,[123] = &Mapper123,[124] = &Mapper124,[125] = &Mapper125,[126] = &Mapper126,[127] = &Mapper127,
+        [128] = &Mapper128,[129] = &Mapper129,[130] = &Mapper130,[131] = &Mapper131,[132] = &Mapper132,[133] = &Mapper133,[134] = &Mapper134,[135] = &Mapper135,[136] = &Mapper136,[137] = &Mapper137,[138] = &Mapper138,[139] = &Mapper139,[140] = &Mapper140,[141] = &Mapper141,[142] = &Mapper142,[143] = &Mapper143,
+        [144] = &Mapper144,[145] = &Mapper145,[146] = &Mapper146,[147] = &Mapper147,[148] = &Mapper148,[149] = &Mapper149,[150] = &Mapper150,[151] = &Mapper151,[152] = &Mapper152,[153] = &Mapper153,[154] = &Mapper154,[155] = &Mapper155,[156] = &Mapper156,[157] = &Mapper157,[158] = &Mapper158,[159] = &Mapper159,
+        [160] = &Mapper160,[161] = &Mapper161,[162] = &Mapper162,[163] = &Mapper163,[164] = &Mapper164,[165] = &Mapper165,[166] = &Mapper166,[167] = &Mapper167,[168] = &Mapper168,[169] = &Mapper169,[170] = &Mapper170,[171] = &Mapper171,[172] = &Mapper172,[173] = &Mapper173,[174] = &Mapper174,[175] = &Mapper175,
+        [176] = &Mapper176,[177] = &Mapper177,[178] = &Mapper178,[179] = &Mapper179,[180] = &Mapper180,[181] = &Mapper181,[182] = &Mapper182,[183] = &Mapper183,[184] = &Mapper184,[185] = &Mapper185,[186] = &Mapper186,[187] = &Mapper187,[188] = &Mapper188,[189] = &Mapper189,[190] = &Mapper190,[191] = &Mapper191,
+        [192] = &Mapper192,[193] = &Mapper193,[194] = &Mapper194,[195] = &Mapper195,[196] = &Mapper196,[197] = &Mapper197,[198] = &Mapper198,[199] = &Mapper199,[200] = &Mapper200,[201] = &Mapper201,[202] = &Mapper202,[203] = &Mapper203,[204] = &Mapper204,[205] = &Mapper205,[206] = &Mapper206,[207] = &Mapper207,
+        [208] = &Mapper208,[209] = &Mapper209,[210] = &Mapper210,[211] = &Mapper211,[212] = &Mapper212,[213] = &Mapper213,[214] = &Mapper214,[215] = &Mapper215,[216] = &Mapper216,[217] = &Mapper217,[218] = &Mapper218,[219] = &Mapper219,[220] = &Mapper220,[221] = &Mapper221,[222] = &Mapper222,[223] = &Mapper223,
+        [224] = &Mapper224,[225] = &Mapper225,[226] = &Mapper226,[227] = &Mapper227,[228] = &Mapper228,[229] = &Mapper229,[230] = &Mapper230,[231] = &Mapper231,[232] = &Mapper232,[233] = &Mapper233,[234] = &Mapper234,[235] = &Mapper235,[236] = &Mapper236,[237] = &Mapper237,[238] = &Mapper238,[239] = &Mapper239,
+        [240] = &Mapper240,[241] = &Mapper241,[242] = &Mapper242,[243] = &Mapper243,[244] = &Mapper244,[245] = &Mapper245,[246] = &Mapper246,[247] = &Mapper247,[248] = &Mapper248,[249] = &Mapper249,[250] = &Mapper250,[251] = &Mapper251,[252] = &Mapper252,[253] = &Mapper253,[254] = &Mapper254,[255] = &Mapper255
+    };
+
+    Mapper* mapper = malloc(sizeof(Mapper));
+    if (mapper == NULL)
+        return NULL;
+    mapper_funcs[id](mapper, rom_banks, char_banks);
+    return mapper;
+}
+
 void Mapper_Destroy(Mapper* mapper) {
     free(mapper);
 }
 
-// FIXME: shoudl refactor this to return the pointer rather than taking it
-//          like the otehr constructors
-// mapper000
+/* Mapper000 */
 void Mapper000(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
     mapper->id = 0;
-    mapper->program_rom_banks = rom_banks;  // can be either 1 or 2
-    mapper->char_rom_banks = char_banks;    // should always be 1
+    mapper->prg_rom_banks = rom_banks;  // can be either 1 or 2
+    mapper->chr_rom_banks = char_banks; // should always be 1
 
     mapper->map_cpu_read = &Mapper000_CPURead;
     mapper->map_cpu_write = &Mapper000_CPUWrite;
@@ -20,26 +45,22 @@ void Mapper000(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
     mapper->map_ppu_write = &Mapper000_PPUWrite;
 }
 
-// FIXME: THIS SHIT WILL BE WRONG
 bool Mapper000_CPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
-    if (addr >= 0x8000 && addr <= 0xffff) {
-        // it's like modding by 16kb or 32kb depending on how much prg_rom
-        *mapped_addr = addr & (mapper->program_rom_banks > 1 ? 0x7fff : 0x3fff);
-        return true;
-    }
-    return false;
+    // Depending on if there are 1 or 2 banks of prg_rom changes what value
+    // we use to mirror the memory
+    *mapped_addr = addr % (mapper->prg_rom_banks > 1 ? 0x8000 : 0x4000);
+    return true;
 }
 
 bool Mapper000_CPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
-    if (addr >= 0x8000 && addr <= 0xffff) {
-        // it's like modding by 16kb or 32kb depending on how much prg_rom
-        *mapped_addr = addr & (mapper->program_rom_banks > 1 ? 0x7fff : 0x3fff);
-        return true;
-    }
-    return false;
+    // Depending on if there are 1 or 2 banks of prg_rom changes what value
+    // we use to mirror the memory
+    *mapped_addr = addr % (mapper->prg_rom_banks > 1 ? 0x8000 : 0x4000);
+    return true;
 }
 
 bool Mapper000_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
+    // No mapping required, use the address directly
     if (addr >= 0 && addr < 0x2000) {
         *mapped_addr = addr;
         return true;
@@ -48,11 +69,9 @@ bool Mapper000_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
 }
 
 bool Mapper000_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
-    // FIXME: 
-    // there is only chr_rom from 0 to 0x2000, so we can't write to it
-    // however, if for some reason there are 0 banks, we can treat this as ram
-    // but i don't implement this cuz i think i would have a null ptr for my char_rom
-    if (addr >= 0 && addr < 0x2000 && mapper->char_rom_banks == 0) {
+    // There is only chr_rom from 0 to 0x2000, so we can't write to it.
+    // However, if for some reason there are 0 banks, we can treat this as ram
+    if (addr >= 0 && addr < 0x2000 && mapper->chr_rom_banks == 0) {
         *mapped_addr = addr;
         return true;
     }

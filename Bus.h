@@ -37,7 +37,7 @@ struct bus {
 Bus* Bus_CreateNES(void);       // Creates a Bus with connected components
 void Bus_DestroyNES(Bus* bus);  // Deallocates memory for Bus and connected components
 
-/* R/W */
+/* Read/Write */
 void Bus_ClearMem(Bus* bus);        // Sets contents of RAM to a deterministic value
 void Bus_ClearMemRand(Bus* bus);
 uint8_t Bus_Read(Bus* bus, uint16_t addr);

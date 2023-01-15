@@ -12,5 +12,5 @@ typedef struct cpu_instr CPU_Instr;
 typedef struct pixel PPU_Pixel;
 
 typedef enum cart_mirror_mode Cart_MirrorMode;
-typedef enum cpu_addr_mode CPU_AddrMode;
+typedef enum cpu_addrmode CPU_AddrMode;
 typedef enum cpu_op_type CPU_OpType;

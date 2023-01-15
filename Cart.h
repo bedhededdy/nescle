@@ -38,7 +38,7 @@ struct cart {
     uint8_t* chr_rom;
 };
 
-Cart* Cart_Create();
+Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
 
 bool Cart_LoadROM(Cart* cart, const char* path);

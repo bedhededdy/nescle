@@ -33,6 +33,7 @@ def main():
             print('ref line')
             print(ref_line[48:])
             return
+        '''
 
         if my_line != ref_line:
             print(f'diff on line {i+1}')
@@ -41,7 +42,6 @@ def main():
             print('ref line')
             print(ref_line)
             return
-        '''
     
     print('no differences detected')
 

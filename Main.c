@@ -1,10 +1,23 @@
+// FIXME: TRY AND MAKE THE FRAMETIMES MORE CONSISTENT
+//        I SEEM TO BE GETTING INTO SCENARIOS WHERE I EITHER
+//        RENDER AT 59 OR 61 FPS (61 when not running, 59/60 when running)
+//        VERY BIZARRE THAT NOT RUNNING ACTUALLY GIVES LARGER FRAMETIMES
+//        CHECKING EACH FRAMETIME MANUALLY IT SEEMS I GET A BIT DESYNCED AT THE BEGINNING
+//        BUT OTHER THAN THAT I STAY CONSISTENT AT 16-17MS PER FRAME
+//        BUT THAT DOESN'T EXPLAIN WHY IT GETS SO OFF WITH THE OTHER METHOD, BECAUSE AFTER THE FIRST
+//        FRAME IT SHOULD STABILIZE
+
+// ISSUE COULD ALSO BE RELATED TO CACHE OR SOMETHING ELSE THAT ISN'T MY FAULT CUZ ON LAPTOP
+// I EVENTUALLY CONVERGE TO AROUDN 1000MS FOR 60 FRAMES REGARDLESS OF RUNNING OR NOT
+
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // FIXME: MISSING THE PLUGIN I NEED TO DOWNLOAD FOR AUDIO
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_mutex.h>
 
@@ -105,7 +118,7 @@ void test_cpu_with_mapper() {
 
     cpu->pc = 0xc000;
     cpu->addr_eff = 0xc000;
-    cpu->opcode = 0x4c;
+    cpu->instr = CPU_Decode(0x4c);
 
     // dump the program rom
     //FILE* prgdump = fopen("logs/prgdump.log", "w");
@@ -1392,6 +1405,8 @@ void inspect_hw_mul() {
             printf("60 frames rendered in %dms\n", (int)(frame60_t1 - frame60_t0));
             frame60_t0 = frame60_t1;
         }
+
+        //printf("Frametime: %d\n", (int)(SDL_GetTicks64() - t0));
     }
  
     // Cleanup
@@ -1416,7 +1431,13 @@ void inspect_hw_mul() {
 int main(int argc, char** argv) {
     //inspect_soft();
     //inspect_hw();
-    inspect_hw_mul();
+    /*for (int i = 0; i < argc; i++)
+        printf("%s ", argv[i]);
+    printf("\n");
+
+    inspect_hw_mul();*/
+
+    test_cpu_with_mapper();
 
     return 0;
 }
