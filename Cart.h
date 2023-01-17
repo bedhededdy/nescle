@@ -5,6 +5,9 @@
 
 #include "MyTypes.h"
 
+#define CART_CHR_ROM_CHUNK_SIZE 0x2000
+#define CART_PRG_ROM_CHUNK_SIZE 0x4000
+
 enum cart_mirror_mode {
     CART_MIRRORMODE_HORZ,   // Horizontal
     CART_MIRRORMODE_VERT,   // Vertical
@@ -14,9 +17,9 @@ enum cart_mirror_mode {
 
 // ROM file header in iNES (.nes) format
 struct cart_rom_header {
-    char name[4];           // Should always say NES followed by EOF
+    char name[4];           // Should always say NES followed by DOS EOF
     uint8_t prg_rom_size;   // One chunk = 16kb
-    uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom chunks means 1 chunk of chr_ram)
+    uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
     uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
     uint8_t mapper2;        // Discerns mapper, VS/Playchoice, NES 2.0
     uint8_t prg_ram_size;   // Apparently rarely used

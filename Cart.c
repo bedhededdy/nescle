@@ -45,7 +45,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     uint8_t buf[4096];
 
     // Load header data (16 bytes) into the buffer
-    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom) < sizeof(Cart_ROMHeader)) {
+    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom) 
+        < sizeof(Cart_ROMHeader)) {
         printf("Cart_LoadROM: header\n");
         return false;
     }
@@ -56,7 +57,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     cart->metadata = header;
 
-    // Load trainer data if it exists (TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT)
+    // Load trainer data if it exists 
+    // TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT
     if (header->mapper1 & 0x04) {
         if (fread(buf, sizeof(uint8_t), 512, rom) < 512) {
             printf("Cart_LoadROM: trainer\n");
@@ -79,7 +81,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     }
 
     // Now that we know the program rom size, we can allocate memory for it
-    const size_t prg_rom_nbytes = sizeof(uint8_t) * 0x4000 * header->prg_rom_size;
+    const size_t prg_rom_nbytes = sizeof(uint8_t) 
+        * CART_PRG_ROM_CHUNK_SIZE * header->prg_rom_size;
     cart->prg_rom = malloc(prg_rom_nbytes);
 
     if (cart->prg_rom == NULL) {
@@ -97,7 +100,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         memcpy(&cart->prg_rom[i * sizeof(buf)], buf, sizeof(buf));
     }
 
-    const size_t chr_rom_nbytes = sizeof(uint8_t) * 0x2000 * header->chr_rom_size;
+    const size_t chr_rom_nbytes = sizeof(uint8_t) 
+        * CART_CHR_ROM_CHUNK_SIZE * header->chr_rom_size;
     if (chr_rom_nbytes > 0) {
         // Load char rom if exists
         // similar logic to program rom, but with 8kb instead of 16
@@ -120,14 +124,12 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     else {
         // If the file type is 1, we still give it 0x2000 bytes 
         // but those bytes will be used as RAM instead of ROM
-        cart->chr_rom = malloc(0x2000 * sizeof(uint8_t));
+        cart->chr_rom = malloc(CART_CHR_ROM_CHUNK_SIZE * sizeof(uint8_t));
 
         if (cart->chr_rom == NULL) {
             printf("Cart_LoadROM: alloc chr_ram\n");
             return false;
         }
-
-        //memset(cart->chr_rom, 0xff, 0x2000 * sizeof(uint8_t));
     }
 
     // Determine mapper_id and mirror_mode
@@ -137,10 +139,12 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     printf("mapper id: %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    cart->mirror_mode = (header->mapper1 & 1) ? CART_MIRRORMODE_VERT : CART_MIRRORMODE_HORZ;
+    cart->mirror_mode = (header->mapper1 & 1) ? 
+        CART_MIRRORMODE_VERT : CART_MIRRORMODE_HORZ;
 
     // Initialize cart's mapper
-    cart->mapper = Mapper_Create(mapper_id, header->prg_rom_size, header->chr_rom_size);
+    cart->mapper = Mapper_Create(mapper_id, 
+        header->prg_rom_size, header->chr_rom_size);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
         return false;
