@@ -103,7 +103,6 @@ void CPU_PowerOn(CPU* cpu); // Put NES in powerup state (not a real interrupt)
 
 /* Fetch/Decode/Execute */
 const CPU_Instr* CPU_Decode(uint8_t opcode);  // Returns CPU_Instr associated with opcode
-void CPU_CalculateEffectiveAddress(uint16_t pc, const CPU_Instr* instr);    // Calculate addr_eff for instr
 void CPU_SetAddrMode(CPU* cpu);               // Sets addr_eff with effective address for current instruction
 void CPU_Execute(CPU* cpu);                   // Executes current CPU instruction
 

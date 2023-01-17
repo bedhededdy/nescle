@@ -8,7 +8,7 @@
 #include "PPU.h"
 
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
-#define DISASSEMBLY_LOG
+//#define DISASSEMBLY_LOG
 
 // TODO: FIND A WAY TO DO LOGGING WITHOUT GLOBAL VARIABLE
 FILE* nestest_log;
@@ -313,7 +313,7 @@ static void op_bpl(CPU* cpu) {
 }
 
 // TODO: SEE IF THIS WORKS, IT HASN'T BEEN TESTED
-// FIXME: MAY WANT TO SET IRQ AFTER PUSHING
+// FIXME: MAY WANT TO SET IRQ BEFORE PUSHING
 // Program sourced interrupt
 static void op_brk(CPU* cpu) {
     // Dummy pc increment
@@ -323,11 +323,14 @@ static void op_brk(CPU* cpu) {
     stack_push(cpu, cpu->pc >> 8);
     stack_push(cpu, (uint8_t)cpu->pc);
 
-    // Set break and interrupt flags and push status register
+    // Set break flag, push status register, and set IRQ flag
     set_status(cpu, CPU_STATUS_BRK, true);
-    set_status(cpu, CPU_STATUS_IRQ, true);
     stack_push(cpu, cpu->status);
+    set_status(cpu, CPU_STATUS_IRQ, true);
+
     // FIXME: THIS MAY BE WRONG (OLC HAS IT, BUT INSTRUCTIONS DON'T)
+    //        FORCING THIS OFF SHOULD BE HANDLED BY THE RTI, BUT NO GUARANTEE
+    //        THAT THAT WAS ACTUALLY CALLED
     set_status(cpu, CPU_STATUS_BRK, false); 
 
     // Fetch and set PC from hard-coded location
@@ -800,7 +803,7 @@ void CPU_Clock(CPU* cpu) {
     cpu->cycles_count++;
 }
 
-// FIXME: WE MAY WANT THE IRQ TO BE SET AFTER PUSHING
+// FIXME: WE MAY WANT THE IRQ TO BE SET BEFORE PUSHING
 // FIXME: TECHNICALLY 0X00 SHOULD BE LOADED INTO THE OPCODE REG
 void CPU_IRQ(CPU* cpu) {
     if (!(cpu->status & CPU_STATUS_IRQ)) {
@@ -808,24 +811,25 @@ void CPU_IRQ(CPU* cpu) {
         stack_push(cpu, cpu->pc >> 8);
         stack_push(cpu, (uint8_t)cpu->pc);
 
-        // Set status flags
+        // Set BRK flag
         set_status(cpu, CPU_STATUS_BRK, false);
-        set_status(cpu, 1 << 5, true); // this should already have been set
-        set_status(cpu, CPU_STATUS_IRQ, true);
+        // This should never be off, but this is something to investigate
+        // reenabling if bugs are encountered
+        //set_status(cpu, 1 << 5, true); 
 
         // Push status register onto the stack
         stack_push(cpu, cpu->status);
+        set_status(cpu, CPU_STATUS_IRQ, true);
 
         // Load PC from hard-coded address
         cpu->pc = Bus_Read16(cpu->bus, 0xfffe);
 
-        printf("IRQ triggered\n");
         // Set time for IRQ to be handled
         cpu->cycles_rem = 7;
     }
 }
 
-// FIXME: WE MAY WANT THE IRQ TO BE SET AFTER PUSHING
+// FIXME: WE MAY WANT THE IRQ TO BE SET BEFORE PUSHING
 // FIXME: TECHNICALLY 0X00 SHOULD BE LOADED INTO THE OPCODE REG
 void CPU_NMI(CPU* cpu) {
     // Push PC (MSB first) and status register onto the stack
@@ -834,16 +838,17 @@ void CPU_NMI(CPU* cpu) {
 
     // Set status flags
     set_status(cpu, CPU_STATUS_BRK, false);
-    set_status(cpu, 1 << 5, true);     // this should already have been set
-    set_status(cpu, CPU_STATUS_IRQ, true);
+    // This should never be off, but this is something to investigate
+    // reenabling if bugs are encountered
+    //set_status(cpu, 1 << 5, true);     // this should already have been set
     
     // Push status register onto the stack
     stack_push(cpu, cpu->status);
+    set_status(cpu, CPU_STATUS_IRQ, true);
 
     // Load pc from hard-coded address
     cpu->pc = Bus_Read16(cpu->bus, 0xfffa);
 
-    printf("NMI triggered\n");
     // Set time for IRQ to be handled
     cpu->cycles_rem = 7;
 }
@@ -908,7 +913,7 @@ void CPU_PowerOn(CPU* cpu) {
 const CPU_Instr* CPU_Decode(uint8_t opcode) {
     // 6502 ISA indexed by opcode
     static const CPU_Instr isa[256] = {
-        {0X00, CPU_ADDRMODE_IMP, CPU_OP_BRK, 1, 7}, {0X01, CPU_ADDRMODE_IDX, CPU_OP_ORA, 2, 6}, {0X02, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X03, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X04, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0x05, CPU_ADDRMODE_ZPG, CPU_OP_ORA, 2, 3}, {0X06, CPU_ADDRMODE_ZPG, CPU_OP_ASL, 2, 5}, {0X07, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X08, CPU_ADDRMODE_IMP, CPU_OP_PHP, 1, 3}, {0X09, CPU_ADDRMODE_IMM, CPU_OP_ORA, 2, 2}, {0X0A, CPU_ADDRMODE_ACC, CPU_OP_ASL, 1, 2}, {0X0B, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X0C, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XD, CPU_ADDRMODE_ABS, CPU_OP_ORA, 3, 4}, {0X0E, CPU_ADDRMODE_ABS, CPU_OP_ASL, 3, 6}, {0X0F, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
+        {0X00, CPU_ADDRMODE_IMP, CPU_OP_BRK, 1, 7}, {0X01, CPU_ADDRMODE_IDX, CPU_OP_ORA, 2, 6}, {0X02, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X03, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X04, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0x05, CPU_ADDRMODE_ZPG, CPU_OP_ORA, 2, 3}, {0X06, CPU_ADDRMODE_ZPG, CPU_OP_ASL, 2, 5}, {0X07, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X08, CPU_ADDRMODE_IMP, CPU_OP_PHP, 1, 3}, {0X09, CPU_ADDRMODE_IMM, CPU_OP_ORA, 2, 2}, {0X0A, CPU_ADDRMODE_ACC, CPU_OP_ASL, 1, 2}, {0X0B, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X0C, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X0D, CPU_ADDRMODE_ABS, CPU_OP_ORA, 3, 4}, {0X0E, CPU_ADDRMODE_ABS, CPU_OP_ASL, 3, 6}, {0X0F, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
         {0X10, CPU_ADDRMODE_REL, CPU_OP_BPL, 2, 2}, {0X11, CPU_ADDRMODE_IDY, CPU_OP_ORA, 2, 5}, {0X12, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X13, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X14, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X15, CPU_ADDRMODE_ZPX, CPU_OP_ORA, 2, 4}, {0X16, CPU_ADDRMODE_ZPX, CPU_OP_ASL, 2, 6}, {0X17, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X18, CPU_ADDRMODE_IMP, CPU_OP_CLC, 1, 2}, {0X19, CPU_ADDRMODE_ABY, CPU_OP_ORA, 3, 4}, {0X1A, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X1B, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X1C, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0x1D, CPU_ADDRMODE_ABX, CPU_OP_ORA, 3, 4}, {0X1E, CPU_ADDRMODE_ABX, CPU_OP_ASL, 3, 7}, {0X1F, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
         {0X20, CPU_ADDRMODE_ABS, CPU_OP_JSR, 3, 6}, {0X21, CPU_ADDRMODE_IDX, CPU_OP_AND, 2, 6}, {0X22, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X23, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X24, CPU_ADDRMODE_ZPG, CPU_OP_BIT, 2, 3}, {0X25, CPU_ADDRMODE_ZPG, CPU_OP_AND, 2, 3}, {0X26, CPU_ADDRMODE_ZPG, CPU_OP_ROL, 2, 5}, {0X27, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X28, CPU_ADDRMODE_IMP, CPU_OP_PLP, 1, 4}, {0X29, CPU_ADDRMODE_IMM, CPU_OP_AND, 2, 2}, {0X2A, CPU_ADDRMODE_ACC, CPU_OP_ROL, 1, 2}, {0X2B, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X2C, CPU_ADDRMODE_ABS, CPU_OP_BIT, 3, 4}, {0X2D, CPU_ADDRMODE_ABS, CPU_OP_AND, 3, 4}, {0X2E, CPU_ADDRMODE_ABS, CPU_OP_ROL, 3, 6}, {0X2F, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
         {0X30, CPU_ADDRMODE_REL, CPU_OP_BMI, 2, 2}, {0X31, CPU_ADDRMODE_IDY, CPU_OP_AND, 2, 5}, {0X32, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X33, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X34, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X35, CPU_ADDRMODE_ZPX, CPU_OP_AND, 2, 4}, {0X36, CPU_ADDRMODE_ZPX, CPU_OP_ROL, 2, 6}, {0X37, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X38, CPU_ADDRMODE_IMP, CPU_OP_SEC, 1, 2}, {0X39, CPU_ADDRMODE_ABY, CPU_OP_AND, 3, 4}, {0X3A, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X3B, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X3C, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0X3D, CPU_ADDRMODE_ABX, CPU_OP_AND, 3, 4}, {0X3E, CPU_ADDRMODE_ABX, CPU_OP_ROL, 3, 7}, {0X3F, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
@@ -923,7 +928,7 @@ const CPU_Instr* CPU_Decode(uint8_t opcode) {
         {0XC0, CPU_ADDRMODE_IMM, CPU_OP_CPY, 2, 2}, {0XC1, CPU_ADDRMODE_IDX, CPU_OP_CMP, 2, 6}, {0XC2, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XC3, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XC4, CPU_ADDRMODE_ZPG, CPU_OP_CPY, 2, 3}, {0XC5, CPU_ADDRMODE_ZPG, CPU_OP_CMP, 2, 3}, {0XC6, CPU_ADDRMODE_ZPG, CPU_OP_DEC, 2, 5}, {0XC7, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XC8, CPU_ADDRMODE_IMP, CPU_OP_INY, 1, 2}, {0XC9, CPU_ADDRMODE_IMM, CPU_OP_CMP, 2, 2}, {0XCA, CPU_ADDRMODE_IMP, CPU_OP_DEX, 1, 2}, {0XCB, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XCC, CPU_ADDRMODE_ABS, CPU_OP_CPY, 3, 4}, {0XCD, CPU_ADDRMODE_ABS, CPU_OP_CMP, 3, 4}, {0XCE, CPU_ADDRMODE_ABS, CPU_OP_DEC, 3, 6}, {0XCF, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
         {0XD0, CPU_ADDRMODE_REL, CPU_OP_BNE, 2, 2}, {0XD1, CPU_ADDRMODE_IDY, CPU_OP_CMP, 2, 5}, {0XD2, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XD3, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XD4, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XD5, CPU_ADDRMODE_ZPX, CPU_OP_CMP, 2, 4}, {0XD6, CPU_ADDRMODE_ZPX, CPU_OP_DEC, 2, 6}, {0XD7, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XD8, CPU_ADDRMODE_IMP, CPU_OP_CLD, 1, 2}, {0XD9, CPU_ADDRMODE_ABY, CPU_OP_CMP, 3, 4}, {0XDA, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XDB, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XDC, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XDD, CPU_ADDRMODE_ABX, CPU_OP_CMP, 3, 4}, {0XDE, CPU_ADDRMODE_ABX, CPU_OP_DEC, 3, 7}, {0XDF, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
         {0XE0, CPU_ADDRMODE_IMM, CPU_OP_CPX, 2, 2}, {0XE1, CPU_ADDRMODE_IDX, CPU_OP_SBC, 2, 6}, {0XE2, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XE3, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XE4, CPU_ADDRMODE_ZPG, CPU_OP_CPX, 2, 3}, {0XE5, CPU_ADDRMODE_ZPG, CPU_OP_SBC, 2, 3}, {0XE6, CPU_ADDRMODE_ZPG, CPU_OP_INC, 2, 5}, {0XE7, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XE8, CPU_ADDRMODE_IMP, CPU_OP_INX, 1, 2}, {0XE9, CPU_ADDRMODE_IMM, CPU_OP_SBC, 2, 2}, {0XEA, CPU_ADDRMODE_IMP, CPU_OP_NOP, 1, 2}, {0XEB, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XEC, CPU_ADDRMODE_ABS, CPU_OP_CPX, 3, 4}, {0XED, CPU_ADDRMODE_ABS, CPU_OP_SBC, 3, 4}, {0XEE, CPU_ADDRMODE_ABS, CPU_OP_INC, 3, 6}, {0XEF, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
-        {0XF0, CPU_ADDRMODE_REL, CPU_OP_BEQ, 2, 2}, {0XF1, CPU_ADDRMODE_IDY, CPU_OP_SBC, 2, 5}, {0XF2, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF3, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF4, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF5, CPU_ADDRMODE_ZPX, CPU_OP_SBC, 2, 4}, {0XF6, CPU_ADDRMODE_ZPX, CPU_OP_INC, 2, 6}, {0XF7, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF8, CPU_ADDRMODE_IMP, CPU_OP_SED, 1, 2}, {0XF9, CPU_ADDRMODE_ABY, CPU_OP_SBC, 3, 4}, {0XFA, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFB, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFC, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFD, CPU_ADDRMODE_ABX, CPU_OP_SBC, 3, 4}, {0XFE, CPU_ADDRMODE_ABX, CPU_OP_INC, 3, 7}, {0XFF, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, 
+        {0XF0, CPU_ADDRMODE_REL, CPU_OP_BEQ, 2, 2}, {0XF1, CPU_ADDRMODE_IDY, CPU_OP_SBC, 2, 5}, {0XF2, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF3, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF4, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF5, CPU_ADDRMODE_ZPX, CPU_OP_SBC, 2, 4}, {0XF6, CPU_ADDRMODE_ZPX, CPU_OP_INC, 2, 6}, {0XF7, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XF8, CPU_ADDRMODE_IMP, CPU_OP_SED, 1, 2}, {0XF9, CPU_ADDRMODE_ABY, CPU_OP_SBC, 3, 4}, {0XFA, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFB, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFC, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2}, {0XFD, CPU_ADDRMODE_ABX, CPU_OP_SBC, 3, 4}, {0XFE, CPU_ADDRMODE_ABX, CPU_OP_INC, 3, 7}, {0XFF, CPU_ADDRMODE_INV, CPU_OP_INV, 1, 2} 
     };
 
     return &isa[opcode];
@@ -956,20 +961,20 @@ void CPU_SetAddrMode(CPU* cpu) {
 void CPU_Execute(CPU* cpu) {
     // Maps OpType to the appropriate 6502 operation
     static const void(*op_funcs[])(CPU*) = {
-        [CPU_OP_ADC] = &op_adc,[CPU_OP_AND] = &op_and,[CPU_OP_ASL] = &op_asl,
-        [CPU_OP_BCC] = &op_bcc,[CPU_OP_BCS] = &op_bcs,[CPU_OP_BEQ] = &op_beq,[CPU_OP_BIT] = &op_bit,[CPU_OP_BMI] = &op_bmi,[CPU_OP_BNE] = &op_bne,[CPU_OP_BPL] = &op_bpl,[CPU_OP_BRK] = &op_brk,[CPU_OP_BVC] = &op_bvc,[CPU_OP_BVS] = &op_bvs,
-        [CPU_OP_CLC] = &op_clc,[CPU_OP_CLD] = &op_cld,[CPU_OP_CLI] = &op_cli,[CPU_OP_CLV] = &op_clv,[CPU_OP_CMP] = &op_cmp,[CPU_OP_CPX] = &op_cpx,[CPU_OP_CPY] = &op_cpy,
-        [CPU_OP_DEC] = &op_dec,[CPU_OP_DEX] = &op_dex,[CPU_OP_DEY] = &op_dey,
+        [CPU_OP_ADC] = &op_adc, [CPU_OP_AND] = &op_and, [CPU_OP_ASL] = &op_asl,
+        [CPU_OP_BCC] = &op_bcc, [CPU_OP_BCS] = &op_bcs, [CPU_OP_BEQ] = &op_beq, [CPU_OP_BIT] = &op_bit, [CPU_OP_BMI] = &op_bmi, [CPU_OP_BNE] = &op_bne, [CPU_OP_BPL] = &op_bpl, [CPU_OP_BRK] = &op_brk, [CPU_OP_BVC] = &op_bvc, [CPU_OP_BVS] = &op_bvs,
+        [CPU_OP_CLC] = &op_clc, [CPU_OP_CLD] = &op_cld, [CPU_OP_CLI] = &op_cli, [CPU_OP_CLV] = &op_clv, [CPU_OP_CMP] = &op_cmp, [CPU_OP_CPX] = &op_cpx, [CPU_OP_CPY] = &op_cpy,
+        [CPU_OP_DEC] = &op_dec, [CPU_OP_DEX] = &op_dex, [CPU_OP_DEY] = &op_dey,
         [CPU_OP_EOR] = &op_eor,
-        [CPU_OP_INC] = &op_inc,[CPU_OP_INX] = &op_inx,[CPU_OP_INY] = &op_iny,
-        [CPU_OP_JMP] = &op_jmp,[CPU_OP_JSR] = &op_jsr,
-        [CPU_OP_LDA] = &op_lda,[CPU_OP_LDX] = &op_ldx,[CPU_OP_LDY] = &op_ldy,[CPU_OP_LSR] = &op_lsr,
+        [CPU_OP_INC] = &op_inc, [CPU_OP_INX] = &op_inx, [CPU_OP_INY] = &op_iny,
+        [CPU_OP_JMP] = &op_jmp, [CPU_OP_JSR] = &op_jsr,
+        [CPU_OP_LDA] = &op_lda, [CPU_OP_LDX] = &op_ldx, [CPU_OP_LDY] = &op_ldy,[CPU_OP_LSR] = &op_lsr,
         [CPU_OP_NOP] = &op_nop,
         [CPU_OP_ORA] = &op_ora,
-        [CPU_OP_PHA] = &op_pha,[CPU_OP_PHP] = &op_php,[CPU_OP_PLA] = &op_pla,[CPU_OP_PLP] = &op_plp,
-        [CPU_OP_ROL] = &op_rol,[CPU_OP_ROR] = &op_ror,[CPU_OP_RTI] = &op_rti,[CPU_OP_RTS] = &op_rts,
-        [CPU_OP_SBC] = &op_sbc,[CPU_OP_SEC] = &op_sec,[CPU_OP_SED] = &op_sed,[CPU_OP_SEI] = &op_sei,[CPU_OP_STA] = &op_sta,[CPU_OP_STX] = &op_stx,[CPU_OP_STY] = &op_sty,
-        [CPU_OP_TAX] = &op_tax,[CPU_OP_TAY] = &op_tay,[CPU_OP_TSX] = &op_tsx,[CPU_OP_TXA] = &op_txa,[CPU_OP_TXS] = &op_txs,[CPU_OP_TYA] = &op_tya,
+        [CPU_OP_PHA] = &op_pha, [CPU_OP_PHP] = &op_php, [CPU_OP_PLA] = &op_pla, [CPU_OP_PLP] = &op_plp,
+        [CPU_OP_ROL] = &op_rol, [CPU_OP_ROR] = &op_ror, [CPU_OP_RTI] = &op_rti, [CPU_OP_RTS] = &op_rts,
+        [CPU_OP_SBC] = &op_sbc, [CPU_OP_SEC] = &op_sec, [CPU_OP_SED] = &op_sed, [CPU_OP_SEI] = &op_sei, [CPU_OP_STA] = &op_sta, [CPU_OP_STX] = &op_stx, [CPU_OP_STY] = &op_sty,
+        [CPU_OP_TAX] = &op_tax, [CPU_OP_TAY] = &op_tay, [CPU_OP_TSX] = &op_tsx, [CPU_OP_TXA] = &op_txa, [CPU_OP_TXS] = &op_txs, [CPU_OP_TYA] = &op_tya,
 
         // Invalid opcode is handled as a NOP
         [CPU_OP_INV] = &op_nop    
@@ -979,18 +984,221 @@ void CPU_Execute(CPU* cpu) {
 }
 
 /* Disassembler */
+// Returns a string of the disassembled instruction at addr 
+// Call before clocking
+char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
+    // Map OpType to string
+    static const char* op_names[] = {
+        [CPU_OP_ADC] = "ADC", [CPU_OP_AND] = "AND", [CPU_OP_ASL] = "ASL" ,  
+        [CPU_OP_BCC] = "BCC", [CPU_OP_BCS] = "BCS", [CPU_OP_BEQ] = "BEQ", [CPU_OP_BIT] = "BIT", [CPU_OP_BMI] = "BMI", [CPU_OP_BNE] = "BNE", [CPU_OP_BPL] = "BPL", [CPU_OP_BRK] = "BRK", [CPU_OP_BVC] = "BVC", [CPU_OP_BVS] = "BVS",
+        [CPU_OP_CLC] = "CLC", [CPU_OP_CLD] = "CLD", [CPU_OP_CLI] = "CLI", [CPU_OP_CLV] = "CLV", [CPU_OP_CMP] = "CMP", [CPU_OP_CPX] = "CPX", [CPU_OP_CPY] = "CPY",
+        [CPU_OP_DEC] = "DEC", [CPU_OP_DEX] = "DEX", [CPU_OP_DEY] = "DEY" ,  
+        [CPU_OP_EOR] = "EOR",
+        [CPU_OP_INC] = "INC", [CPU_OP_INX] = "INX", [CPU_OP_INY] = "INY" ,  
+        [CPU_OP_JMP] = "JMP", [CPU_OP_JSR] = "JSR",    
+        [CPU_OP_LDA] = "LDA", [CPU_OP_LDX] = "LDX", [CPU_OP_LDY] = "LDY", [CPU_OP_LSR] = "LSR", 
+        [CPU_OP_NOP] = "NOP",
+        [CPU_OP_ORA] = "ORA",
+        [CPU_OP_PHA] = "PHA", [CPU_OP_PHP] = "PHP", [CPU_OP_PLA] = "PLA", [CPU_OP_PLP] = "PLP", 
+        [CPU_OP_ROL] = "ROL", [CPU_OP_ROR] = "ROR", [CPU_OP_RTI] = "RTI", [CPU_OP_RTS] = "RTS", 
+        [CPU_OP_SBC] = "SBC", [CPU_OP_SEC] = "SEC", [CPU_OP_SED] = "SED", [CPU_OP_SEI] = "SEI", [CPU_OP_STA] = "STA", [CPU_OP_STX] = "STX", [CPU_OP_STY] = "STY",
+        [CPU_OP_TAX] = "TAX", [CPU_OP_TAY] = "TAY", [CPU_OP_TSX] = "TSX", [CPU_OP_TXA] = "TXA", [CPU_OP_TXS] = "TXS", [CPU_OP_TYA] = "TYA",
+
+        [CPU_OP_INV] = "INV"
+    };
+
+    uint8_t b1, b2, b3;
+    b1 = b2 = b3 = 0xff;
+    char* ptr;
+
+    uint8_t addr_ptr;
+    uint16_t addr_eff;
+    uint8_t off, lsb, msb;
+
+    uint8_t op = Bus_Read(cpu->bus, addr);    
+    const CPU_Instr* instr = CPU_Decode(op);
+
+    /*
+     * Order
+     * PC with 2 spaces after
+     * Instruction bytes, with white space if the byte isn't used
+     * 1 space extra
+     * Instruction name (begins with a * if it's an invalid opcode) 
+     * followed by some crazy syntax with one space at the end
+     * The end format is self explanatory
+     */
+    // Write the raw bytecode
+    char bytecode[9];
+    ptr = &bytecode[0];
+
+    b1 = Bus_Read(cpu->bus, addr);
+    ptr += sprintf(ptr, "%02X ", b1);
+    if (instr->bytes > 1) {
+        b2 = Bus_Read(cpu->bus, addr + 1);
+        ptr += sprintf(ptr, "%02X ", b2);
+    }
+    if (instr->bytes > 2) {
+        b3 = Bus_Read(cpu->bus, addr + 2);
+        sprintf(ptr, "%02X", b3);
+    }
+
+    // First byte is a * on invalid opcodes, ' ' on regular opcodes
+    char disas[32];
+    disas[0] = ' ';
+    
+    // Write the instruction name
+    ptr = &disas[1];
+    ptr += sprintf(ptr, "%s ", op_names[instr->op_type]);
+
+    // Reading from the PPU can change its state, so we call the 
+    // PPU_RegisterInspect function to view without changing the state
+    // TODO: THIS IS A LITTLE REDUNDANT, TRY AND MAKE A FUNCTION THAT IS USED
+    //       BY CPU_SetAddrMode THAT I CAN ALSO USE HERE TO GET addr_eff
+    // FIXME: THIS IS BROKEN, THIS WILL MODIFY PPU STATE ON ANY PPU REGISTER
+    //        READ OTHER THAN IN ABSOLUTE MODE, SO I WILL PRINT IF THAT 
+    //        HAPPENS TO SIGNAL THAT EVERYTHING THAT HAPPENS IS INVALID
+    if (instr->addr_mode != CPU_ADDRMODE_ABS && addr >= 0x2000 && addr < 0x4000)
+        printf("PPU_RegisterRead in disassembler\n");
+    switch (instr->addr_mode) {
+    case CPU_ADDRMODE_ACC:
+        if (instr->op_type == CPU_OP_LSR || instr->op_type == CPU_OP_ASL 
+            || instr->op_type == CPU_OP_ROR || instr->op_type == CPU_OP_ROL)
+            sprintf(ptr, "A");
+        else
+            sprintf(ptr, "#$%02X", b2);
+        break;
+    case CPU_ADDRMODE_IMM:
+        sprintf(ptr, "#$%02X", b2);
+        break;
+    case CPU_ADDRMODE_ABS:
+        if (instr->op_type == CPU_OP_JMP || instr->op_type == CPU_OP_JSR) {
+            sprintf(ptr, "$%02X%02X", b3, b2);
+        }
+        else {
+            addr_eff = ((uint16_t)b3 << 8) | b2;
+            if (addr_eff >= 0x2000 && addr_eff < 0x4000)
+                sprintf(ptr, "$%02X%02X = %02X", b3, b2, 
+                    PPU_RegisterInspect(cpu->bus->ppu, addr_eff));
+            else
+                sprintf(ptr, "$%02X%02X = %02X", b3, b2, 
+                    Bus_Read(cpu->bus, ((uint16_t)b3 << 8) | b2));
+        }
+        break;
+    case CPU_ADDRMODE_ZPG:
+        sprintf(ptr, "$%02X = %02X", b2, Bus_Read(cpu->bus, b2));
+        break;
+    case CPU_ADDRMODE_ZPX:
+        sprintf(ptr, "$%02X,X @ %02X = %02X", b2, (uint8_t)(b2 + cpu->x), 
+            Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->x)));
+        break;
+    case CPU_ADDRMODE_ZPY:
+        sprintf(ptr, "$%02X,Y @ %02X = %02X", b2, (uint8_t)(b2 + cpu->y), 
+            Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->y)));
+        break;
+    case CPU_ADDRMODE_ABX:
+        addr_eff = (((uint16_t)b3 << 8) | b2) + cpu->x;
+        sprintf(ptr, "$%02X%02X,X @ %04X = %02X", b3, b2, addr_eff, 
+            Bus_Read(cpu->bus, addr_eff));
+        break;
+    case CPU_ADDRMODE_ABY:
+        addr_eff = (((uint16_t)b3 << 8) | b2) + cpu->y;
+        sprintf(ptr, "$%02X%02X,Y @ %04X = %02X", b3, b2, addr_eff, 
+            Bus_Read(cpu->bus, addr_eff));
+        break;
+    case CPU_ADDRMODE_IMP:
+        break;
+    case CPU_ADDRMODE_REL:
+        sprintf(ptr, "$%04X", addr + 2 + b2);
+        break;
+    case CPU_ADDRMODE_IDX:
+        addr_ptr = b2 + cpu->x;
+        addr_eff = ((uint16_t)Bus_Read(cpu->bus, (uint8_t)(addr_ptr + 1)) << 8) 
+            | Bus_Read(cpu->bus, addr_ptr);
+        sprintf(ptr, "($%02X,X) @ %02X = %04X = %02X", b2, addr_ptr, addr_eff, 
+            Bus_Read(cpu->bus, addr_eff));
+        break;
+    case CPU_ADDRMODE_IDY:
+        off = b2;
+
+        // perform addition on 8-bit variable to force desired overflow (wrap around) behavior
+        lsb = Bus_Read(cpu->bus, off++);
+        msb = Bus_Read(cpu->bus, off);
+
+        addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->y;
+        // without cast you get some weird stack corruption shit when the addition of y causes an overflow, leading
+        // to it's subtraction causing and underflow and making final_addr not fit in the space it should
+        sprintf(ptr, "($%02X),Y = %04X @ %04X = %02X", b2, 
+            (uint16_t)(addr_eff - cpu->y), addr_eff, 
+            Bus_Read(cpu->bus, addr_eff));
+        break;
+    case CPU_ADDRMODE_IND:
+        addr_eff = ((uint16_t)b3 << 8) | b2;
+
+        if (b2 == 0xff)
+            sprintf(ptr, "($%04X) = %04X", addr_eff,
+                (uint16_t)(Bus_Read(cpu->bus, addr_eff & 0xff00) << 8) 
+                | Bus_Read(cpu->bus, addr_eff));
+        else
+            sprintf(ptr, "($%04X) = %04X", addr_eff,
+                ((uint16_t)Bus_Read(cpu->bus, addr_eff + 1) << 8) 
+                | Bus_Read(cpu->bus, addr_eff));
+        break;
+
+    default:
+        break;
+    }
+
+    /*
+     * 4 for pc + 2 spaces + 8 for bytecode + 1 space + 31 for disassembly 
+     * + 2 spaces + 4 for A 
+     * + 1 space + 4 for x + 1 space + 4 for y + 1 space + 4 for p 
+     * + 1 space + 4 for sp + 1 space + 
+     * 4 for ppu text + max of 10 chars for unsigned int + 1 comma 
+     * + max of 10 chars for unsigned int
+     * + 1 space + 4 for cyc text 
+     * + max of 10 chars for unsigned int + 1 null terminator
+     * 4 + 2 + 8 + 1 + 8 + 1 + 31 + 2 + 4 + 1 + 4 + 1 + 4 + 
+     * 1 + 4 + 1 + 4 + 1 + 4 + 10 + 1 + 10 + 1 + 4 + 10 + 1
+     * 115 bytes required, but just in case we will allocate 120 because
+     * It will allocate that much anyway due to 8 byte alignment and give
+     * me a safety net, so really there is no downside.
+     */
+    char* ret = malloc(120*sizeof(char));
+
+    if (ret == NULL)
+        return NULL;
+
+    sprintf(ret, 
+        "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+        addr, bytecode, disas, cpu->a, cpu->x, cpu->y, cpu->status, cpu->sp, 
+        (unsigned int)(cpu->cycles_count*3/341), 
+        (unsigned int)(cpu->cycles_count*3%341), 
+        (unsigned int)cpu->cycles_count);
+
+    return ret;
+}
+
+void CPU_DisassembleLog(CPU* cpu) {
+    char* str = CPU_DisassembleString(cpu, cpu->pc-1);
+    fprintf(nestest_log, "%s\n", str);
+    free(str);
+}
+
 uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
-    // FIXME: SOMETHING ABOUT THIS IS SLIGHTLY WRONG
-    // BECAUSE IN NESTEST I KNOW THAT I SHOULD HAVE A JMP AT C000 BUT IT SHOWS THE INSTR STARTING
-    // AT C001
-    // need to start all the way from the beginning (recall that prg_rom starts at addr 0x8000)
+    // NOTE: IN THE CASE OF NESTEST WHERE IT JUMPS TO C000, THERE IS A 
+    //       MISALIGNMENT BECAUSE THE JMP IS JUST A RANDOM BYTE, NOT AN 
+    //       ALIGNED INSTRUCTION, SO THIS WILL NOT BE RIGHT FOR INSTRUCTIONS
+    //       EMBEDDED IN OTHER INSTRUCTIONS
+
+    // Need to start all the way from the beginning 
+    // (recall that prg_rom starts at addr 0x8000)
     uint16_t* ret = malloc(27 * sizeof(uint16_t));
     uint16_t addr = 0x8000;
 
     if (ret == NULL)
         return NULL;
 
-    // fill with first 27 instructions
+    // Fill with first 27 instructions
     for (int i = 0; i < 27; i++) {
         ret[i] = addr;
         uint8_t opcode = Bus_Read(cpu->bus, addr);
@@ -1003,7 +1211,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
         // TODO: put in the logic for this edge case
     }
     else {
-        while (addr != cpu->pc) {
+        while (addr < cpu->pc) {
             for (int i = 1; i < 27; i++) {
                 ret[i - 1] = ret[i];
             }
@@ -1031,186 +1239,4 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     }
 
     return ret;
-}
-
-char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
-    // ops_t mapped to a string (there should really be a built-in function for this)
-    static const char* op_names[] = {
-        [CPU_OP_ADC] = "ADC",[CPU_OP_AND] = "AND",[CPU_OP_ASL] = "ASL",
-        [CPU_OP_BCC] = "BCC",[CPU_OP_BCS] = "BCS",[CPU_OP_BEQ] = "BEQ",[CPU_OP_BIT] = "BIT",[CPU_OP_BMI] = "BMI",[CPU_OP_BNE] = "BNE",[CPU_OP_BPL] = "BPL",[CPU_OP_BRK] = "BRK",[CPU_OP_BVC] = "BVC",[CPU_OP_BVS] = "BVS",
-        [CPU_OP_CLC] = "CLC",[CPU_OP_CLD] = "CLD",[CPU_OP_CLI] = "CLI",[CPU_OP_CLV] = "CLV",[CPU_OP_CMP] = "CMP",[CPU_OP_CPX] = "CPX",[CPU_OP_CPY] = "CPY",
-        [CPU_OP_DEC] = "DEC",[CPU_OP_DEX] = "DEX",[CPU_OP_DEY] = "DEY",
-        [CPU_OP_EOR] = "EOR",
-        [CPU_OP_INC] = "INC",[CPU_OP_INX] = "INX",[CPU_OP_INY] = "INY",
-        [CPU_OP_JMP] = "JMP",[CPU_OP_JSR] = "JSR",
-        [CPU_OP_LDA] = "LDA",[CPU_OP_LDX] = "LDX",[CPU_OP_LDY] = "LDY",[CPU_OP_LSR] = "LSR",
-        [CPU_OP_NOP] = "NOP",
-        [CPU_OP_ORA] = "ORA",
-        [CPU_OP_PHA] = "PHA",[CPU_OP_PHP] = "PHP",[CPU_OP_PLA] = "PLA",[CPU_OP_PLP] = "PLP",
-        [CPU_OP_ROL] = "ROL",[CPU_OP_ROR] = "ROR",[CPU_OP_RTI] = "RTI",[CPU_OP_RTS] = "RTS",
-        [CPU_OP_SBC] = "SBC",[CPU_OP_SEC] = "SEC",[CPU_OP_SED] = "SED",[CPU_OP_SEI] = "SEI",[CPU_OP_STA] = "STA",[CPU_OP_STX] = "STX",[CPU_OP_STY] = "STY",
-        [CPU_OP_TAX] = "TAX",[CPU_OP_TAY] = "TAY",[CPU_OP_TSX] = "TSX",[CPU_OP_TXA] = "TXA",[CPU_OP_TXS] = "TXS",[CPU_OP_TYA] = "TYA",
-
-        [CPU_OP_INV] = "INV"
-    };
-
-    uint8_t b1, b2, b3;
-    b1 = b2 = b3 = 0xff;
-    char* ptr;
-
-    // FIXME: CLEAN THIS UP
-    uint16_t a1, a2;
-    uint8_t addr_ptr;
-    uint16_t addr_eff;
-    uint16_t abcdef;
-    uint16_t foobar;
-    uint8_t off, lsb, msb;
-    uint16_t final_addr;
-
-    // to be called before clocking
-    uint8_t op = Bus_Read(cpu->bus, addr);          // read instruction (don't increment as we need to do this again in clock function)
-    const CPU_Instr* instr = CPU_Decode(op);  // index associated instruction
-
-    uint8_t opcode = op;
-    uint8_t cycles_rem = instr->cycles;
-    
-    // order 
-    // pc with 2 spaces after
-    // the instruction bytes, with white space if the byte isn't used. with 1 space after
-    // instruction name (begins with a * if it's an invalid opcode) followed by some crazy fucking syntax (1 or 2 spaces at end, i can't tell)
-    // the rest is trivial at the end
-
-    // default to spaces
-    char bytecode[9];
-    
-    // write the bytes (first one will always happen, barring a bug)
-    ptr = &bytecode[0];
-    if (instr->bytes > 0) {
-        b1 = Bus_Read(cpu->bus, addr);
-        ptr += sprintf(ptr, "%02X ", b1);
-    }
-    if (instr->bytes > 1) {
-        b2 = Bus_Read(cpu->bus, addr + 1);
-        ptr += sprintf(ptr, "%02X ", b2);
-    }
-    if (instr->bytes > 2) {
-        b3 = Bus_Read(cpu->bus, addr + 2);
-        ptr += sprintf(ptr, "%02X", b3);
-    }
-
-    // default to spaces
-    char disas[32];
-    disas[0] = ' ';
-    
-    // first byte is a * on invalid opcodes
-    ptr = &disas[1];
-    ptr += sprintf(ptr, "%s ", op_names[instr->op_type]);
-
-    // FIXME: fix this hacked together mess
-    // FIXME: IF YOU PERFORM A PPU READ, YOU HAVE INADVERTANTLY MODIFIED THE STATE OF THE PPU
-    //        TO AVOID THIS I REFUSE TO READ IF THE ADDRESS IS IN THE PPU ADDRESSING RANGE
-    switch (instr->addr_mode) {
-    case CPU_ADDRMODE_ACC:
-        if (instr->op_type == CPU_OP_LSR || instr->op_type == CPU_OP_ASL || instr->op_type == CPU_OP_ROR || instr->op_type == CPU_OP_ROL)
-            ptr += sprintf(ptr, "A");
-        else
-            ptr += sprintf(ptr, "#$%02X", b2);
-        break;
-    case CPU_ADDRMODE_IMM:
-        ptr += sprintf(ptr, "#$%02X", b2);
-        break;
-    case CPU_ADDRMODE_ABS:
-        // NOTE: THERE IS A HACK HERE SO THAT I DON'T MODIFY THE PPU STATE IF I TRY TO READ FROM IT
-        //       THERE MAY BE OTHER ADDR MODES THAT TRY THIS SHIT
-        if (instr->op_type == CPU_OP_JMP || instr->op_type == CPU_OP_JSR)
-            ptr += sprintf(ptr, "$%02X%02X", b3, b2);
-        else {
-            abcdef = ((uint16_t)b3 << 8) | b2;
-            if (abcdef >= 0x2000 && abcdef < 0x4000)
-                ptr += sprintf(ptr, "$%02X%02X = %02X", b3, b2, PPU_RegisterInspect(cpu->bus->ppu, abcdef));
-            else
-                ptr += sprintf(ptr, "$%02X%02X = %02X", b3, b2, Bus_Read(cpu->bus, ((uint16_t)b3 << 8) | b2));
-        }
-        break;
-    case CPU_ADDRMODE_ZPG:
-        ptr += sprintf(ptr, "$%02X = %02X", b2, Bus_Read(cpu->bus, b2));
-        break;
-    case CPU_ADDRMODE_ZPX:
-        ptr += sprintf(ptr, "$%02X,X @ %02X = %02X", b2, (uint8_t)(b2 + cpu->x), Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->x)));
-        break;
-    case CPU_ADDRMODE_ZPY:
-        ptr += sprintf(ptr, "$%02X,Y @ %02X = %02X", b2, (uint8_t)(b2 + cpu->y), Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->y)));
-        break;
-    case CPU_ADDRMODE_ABX:
-        a1 = (((uint16_t)b3 << 8) | b2) + cpu->x;
-        ptr += sprintf(ptr, "$%02X%02X,X @ %04X = %02X", b3, b2, a1, Bus_Read(cpu->bus, a1));
-        break;
-    case CPU_ADDRMODE_ABY:
-        a2 = (((uint16_t)b3 << 8) | b2) + cpu->y;
-        ptr += sprintf(ptr, "$%02X%02X,Y @ %04X = %02X", b3, b2, a2, Bus_Read(cpu->bus, a2));
-        break;
-    case CPU_ADDRMODE_IMP:
-        //ptr += sprintf(ptr, "$%02X%02X", b3, b2);
-        break;
-    case CPU_ADDRMODE_REL:
-        ptr += sprintf(ptr, "$%04X", addr + 2 + b2);
-        break;
-    case CPU_ADDRMODE_IDX:
-        addr_ptr = b2 + cpu->x;
-        addr_eff = ((uint16_t)Bus_Read(cpu->bus, (uint8_t)(addr_ptr + 1)) << 8) | Bus_Read(cpu->bus, addr_ptr);
-        ptr += sprintf(ptr, "($%02X,X) @ %02X = %04X = %02X", b2, addr_ptr, addr_eff, Bus_Read(cpu->bus, addr_eff));
-        break;
-    case CPU_ADDRMODE_IDY:
-        off = b2;
-
-        // perform addition on 8-bit variable to force desired overflow (wrap around) behavior
-        lsb = Bus_Read(cpu->bus, off++);
-        msb = Bus_Read(cpu->bus, off);
-
-        final_addr = (((uint16_t)msb << 8) | lsb) + cpu->y;
-        // without cast you get some weird stack corruption shit when the addition of y causes an overflow, leading
-        // to it's subtraction causing and underflow and making final_addr not fit in the space it should
-        ptr += sprintf(ptr, "($%02X),Y = %04X @ %04X = %02X", b2, (uint16_t)(final_addr - cpu->y), final_addr, Bus_Read(cpu->bus, final_addr));
-        break;
-    case CPU_ADDRMODE_IND:
-        foobar = ((uint16_t)b3 << 8) | b2;
-
-        if (b2 == 0xff)
-            ptr += sprintf(ptr, "($%04X) = %04X", foobar,
-                (uint16_t)(Bus_Read(cpu->bus, foobar & 0xff00) << 8) | Bus_Read(cpu->bus, foobar));
-        else
-                ptr += sprintf(ptr, "($%04X) = %04X", foobar,
-                    ((uint16_t)Bus_Read(cpu->bus, foobar + 1) << 8) | Bus_Read(cpu->bus, foobar));
-        break;
-
-    default:
-        break;
-    }
-
-    // might wanna make this a static buffer, but it seems safer to potentially leak memory
-    // and waste the performance than to potentially have random changes occur to my buffer
-    // 4 for pc + 2 spaces + 8 for bytecode + 1 space + 31 for disassembly + 2 spaces + 4 for A 
-    // + 1 space + 4 for x + 1 space + 4 for y + 1 space + 4 for p + 1 space + 4 for sp + 1 space + 
-    // 4 for ppu text + max of 10 chars for unsigned int + 1 comma + max of 10 chars for unsigned int
-    // + 1 space + 4 for cyc text + max of 10 chars for unsigned int + 1 null terminator
-    // 4 + 2 + 8 + 1 + 8 + 1 + 31 + 2 + 4 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 4 + 10 + 1 + 10 + 1 + 4 + 10 + 1
-    // 115 bytes required, but just in case we will allocate 120 because A. it will allocate that much anyway due to 
-    // 8 byte alignment, and B. to give me a safety net in case i miscounted
-    char* ret = malloc(120*sizeof(char));
-
-    if (ret == NULL)
-        return NULL;
-
-    // NOTE: YOU NEED TO ALLOCATE EXTRA SPACE AT THE END THAN WHAT YOU NEED FROM WHEN YOU ONLY TEST BECUASE THE CYCLES WILL OVERFLOW THAT
-    sprintf(ret, "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-        addr, bytecode, disas, cpu->a, cpu->x, cpu->y, cpu->status, cpu->sp, (unsigned int)(cpu->cycles_count*3/341), 
-        (unsigned int)(cpu->cycles_count*3%341), (unsigned int)cpu->cycles_count);
-
-    return ret;
-}
-
-void CPU_DisassembleLog(CPU* cpu) {
-    char* str = CPU_DisassembleString(cpu, cpu->pc-1);
-    fprintf(nestest_log, "%s\n", str);
-    free(str);
 }

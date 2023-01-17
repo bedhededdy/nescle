@@ -631,7 +631,7 @@ void inspect_soft() {
     Cart* cart = bus->cart;
     PPU* ppu = bus->ppu;
 
-    const char* rom_name = "roms/dkrev1.nes";
+    const char* rom_name = "roms/iceclimbers.nes";
     if (!Cart_LoadROM(cart, rom_name))
         return;
 
@@ -1271,7 +1271,7 @@ void inspect_hw_mul() {
     PPU* ppu = bus->ppu;
     Cart* cart = bus->cart;
 
-    const char* rom_path = "roms/dkrev1.nes";
+    const char* rom_path = "roms/iceclimbers.nes";
     if (!Cart_LoadROM(cart, rom_path)) return;
 
     Bus_PowerOn(bus);
@@ -1437,8 +1437,9 @@ int main(int argc, char** argv) {
 
     inspect_hw_mul();*/
 
-    test_cpu_with_mapper();
+    //test_cpu_with_mapper();
     //inspect_hw_mul();
+    inspect_soft();
 
     return 0;
 }
