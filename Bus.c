@@ -13,7 +13,7 @@
 Bus* Bus_CreateNES(void) {
     Bus* bus = malloc(sizeof(Bus));
     CPU* cpu = CPU_Create();
-    PPU* ppu = PPU_Construct();
+    PPU* ppu = PPU_Create();
     Cart* cart = Cart_Create();
 
     if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
