@@ -1326,7 +1326,7 @@ void inspect_hw_mul() {
     if (char_set == NULL) return;
 
     // Start emulation thread
-    bool run_emulation = false;
+    bool run_emulation = true;
     bool quit = false;
     SDL_cond* signal_frame_ready = SDL_CreateCond();
     struct emulation_thread_struct arg = { bus, &run_emulation, &quit, signal_frame_ready };
@@ -1438,6 +1438,7 @@ int main(int argc, char** argv) {
     inspect_hw_mul();*/
 
     test_cpu_with_mapper();
+    //inspect_hw_mul();
 
     return 0;
 }
