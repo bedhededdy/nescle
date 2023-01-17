@@ -1120,13 +1120,16 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
     case CPU_ADDRMODE_IDY:
         off = b2;
 
-        // perform addition on 8-bit variable to force desired overflow (wrap around) behavior
+        // Perform addition on 8-bit variable to force desired 
+        // overflow (wrap around) behavior
         lsb = Bus_Read(cpu->bus, off++);
         msb = Bus_Read(cpu->bus, off);
 
         addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->y;
-        // without cast you get some weird stack corruption shit when the addition of y causes an overflow, leading
-        // to it's subtraction causing and underflow and making final_addr not fit in the space it should
+        // Without cast you get some weird stack corruption when the 
+        // addition of y causes an overflow, leading
+        // to it's subtraction causing and underflow and making addr_eff
+        // not fit in the space it should
         sprintf(ptr, "($%02X),Y = %04X @ %04X = %02X", b2, 
             (uint16_t)(addr_eff - cpu->y), addr_eff, 
             Bus_Read(cpu->bus, addr_eff));
@@ -1179,27 +1182,37 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
 }
 
 void CPU_DisassembleLog(CPU* cpu) {
+    // Need to do PC-1 since we call this in the middle of the clock function
     char* str = CPU_DisassembleString(cpu, cpu->pc-1);
     fprintf(nestest_log, "%s\n", str);
     free(str);
 }
 
 uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
-    // NOTE: IN THE CASE OF NESTEST WHERE IT JUMPS TO C000, THERE IS A 
-    //       MISALIGNMENT BECAUSE THE JMP IS JUST A RANDOM BYTE, NOT AN 
-    //       ALIGNED INSTRUCTION, SO THIS WILL NOT BE RIGHT FOR INSTRUCTIONS
-    //       EMBEDDED IN OTHER INSTRUCTIONS
+    /* 
+     * NOTE: This function will not necessarily work for misaligned 
+     * instructions. What I 
+     * mean by this is consider something like the nestest rom. Before you
+     * have graphics and controller input in at least a semi-working state,
+     * you need to hardcode the PC to the address C000. This address is not
+     * the actual beginning of an instruction, it's just some random byte
+     * that happens to do what is required by the program. For a misaligned
+     * instruction, the actual correct instruction will be highlighted in 
+     * green in the disassembler, but everything before and after it are 
+     * potentially wrong.
+     */
 
-    // Need to start all the way from the beginning 
-    // (recall that prg_rom starts at addr 0x8000)
-    uint16_t* ret = malloc(27 * sizeof(uint16_t));
+    // Need to start all the way from the beginning of prg_rom to determine
+    // the alignment of all instructions preceding the current one
+    const int ret_len = 27;
+    uint16_t* ret = malloc(ret_len * sizeof(uint16_t));
     uint16_t addr = 0x8000;
 
     if (ret == NULL)
         return NULL;
 
     // Fill with first 27 instructions
-    for (int i = 0; i < 27; i++) {
+    for (int i = 0; i < ret_len; i++) {
         ret[i] = addr;
         uint8_t opcode = Bus_Read(cpu->bus, addr);
 
@@ -1208,29 +1221,31 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     }
     
     if (addr >= cpu->pc) {
-        // TODO: put in the logic for this edge case
+        // TODO: PUT IN LOGIC THAT IGNORES THE PROPER NUMBER OF ROWS
+        //       FOR PROPER VISUAL PLACEMENT ON THE EDGE CASE WHERE
+        //       ADDR IS WITHIN 27 INSTRUCTIONS OF ADDRESS 0X8000
     }
     else {
+        // We need to do a < here, because if we do an addr != pc
+        // we will get stuck in an infinite loop on misaligned instructions
         while (addr < cpu->pc) {
-            for (int i = 1; i < 27; i++) {
+            for (int i = 1; i < ret_len; i++)
                 ret[i - 1] = ret[i];
-            }
 
             uint8_t opcode = Bus_Read(cpu->bus, addr);
 
             const CPU_Instr* instr = CPU_Decode(opcode);
             addr += instr->bytes;
-            ret[26] = addr;
-
+            ret[ret_len - 1] = addr;
         }
     }
 
-    // TODO: HANDLE EDGE CASE WHERE WE DON'T HAVE 13 INSTRUCTIONS AFTER THE PC
-    for (int i = 0; i < 13; i++)
+    for (int i = 0; i < ret_len/2; i++)
         for (int j = 1; j < 27; j++)
             ret[j - 1] = ret[j];
 
-    for (int i = 14; i < 27; i++) {
+    // TODO: HANDLE EDGE CASE WHERE WE DON'T HAVE 13 INSTRUCTIONS AFTER THE PC
+    for (int i = ret_len/2 + 1; i < ret_len; i++) {
         uint8_t opcode = Bus_Read(cpu->bus, addr);
 
         const CPU_Instr* instr = CPU_Decode(opcode);
