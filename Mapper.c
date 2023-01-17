@@ -70,7 +70,7 @@ bool Mapper000_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
 
 bool Mapper000_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
     // There is only chr_rom from 0 to 0x2000, so we can't write to it.
-    // However, if for some reason there are 0 banks, we can treat this as ram
+    // However, if for some reason there are 0 banks, we can treat this as RAM
     if (addr >= 0 && addr < 0x2000 && mapper->chr_rom_banks == 0) {
         *mapped_addr = addr;
         return true;
