@@ -1,7 +1,3 @@
-// TODO: MAIN THING TO DO HERE IS TO REMOVE PPU_PIXELS IN FAVOR OF UINT32
-//       AND ALSO TO FIX THE READ TO USE THE MAPPING, THUS AVOIDING DEALING
-//       WITH THE PATTERN TABLE ENTIRELY (AS IT IS JUST AN ABSTRACTION
-//       THAT POINTS TO SOMEWHERE IN CHR_ROM)
 #pragma once
 
 #include <stdbool.h>
@@ -18,6 +14,9 @@
 #define PPU_TILE_NBYTES     (16)
 #define PPU_TILE_X          (8)
 #define PPU_TILE_Y          (8)
+
+#define PPU_NAMETBL_X       (32)
+#define PPU_NAMETBL_Y       (32)
 
 #define PPU_RESOLUTION_X    (256)
 #define PPU_RESOLUTION_Y    (240)
@@ -56,25 +55,36 @@
 #define PPU_LOOPY_NAMETBL_Y             (1 << 11)
 #define PPU_LOOPY_FINE_Y                (0x7000)
 
+// Wrapper for PPU double buffer
+//struct ppu_double_buffer {
+//    uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
+//    SDL_mutex* frame_buffer_lock;
+//}
+
+// Wrapper for PPU triple buffer
+//struct ppu_triple_buffer {
+//    uint32_t frame_buffer[2][PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
+//    int buffer_to_write;
+//}
+
 struct ppu {
     Bus* bus;
 
     // Current screen and last complete frame
     // TODO: EITHER MAKE BOTH OF THESE 1D OR 2D ARRAYS
+    // TODO: CONSIDER WRAPPING THE FRAME BUFFER AND LOCK IN ITS OWN STRUCT
     uint32_t screen[PPU_RESOLUTION_Y][PPU_RESOLUTION_X];
     uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
     SDL_mutex* frame_buffer_lock;
 
-    uint8_t nametbl[2][PPU_NAMETBL_SIZE];           // nes supported 2, 1kb nametables
-    uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
-    uint8_t palette[PPU_PALETTE_SIZE];              // color palette information
-    
-    // representation of the nametable data as rgb values
-    uint32_t sprnametbl[2][PPU_RESOLUTION_X * PPU_RESOLUTION_Y];
+    uint8_t nametbl[2][PPU_NAMETBL_SIZE];   // nes supported 2, 1kb nametables
+    // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
+    //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
+    uint8_t palette[PPU_PALETTE_SIZE];     // color palette information
 
     // 8x8px per tile x 256 tiles per half
     // representation of the pattern table as rgb values
-    uint32_t sprpatterntbl[2][8 * 16][8 * 16];
+    uint32_t sprpatterntbl[2][PPU_TILE_X * PPU_TILE_NBYTES][PPU_TILE_Y * PPU_TILE_NBYTES];
 
     int scanline;   // which row of the screen we are on
     int cycle;      // what col of the screen we are on (1 pixel per cycle)
@@ -90,7 +100,7 @@ struct ppu {
 
     uint8_t fine_x;
 
-    uint8_t addr_latch;     // indicates if i'm writing to the lo or hi byte of memory
+    uint8_t addr_latch;     // indicates whether I'm writing the lo or hi byte of the address
     uint8_t data_buffer;    // r/w buffer, since most r/w is delayed by a cycle
 
     // Background rendering
@@ -108,7 +118,7 @@ struct ppu {
 };
 
 /* Constructors/Destructors */
-PPU* PPU_Create();
+PPU* PPU_Create(void);
 void PPU_Destroy(PPU* ppu);
 
 /* Interrupts (technically PPU has no notion of interrupts) */
@@ -117,16 +127,14 @@ void PPU_Reset(PPU* ppu);
 void PPU_PowerOn(PPU* ppu);
 
 /* Read/Write */
-// TODO: MAKE SURE THESE FUCKERS MAP THE ADDRESS
 uint8_t PPU_Read(PPU* ppu, uint16_t addr);
 bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data);
 uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr);
 bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data);
-
 // Reads the ppu register without changing the state 
 // (when reading from the ppu registers, some of them actually change state)
 uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr);
 
-uint32_t get_color_from_palette(PPU* ppu, uint8_t palette, uint8_t pixel);
-void set_pixel(PPU* ppu, uint8_t idx, uint16_t x, uint16_t y, uint32_t pixel);
-void get_patterntbl(PPU* ppu, uint8_t idx, uint8_t palette);
+/* Public Helper Functions */
+uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel);
+void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette);

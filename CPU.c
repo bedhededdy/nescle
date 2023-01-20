@@ -765,10 +765,17 @@ static void op_tya(CPU* cpu) {
 
 /* Constructors/Destructors */
 CPU* CPU_Create(void) {
-    return malloc(sizeof(CPU));
+    CPU* cpu = malloc(sizeof(CPU));
+    if (cpu == NULL)
+        return NULL;
+    cpu->pc_lock = SDL_CreateMutex();
+    if (cpu->pc_lock == NULL)
+        return NULL;
+    return cpu;
 }
 
 void CPU_Destroy(CPU* cpu) {
+    SDL_DestroyMutex(cpu->pc_lock);
     free(cpu);
 }
 
@@ -782,6 +789,9 @@ void CPU_Clock(CPU* cpu) {
      * to ensure proper timing 
      */
     if (cpu->cycles_rem == 0) {
+        // Don't let disassembler run while in middle of instruction
+        if (SDL_LockMutex(cpu->pc_lock))
+            printf("CPU_Clock: failed to acquire mutex\n");
         // Fetch
         uint8_t op = Bus_Read(cpu->bus, cpu->pc++);
         
@@ -796,6 +806,8 @@ void CPU_Clock(CPU* cpu) {
         // Execute
         CPU_SetAddrMode(cpu);
         CPU_Execute(cpu);
+        if (SDL_UnlockMutex(cpu->pc_lock))
+            printf("CPU_Clock: failed to unlock mutex\n");
     }
 
     // Countdown
@@ -1189,6 +1201,12 @@ void CPU_DisassembleLog(CPU* cpu) {
 }
 
 uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
+    // TODO: CALLING THIS EACH TIME IS SUBOPTIMAL (ALTHOUGH HAS LITTLE 
+    //       PERFORMANCE IMPACT). BETTER TO GENERATE ALL ADDRS AT ONCE
+    //       AND DO A BIN SEARCH FOR OUR SUBSET OF INSTRUCTIONS. 
+    //       WE COULD USE A MAP TO FURTHER
+    //       IMPROVE THE PERFORMANCE, BUT I'D RATHER NOT CREATE MY OWN
+    //       MAP FOR NO PERCEPTIBLE PERFORMANCE GAIN
     /* 
      * NOTE: This function will not necessarily work for misaligned 
      * instructions. What I 
@@ -1211,6 +1229,13 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     if (ret == NULL)
         return NULL;
 
+    // THIS CANNOT BE OPTIMIZED AWAY, OR THERE WILL BE BUGS
+    if (SDL_LockMutex(cpu->pc_lock))
+        printf("CPU_GenerateOpStartingAddrs: failed to acquire mutex\n");
+    uint16_t pc = cpu->pc;
+    if (SDL_UnlockMutex(cpu->pc_lock))
+        printf("CPU_GenerateOpStartingAddrs: failed to unlock mutex\n");
+
     // Fill with first 27 instructions
     for (int i = 0; i < ret_len; i++) {
         ret[i] = addr;
@@ -1220,7 +1245,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
         addr += instr->bytes;
     }
     
-    if (addr >= cpu->pc) {
+    if (addr >= pc) {
         // TODO: PUT IN LOGIC THAT IGNORES THE PROPER NUMBER OF ROWS
         //       FOR PROPER VISUAL PLACEMENT ON THE EDGE CASE WHERE
         //       ADDR IS WITHIN 27 INSTRUCTIONS OF ADDRESS 0X8000
@@ -1228,7 +1253,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     else {
         // We need to do a < here, because if we do an addr != pc
         // we will get stuck in an infinite loop on misaligned instructions
-        while (addr < cpu->pc) {
+        while (addr < pc) {
             for (int i = 1; i < ret_len; i++)
                 ret[i - 1] = ret[i];
 
@@ -1252,6 +1277,9 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
         addr += instr->bytes;
         ret[i] = addr;
     }
+
+    if (pc != cpu->pc)
+        printf("CPU_GenerateOpStartingAddrs: OPTIMIZER BROKE THE CODE\n");
 
     return ret;
 }

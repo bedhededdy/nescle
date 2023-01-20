@@ -8,26 +8,9 @@
 #include "Cart.h"
 #include "Mapper.h"
 
-/* Constructors/Destructors */
-PPU* PPU_Create() {
-    PPU* ppu = malloc(sizeof(PPU));
-    if (ppu == NULL)
-        return NULL;
-    ppu->frame_buffer_lock = SDL_CreateMutex();
-    if (ppu->frame_buffer_lock == NULL) {
-        printf("PPU_Create: unable to create mutex\n");
-        return NULL;
-    }
-    return ppu;
-}
-
-void PPU_Destroy(PPU* ppu) {
-    SDL_DestroyMutex(ppu->frame_buffer_lock);
-    free(ppu);
-}
-
 /* Helper Functions */
-static void set_loopy_register(uint16_t* reg, uint16_t value, uint16_t bitmask) {
+static void set_loopy_register(uint16_t* reg, uint16_t value, 
+    uint16_t bitmask) {
     switch (bitmask) {
     case PPU_LOOPY_COARSE_X:
         value <<= 0;
@@ -82,13 +65,10 @@ static uint16_t align_loopy_register(uint16_t reg, uint16_t bitmask) {
     return ret;
 }
 
-// TODO: INVESTIGATE NEGATIVE X VALUES COMING HERE
 static void screen_write(PPU* ppu, int x, int y, uint32_t color) {
     // Avoids buffer overflow on overscan
     if (y >= PPU_RESOLUTION_Y || x >= PPU_RESOLUTION_X || x < 0 || y < 0)
         return;
-    //if (x < 0)
-    //    printf("x neg\n");
     ppu->screen[y][x] = color;
 }
 
@@ -100,7 +80,8 @@ static void load_bg_shifters(PPU* ppu) {
     ppu->bg_shifter_pattern_hi = (ppu->bg_shifter_pattern_hi & 0xff00) 
         | ppu->bg_next_tile_msb;
 
-    // I don't understand this
+    // The selected palette only changes every 8 pixels, so to avoid any
+    // complicated logic, we pad the value to take up a full 8-bits
     ppu->bg_shifter_attr_lo = (ppu->bg_shifter_attr_lo & 0xff00) 
         | ((ppu->bg_next_tile_attr & 1) ? 0xff : 0x00);
     ppu->bg_shifter_attr_hi = (ppu->bg_shifter_attr_hi & 0xff00) 
@@ -118,17 +99,21 @@ static void update_shifters(PPU* ppu) {
 
 static void increment_scroll_x(PPU* ppu) {
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
-        // recall that a nametable is 32 across, so we must wrap the value if we hit idx 31
+        // Recall that a nametable is 32 across, 
+        // so we must wrap the value if we hit idx 31
         if (align_loopy_register(ppu->vram_addr, PPU_LOOPY_COARSE_X) == 31) {
-            // clear the coarse_x bits and flip the nametable bit
+            // Clear the coarse_x bits and flip the nametable bit
             ppu->vram_addr &= ~PPU_LOOPY_COARSE_X;
-            uint16_t ntx = align_loopy_register(ppu->vram_addr, PPU_LOOPY_NAMETBL_X);
+            uint16_t ntx = align_loopy_register(ppu->vram_addr, 
+                PPU_LOOPY_NAMETBL_X);
             set_loopy_register(&ppu->vram_addr, ~ntx, PPU_LOOPY_NAMETBL_X);
         }
         else {
-            // increment the coarse_x
-            uint16_t course_x = align_loopy_register(ppu->vram_addr, PPU_LOOPY_COARSE_X);
-            set_loopy_register(&ppu->vram_addr, course_x + 1, PPU_LOOPY_COARSE_X);
+            // Increment the coarse_x
+            uint16_t course_x = align_loopy_register(ppu->vram_addr, 
+                PPU_LOOPY_COARSE_X);
+            set_loopy_register(&ppu->vram_addr, course_x + 1, 
+                PPU_LOOPY_COARSE_X);
         }
     }
 }
@@ -140,27 +125,32 @@ static void increment_scroll_y(PPU* ppu) {
             set_loopy_register(&ppu->vram_addr, fine_y + 1, PPU_LOOPY_FINE_Y);
         }
         else {
-            // wipe the fine y bits
+            // Wipe the fine y bits
             ppu->vram_addr &= ~PPU_LOOPY_FINE_Y;
 
-            uint16_t coarse_y = align_loopy_register(ppu->vram_addr, PPU_LOOPY_COARSE_Y);
+            uint16_t coarse_y = align_loopy_register(ppu->vram_addr, 
+                PPU_LOOPY_COARSE_Y);
 
-            // if we are in the regular memory
+            // If we are in the regular memory
             if (coarse_y == 29) {
-                // wipe the coarse y bits
+                // Wipe the coarse y bits
                 ppu->vram_addr &= ~PPU_LOOPY_COARSE_Y;
 
-                // flip nametable bit
-                uint16_t nty = align_loopy_register(ppu->vram_addr, PPU_LOOPY_NAMETBL_Y);
+                // Flip nametable bit
+                uint16_t nty = align_loopy_register(ppu->vram_addr, 
+                    PPU_LOOPY_NAMETBL_Y);
                 set_loopy_register(&ppu->vram_addr, ~nty, PPU_LOOPY_NAMETBL_Y);
             }
-            // if we are in the attribute memory (recall last 2 rows are the attribute data)
+            // If we are in the attribute memory 
+            // (recall last 2 rows are the attribute data)
             else if (coarse_y == 31) {
-                // wipe the coarse y bits
+                // Wipe the coarse y bits
                 ppu->vram_addr &= ~PPU_LOOPY_COARSE_Y;
             }
             else {
-                set_loopy_register(&ppu->vram_addr, coarse_y + 1, PPU_LOOPY_COARSE_Y);
+                // By default just increment coarse_y by 1
+                set_loopy_register(&ppu->vram_addr, coarse_y + 1, 
+                    PPU_LOOPY_COARSE_Y);
             }
         }
     }
@@ -168,9 +158,10 @@ static void increment_scroll_y(PPU* ppu) {
 
 static void transfer_addr_x(PPU* ppu) {
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
-        // copy x components of tram into vram
+        // Copy x components of tram into vram
         uint16_t ntx = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_X);
-        uint16_t coarse_x = align_loopy_register(ppu->tram_addr, PPU_LOOPY_COARSE_X);
+        uint16_t coarse_x = align_loopy_register(ppu->tram_addr, 
+            PPU_LOOPY_COARSE_X);
         set_loopy_register(&ppu->vram_addr, ntx, PPU_LOOPY_NAMETBL_X);
         set_loopy_register(&ppu->vram_addr, coarse_x, PPU_LOOPY_COARSE_X);
     }
@@ -180,7 +171,8 @@ static void transfer_addr_y(PPU* ppu) {
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         uint16_t fine_y = align_loopy_register(ppu->tram_addr, PPU_LOOPY_FINE_Y);
         uint16_t nty = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_Y);
-        uint16_t coarse_y = align_loopy_register(ppu->tram_addr, PPU_LOOPY_COARSE_Y);
+        uint16_t coarse_y = align_loopy_register(ppu->tram_addr, 
+            PPU_LOOPY_COARSE_Y);
 
         set_loopy_register(&ppu->vram_addr, fine_y, PPU_LOOPY_FINE_Y);
         set_loopy_register(&ppu->vram_addr, nty, PPU_LOOPY_NAMETBL_Y);
@@ -188,40 +180,22 @@ static void transfer_addr_y(PPU* ppu) {
     }
 }
 
-static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette, int tile, int x, int y) {
+static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette, 
+    int tile, int x, int y) {
     for (int i = 0; i < 8; i++) {
-        // TODO: MAY WANNA DO THIS AS A BUS READ BUT FOR NOW WILL AHRD CODE TO USE
-        //       THE PATTERN MEMORY
-        uint8_t tile_lsb = ppu->patterntbl[idx][tile * 16 + i];
-        uint8_t tile_msb = ppu->patterntbl[idx][tile * 16 + i + 8];
+        uint8_t tile_lsb = PPU_Read(ppu, 0x1000 * idx + tile * 16 + i);
+        uint8_t tile_msb = PPU_Read(ppu, 0x1000 * idx + tile * 16 + i + 8);
 
         for (int j = 0; j < 8; j++) {
             uint8_t color = (tile_lsb & 1) + (tile_msb & 1);
 
-            uint32_t px = get_color_from_palette(ppu, palette, color);
-            set_pixel(ppu, idx, (7-j) + x, i+y, px);
+            uint32_t px = PPU_GetColorFromPalette(ppu, palette, color);
+            ppu->sprpatterntbl[idx][7-j+x][i+y] = px;
 
             tile_msb >>= 1;
             tile_lsb >>= 1;
         }
     }
-}
-
-void get_patterntbl(PPU* ppu, uint8_t idx, uint8_t palette) {
-    int x = 0;
-    int y = 0;
-    for (int tile = 0; tile < 256; tile++) {
-        write_tile_to_sprpatterntbl(ppu, idx, palette, tile, x, y);
-        x += 8;
-        if (x == 128) {
-            x = 0;
-            y += 8;
-        }
-    }
-}
-
-void set_pixel(PPU* ppu, uint8_t idx, uint16_t x, uint16_t y, uint32_t pixel) {
-    ppu->sprpatterntbl[idx][x][y] = pixel;
 }
 
 static uint32_t map_color(int idx) {
@@ -252,7 +226,20 @@ static uint32_t map_color(int idx) {
     return color_map[idx];
 }
 
-uint32_t get_color_from_palette(PPU* ppu, uint8_t palette, uint8_t pixel) {
+void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
+    int x = 0;
+    int y = 0;
+    for (int tile = 0; tile < 256; tile++) {
+        write_tile_to_sprpatterntbl(ppu, idx, palette, tile, x, y);
+        x += 8;
+        if (x == 128) {
+            x = 0;
+            y += 8;
+        }
+    }
+}
+
+uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
     // we need to read into the area of memory that the PPU reserves for the palette
     // each palette in the range is a 4 byte offset and then the individual
     // pixel color in that palette we want is a 1 byte offset on top of that
@@ -261,12 +248,27 @@ uint32_t get_color_from_palette(PPU* ppu, uint8_t palette, uint8_t pixel) {
     return map_color(PPU_Read(ppu, PPU_PALETTE_OFFSET + palette * 4 + pixel));
 }
 
+/* Constructors/Destructors */
+PPU* PPU_Create(void) {
+    PPU* ppu = malloc(sizeof(PPU));
+    if (ppu == NULL)
+        return NULL;
+    ppu->frame_buffer_lock = SDL_CreateMutex();
+    if (ppu->frame_buffer_lock == NULL) {
+        printf("PPU_Create: unable to create mutex\n");
+        return NULL;
+    }
+    return ppu;
+}
+
+void PPU_Destroy(PPU* ppu) {
+    SDL_DestroyMutex(ppu->frame_buffer_lock);
+    free(ppu);
+}
+
 /* Interrupts (technically the PPU has no notion of interrupts) */
 // https://www.nesdev.org/wiki/PPU_rendering
 void PPU_Clock(PPU* ppu) {
-    // TODO: MIGHT WANNA MOVE THE WEIRD SCANLINE STUFF TO THE BOTTOM
-    //       SINCE THEN WE WON'T WASTE CYCLES CHECKING IT FOR THE MOSTLY
-    //       NORMAL CYCLES
     // NES rendered in 340x260p, with many invisible pixels in the 
     // overscan area. NES actually displayed in 256x240p, but many TVs
     // did not display that full resolution, so many emulators cut off the
@@ -276,92 +278,100 @@ void PPU_Clock(PPU* ppu) {
     // dummy cycle
 
     // Prerender and visible scanlines
-    if (ppu->scanline < PPU_RESOLUTION_Y) {
+    if (ppu->scanline >= -1 && ppu->scanline < PPU_RESOLUTION_Y) {
         uint16_t my_off;
 
+        // Visible cycles and preparation cycles
+        // The numbers here seem really weird, as you would think we would only
+        // be off by 1, but if we started at 1, we would end up ignoring
+        // the loaded bg shifters from the previous scanline loaded in the 
+        // horizontal blanking period. Similar logic
+        // applies to the 321, except there we actually do want to load new
+        // shifters, so we start there instead of at 322. Alternatively I'm
+        // wrong and this is a weird quirk of OLC's implementation.
+        // TODO: TEST THE BOUNDARIES HERE WITH A MORE COMPLICATED GAME TO SEE
+        //       IF THERE IS ANY CLIPPING
+        // NOTE: NO PERCIEVED DIFFERENCE BETWEEN USING 1 AND 2 HERE, I WILL 
+        //      STICK WITH 2 SINCE THAT IS WHAT OLC HAS
+        if ((ppu->cycle >= 2 && ppu->cycle < 258)
+            || (ppu->cycle >= 321 && ppu->cycle < 338)) {
+            update_shifters(ppu);
+
+            switch ((ppu->cycle - 1) % 8) {
+            case 0:
+                // Read next tile id 
+                // Tile id is read from the nametable, but I only want the 
+                // bottom 12 bits, hence the & 0x0fff
+                load_bg_shifters(ppu);
+                ppu->bg_next_tile_id = PPU_Read(ppu,
+                    PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+                break;
+            case 2:
+                // Read attribute information (extra tiles at bottom of
+                // nametbl that give color info)
+
+                // Get the nametable bits
+                my_off = ppu->vram_addr & 0x0c00;
+
+                // Keep the top 3 bits of coarse y and x 
+                // and put them in the right place
+                my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 7) << 3;
+                my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 2) << 0;
+
+                // 0x23c0 is the starting address of the attribute memory
+                ppu->bg_next_tile_attr = PPU_Read(ppu, 0x23c0 | my_off);
+
+                // Final info is only 2 bits 
+                // Doing some basic arithmetic, we can determine that one byte
+                // in the attribute memory actually coressponds to a group of 4 tiles
+                // we only need 2 bits to represent a color. so we do some arithmetic
+                // to get the appropriate palette for each tile
+                if (((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 5) & 0x02)
+                    ppu->bg_next_tile_attr >>= 4;
+                if (((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 0) & 0x02)
+                    ppu->bg_next_tile_attr >>= 2;
+                ppu->bg_next_tile_attr &= 0x03;
+
+                break;
+            case 4:
+                // Get LSB
+                my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
+                my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
+                my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
+
+                ppu->bg_next_tile_lsb = PPU_Read(ppu, my_off);
+                break;
+            case 6:
+                // Get MSB
+                my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
+                my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
+                my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
+
+                ppu->bg_next_tile_msb = PPU_Read(ppu, my_off + 8);
+                break;
+            case 7:
+                increment_scroll_x(ppu);
+                break;
+            }
+        }
         // We have hit the top of the screen again, so clear VBLANK
-        if (ppu->scanline == -1 && ppu->cycle == 1)
+        else if (ppu->scanline == -1 && ppu->cycle == 1)
             ppu->status &= ~PPU_STATUS_VBLANK;
         // There is a weird quirk about the prerender scanline that makes 
         // this cycle get skipped
         else if (ppu->scanline == 0 && ppu->cycle == 0)
             ppu->cycle = 1;
-        // FIXME: NOT SURE WHY WE DO THIS SO MUCH, INVESTIGATE THIS
         else if (ppu->scanline == -1 && ppu->cycle >= 280 && ppu->cycle < 305)
             transfer_addr_y(ppu);
         
-        //else {
-            // Visible cycles and preparation cycles
-            if ((ppu->cycle >= 2 && ppu->cycle < 258)
-                || (ppu->cycle >= 321 && ppu->cycle < 338)) {
-                update_shifters(ppu);
-
-                switch ((ppu->cycle - 1) % 8) {
-                case 0:
-                    // Read next tile id 
-                    // Tile id is read from the nametable, but I only want the 
-                    // bottom 12 bits, hence the & 0x0fff
-                    load_bg_shifters(ppu);
-                    ppu->bg_next_tile_id = PPU_Read(ppu,
-                        PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
-                    break;
-                case 2:
-                    // Read attribute information (extra tiles at bottom of
-                    // nametbl that give color info)
-
-                    // Get the nametable bits
-                    my_off = ppu->vram_addr & 0x0c00;
-
-                    // Keep the top 3 bits of coarse y and x 
-                    // and put them in the right place
-                    my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 7) << 3;
-                    my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 2) << 0;
-
-                    // 0x23c0 is the starting address of the bottom of the 
-                    // nametable
-                    ppu->bg_next_tile_attr = PPU_Read(ppu, 0x23c0 | my_off);
-
-                    // Final info is only 2 bits 
-                    // (I don't understand the logic though)
-                    if (((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 5) & 0x02)
-                        ppu->bg_next_tile_attr >>= 4;
-                    if (((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 0) & 0x02)
-                        ppu->bg_next_tile_attr >>= 2;
-                    ppu->bg_next_tile_attr &= 0x03;
-
-                    break;
-                case 4:
-                    // Get LSB
-                    my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
-                    my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
-                    my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
-
-                    ppu->bg_next_tile_lsb = PPU_Read(ppu, my_off);
-                    break;
-                case 6:
-                    // Get MSB
-                    my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
-                    my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
-                    my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
-
-                    ppu->bg_next_tile_msb = PPU_Read(ppu, my_off + 8);
-                    break;
-                case 7:
-                    increment_scroll_x(ppu);
-                    break;
-                }
-            }
-
         // First invisible cycle, increment to next scanline
         if (ppu->cycle == PPU_RESOLUTION_X)
             increment_scroll_y(ppu);
-
         // Prepare tiles for next scanline
-        else if (ppu->cycle == 257) {
+        else if (ppu->cycle == PPU_RESOLUTION_X + 1) {
             load_bg_shifters(ppu);
             transfer_addr_x(ppu);
         }
-
         // Dummy reads that shouldn't affect anything (but could maybe due to 
         // reading changing the state)
         else if (ppu->cycle == 338 || ppu->cycle == 340) {
@@ -373,7 +383,7 @@ void PPU_Clock(PPU* ppu) {
     else if (ppu->scanline == PPU_RESOLUTION_Y) {
         
     }
-    else if (ppu->scanline > PPU_RESOLUTION_Y) {
+    else if (ppu->scanline > PPU_RESOLUTION_Y && ppu->scanline <= 260) {
         // Enter the VBLANK period and emit an NMI if the control register says to
         if (ppu->scanline == 241 && ppu->cycle == 1) {
             ppu->status |= PPU_STATUS_VBLANK;
@@ -404,6 +414,9 @@ void PPU_Clock(PPU* ppu) {
                 printf("PPU_Clock: could not release mutex\n");
         }
     }
+    else {
+        printf("PPU_Clock: invalid scanline value\n");
+    }
 
     uint8_t bg_pixel = 0x00;
     uint8_t bg_palette = 0x00;
@@ -417,25 +430,24 @@ void PPU_Clock(PPU* ppu) {
 
         // Calculate pixel offset
         // TODO: I THINK I CAN CHANGE THE > TO A !=
-        uint8_t p0_pixel = (ppu->bg_shifter_pattern_lo & bit_mux) > 0;
-        uint8_t p1_pixel = (ppu->bg_shifter_pattern_hi & bit_mux) > 0;
+        uint8_t p0_pixel = (ppu->bg_shifter_pattern_lo & bit_mux) != 0;
+        uint8_t p1_pixel = (ppu->bg_shifter_pattern_hi & bit_mux) != 0;
 
         bg_pixel = (p1_pixel << 1) | p0_pixel;
 
         // Calculate the palette
         // TODO: I THINK I CAN CHANGE THE > TO A !=
-        uint8_t bg_pal0 = (ppu->bg_shifter_attr_lo & bit_mux) > 0;
-        uint8_t bg_pal1 = (ppu->bg_shifter_attr_hi & bit_mux) > 0;
+        uint8_t bg_pal0 = (ppu->bg_shifter_attr_lo & bit_mux) != 0;
+        uint8_t bg_pal1 = (ppu->bg_shifter_attr_hi & bit_mux) != 0;
 
         bg_palette = (bg_pal1 << 1) | bg_pal0;
     }
 
-    // Not sure why it's cycle-1
+    // We write to cycle-1 because cycle 0 is a dummy cycle
     screen_write(ppu, ppu->cycle-1, ppu->scanline, 
-        get_color_from_palette(ppu, bg_palette, bg_pixel));
+        PPU_GetColorFromPalette(ppu, bg_palette, bg_pixel));
 
     // Properly increment the cycle and scanline
-    // TODO: SHOULDN'T HAVE TO CHECK FOR >= ONLY ==
     ppu->cycle++;
     if (ppu->cycle > 340) {
         ppu->cycle = 0;
@@ -448,6 +460,7 @@ void PPU_Clock(PPU* ppu) {
     }
 }
 
+// https://www.nesdev.org/wiki/PPU_power_up_state
 void PPU_PowerOn(PPU* ppu) {
     ppu->control = 0x00;
     ppu->mask = 0x00;
@@ -462,6 +475,7 @@ void PPU_PowerOn(PPU* ppu) {
     PPU_Reset(ppu);
 }
 
+// https://www.nesdev.org/wiki/PPU_power_up_state
 void PPU_Reset(PPU* ppu) {
     // FIXME: THERE NEEDS TO BE LOGIC THAT PREVENTS GAME
     //        FROM WRITING TO CERTAIN REGISTERS BEFORE CERTAIN
@@ -481,26 +495,34 @@ void PPU_Reset(PPU* ppu) {
     //        I GUESS THAT STATUS OAMADDR AND OAMDATA PPUDATA AND OAMDMA
     //        ALL WORK AT BOOT WITHOUT THE DELAY??
 
-    // FIXEM: maybe these should be 0 
     ppu->control = 0x00;
     ppu->mask = 0x00;
     
     // technically this is wrong and should retain previous value, but
     // i've encountered no issues with this os will leave for now
     // although it should at least be the default value instead of 0
+    // TODO: REMOVE THIS LINE, IT APPEARS TO BE POINTLESS
+    
+    // IT APPEARS THAT NOT WIPING THIS SEEMS POTENTIALLY DANGEROUS WITH CPU MAYBE
+    // ENTERING VBLANK TOO EARLY, BUT WE MAY NEED TO CHANGE THIS LATER
     ppu->status = 0x00;
-
-    // FIXME: could be true
-    ppu->nmi = false;
 
     // FIXME: MAY WANNA INVESTIGATE IF THE SCANLINE SHOULD BE -1, ALTHOUGH
     // IF THE FIRST FRAME IS WRONG WHO WILL CARE
+    // MY GUT FEELING IS THAT THIS IS CORRECT, AND THAT STARTING ON SCANLINE
+    // -1 WILL LEAD TO TIMING ISSUES WITH CPU.
+    // nestest LOG WITH PPU SCANLINE AND CYCELS SEEMS TO CONFIRM THIS
+    // SAME THING WITH FRAMETIMING DIAGRAM WHICH USES PRERENDER SCANLINE AS
+    // 261 INSTEAD OF -1
     ppu->cycle = 0;
     ppu->scanline = 0;
 
     // FIXME: could be true
     ppu->frame_complete = false;
+    ppu->nmi = false;
 
+    // most of these are probably unimportant to set
+    // TODO: SEE WHAT I ACTUALLY NEED TO RESET
     ppu->fine_x = 0;
     ppu->addr_latch = 0;
     ppu->data_buffer = 0;
@@ -536,7 +558,6 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
 
         if (bus->cart->mirror_mode == CART_MIRRORMODE_HORZ) {
             // see vertical comments for explanation
-            //printf("reading nametable\n");
             if (addr >= 0 && addr < 0x800)
                 return ppu->nametbl[0][addr % 0x400];
             else if (addr >= 0x800 && addr < 0x1000)
@@ -674,7 +695,6 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
     uint8_t tmp = 0xff;
     addr %= 8;
 
-    //printf("tyring to access: %d\n", addr);
     switch (addr) {
     case 0: // control
         tmp = ppu->control;
@@ -701,8 +721,7 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
         tmp = ppu->data_buffer;
         ppu->data_buffer = PPU_Read(ppu, ppu->vram_addr);
 
-        // palette memory isn't delayed by one cycle like the rest of memory
-        // it also autoincrements
+        // Palette memory isn't delayed by one cycle like the rest of memory
         if (ppu->vram_addr >= 0x3f00)
             tmp = ppu->data_buffer;
         ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
@@ -717,10 +736,12 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     switch (addr) {
     case 0: // control
         ppu->control = data;
-        // TODO: MAY WANT A FUNCTOIN THAT JUST GIVES ME THE OUTPUT OF A REGISTER SHIFTED THE APPROPRIATE
-        //       AMOUNT OF BITS, SO I DON'T HAVE TO DO THAT HERE
-        set_loopy_register(&ppu->tram_addr, (ppu->control & PPU_CTRL_NAMETBL_SELECT_X) >> 0, PPU_LOOPY_NAMETBL_X);
-        set_loopy_register(&ppu->tram_addr, (ppu->control & PPU_CTRL_NAMETBL_SELECT_Y) >> 1, PPU_LOOPY_NAMETBL_Y);
+        set_loopy_register(&ppu->tram_addr, 
+            (ppu->control & PPU_CTRL_NAMETBL_SELECT_X) >> 0, 
+            PPU_LOOPY_NAMETBL_X);
+        set_loopy_register(&ppu->tram_addr, 
+            (ppu->control & PPU_CTRL_NAMETBL_SELECT_Y) >> 1, 
+            PPU_LOOPY_NAMETBL_Y);
         break;
     case 1: // mask
         ppu->mask = data;
@@ -732,7 +753,6 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     case 4: // OAM data
         break;
     case 5: // scroll
-        //printf("scroll reg\n");
         if (ppu->addr_latch == 0) {
             ppu->fine_x = data & 0x07;
             set_loopy_register(&ppu->tram_addr, data >> 3, PPU_LOOPY_COARSE_X);
@@ -747,7 +767,8 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     case 6: // PPU address
         // sets hi byte then lo byte
         if (ppu->addr_latch == 0) {
-            ppu->tram_addr = (ppu->tram_addr & 0x00ff) | ((uint16_t)(data & 0x3f) << 8);
+            ppu->tram_addr = (ppu->tram_addr & 0x00ff) 
+                | ((uint16_t)(data & 0x3f) << 8);
             ppu->addr_latch = 1;
         }
         else {
