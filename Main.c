@@ -1,3 +1,11 @@
+// TODO: NEED TO MAKE EVERYTHING WRITE TO SAME DIRECTORY REGARDLESS OF TERMINAL
+//       CURRENT WORKING DIRECTORY. NEED SOME WAY TO DETERMINE OUR "INSTALL"
+//       DIRECTORY OR HAVE THE USER SPECIFY THE RELATIVE PATH TO WHERE WE ARE
+//       COMPARED TO THEIR TERMINAL. DOING SOMETHING LIKE FOPEN("ROMS/NESTEST.NES")
+//       WILL BREAK UNLESS THE USER IS IN A SPECIFIC DIRECTORY. 
+//       TO AVOID MAJOR REWRITES, WE COULD JUST TO A CHDIR TO SET THE WORKING
+//       DIRECTORY TO WHERE I WANT IT TO BE
+
 // FIXME: TRY AND MAKE THE FRAMETIMES MORE CONSISTENT
 //        I SEEM TO BE GETTING INTO SCENARIOS WHERE I EITHER
 //        RENDER AT 59 OR 61 FPS (61 when not running, 59/60 when running)
@@ -15,6 +23,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// TODO: REMOVE ME WHEN POSSIBLE
+//#include <Windows.h>
+#include <direct.h>
 
 // FIXME: MISSING THE PLUGIN I NEED TO DOWNLOAD FOR AUDIO
 #include <SDL2/SDL.h>
@@ -67,8 +79,8 @@ void render_tile_with_provided_color(SDL_Texture* texture,
                 pixels[(7-j) + i*8] = color;
             }
             else {
-                // make bg blue
-                pixels[(7 - j) + i*8] = 0xff0000ff;
+                // make pixel transparetn
+                pixels[(7 - j) + i*8] = 0;
             }
 
             tile_lsb >>= 1;
@@ -78,33 +90,6 @@ void render_tile_with_provided_color(SDL_Texture* texture,
 
     // FIXME: SLOW, SHOULD USE SDL_LockTexture
     SDL_UpdateTexture(texture, &area, pixels, 8*sizeof(uint32_t));
-}
-
-// renders a tile with the correct color based on the palette
-void render_tile_with_original_color(SDL_Surface* surface, 
-    const uint8_t* chr_mem, int tile, int pos_x, int pos_y, 
-    PPU* ppu, uint8_t palette) {
-    // tile is 16 bytes long
-    // color data for each pixel is 8 bytes apart
-    for (int i = 0; i < 8; i++) {
-        uint8_t tile_lsb = chr_mem[tile * 16 + i];
-        uint8_t tile_msb = chr_mem[tile * 16 + i + 8];
-
-        for (int j = 0; j < 8; j++) {
-            uint8_t color = (tile_lsb & 1) + (tile_msb & 1);
-            int draw_x = pos_x + (7 - j);
-            int draw_y = pos_y + i; // render 4 tiles in same row
-
-            // fill "rect" which is really just one pixel
-            // draws it as white
-            SDL_Rect px = { draw_x, draw_y, 1, 1 };
-            uint32_t pixel = PPU_GetColorFromPalette(ppu, palette, color);
-            SDL_FillRect(surface, &px, pixel);
-
-            tile_lsb >>= 1;
-            tile_msb >>= 1;
-        }
-    }
 }
 
 // Tests the functionality of the CPU with nestest with working mapper000
@@ -208,38 +193,27 @@ int render_text(SDL_Texture* texture, const uint8_t* chr_mem, const char* text,
     return pos_x;
 }
 
-void render_sprpatterntbl(SDL_Surface* surface, PPU* ppu, uint8_t palette) {
-    // sprpatterntbl is an array of 2 128x128 matrices
-    // we have 128px in each row for a total of 16 tiles per 8 rows
-    // since a tile is 8x8px
-
+void render_sprpatterntbl(SDL_Texture* texture, PPU* ppu, uint8_t palette) {
     PPU_GetPatternTable(ppu, 0, palette);
-
-    for (int i = 0; i < 128; i++) {
-        for (int j = 0; j < 128; j++) {
-            uint32_t px = ppu->sprpatterntbl[0][j][i];
-            SDL_Rect rect = { j + 2, i + 10, 1, 1 };
-            SDL_FillRect(surface, &rect, px);
-        }
-    }
-
     PPU_GetPatternTable(ppu, 1, palette);
 
-    for (int i = 0; i < 128; i++) {
-        for (int j = 0; j < 128; j++) {
-            uint32_t px = ppu->sprpatterntbl[1][j][i];
-            SDL_Rect rect = { j + 2 + 130, i + 10, 1, 1 };
-            SDL_FillRect(surface, &rect, px);
-        }
-    }
+    // Render the first half
+    SDL_Rect rect1 = {2, 10, 128, 128};
+    SDL_UpdateTexture(texture, &rect1, ppu->sprpatterntbl[0], sizeof(uint32_t) * PPU_TILE_X * PPU_TILE_NBYTES);
+
+    // Render the second half
+    SDL_Rect rect2 = {132, 10, 128, 128};
+    SDL_UpdateTexture(texture, &rect2, ppu->sprpatterntbl[1], sizeof(uint32_t) * PPU_TILE_X * PPU_TILE_NBYTES);
 }
 
-void render_pattern_memory(SDL_Surface* surface, PPU* ppu, uint8_t palette) {
-    // fill with blue
-    SDL_Rect rect = { 0, 0, surface->w, surface->h };
-    SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 0, 0xff));
-
+void render_pattern_memory(SDL_Texture* texture, PPU* ppu, uint8_t palette) {
     // render the palettes (8 palettes each with 4 colors)
+
+    // TODO: REWRITE ME, BUT THIS IS A PITA TO DO WITH TEXTURES
+    //       COULD TRY PASSING THE RENDERER AND USING RENDERDRAWRECT
+    //       BUT THAT COULD HAVE TERRIBLE PERFORMANCE LIKE RENDER DRAW POINT DID
+    /*
+    SDL_Rect rect;
     rect.x = 2;
     rect.y = 2;
     rect.w = 6;
@@ -258,7 +232,7 @@ void render_pattern_memory(SDL_Surface* surface, PPU* ppu, uint8_t palette) {
             SDL_Rect left = {rect.x - 26, 0, 2, 8};
             SDL_Rect right = { rect.x, 0, 2, 8 };
 
-            uint32_t color = SDL_MapRGB(surface->format, 0xff, 0xff, 0xff);
+            uint32_t color = 0xffffffff;
 
             SDL_FillRect(surface, &top, color);
             SDL_FillRect(surface, &bottom, color);
@@ -268,26 +242,13 @@ void render_pattern_memory(SDL_Surface* surface, PPU* ppu, uint8_t palette) {
 
         rect.x += 6;
     }
+    */
 
     // render the pattern memory
-    render_sprpatterntbl(surface, ppu, palette);
+    render_sprpatterntbl(texture, ppu, palette);
 }
 
-void render_ppu(SDL_Surface* surface, PPU* ppu) {
-    for (int y = 0; y < PPU_RESOLUTION_Y; y++) {
-        for (int x = 0; x < PPU_RESOLUTION_X; x++) {
-            SDL_Rect rect = { x, y, 1, 1 };
-            uint32_t px = ppu->screen[y][x];
-            SDL_FillRect(surface, &rect, px);
-        }
-    }
-}
-
-void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
-    // Set blue background
-    /*SDL_Rect rect = { 0, 0, surface->w, surface->h };
-    SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 0, 0xff));*/
-
+void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     // each letter is 8px wide, i have 260 pixels in each row for letters, as the remaining 8px are just padding
     // this means that i can fit 32 characters in a row
     int x = 2;
@@ -301,31 +262,31 @@ void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
 
     // status register
     color = 0xffffffff;
-    x = render_text(surface, char_set, "STATUS: ", color, x, y);
+    x = render_text(texture, char_set, "STATUS: ", color, x, y);
     
     color = (cpu->status & CPU_STATUS_NEGATIVE) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "N ", color, x, y);
+    x = render_text(texture, char_set, "N ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_OVERFLOW) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "V ", color, x, y);
+    x = render_text(texture, char_set, "V ", color, x, y);
 
     color = (cpu->status & (1 << 5)) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "- ", color, x, y);
+    x = render_text(texture, char_set, "- ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_BRK) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "B ", color, x, y);
+    x = render_text(texture, char_set, "B ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_DECIMAL) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "D ", color, x, y);
+    x = render_text(texture, char_set, "D ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_IRQ) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "I ", color, x, y);
+    x = render_text(texture, char_set, "I ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_ZERO) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "Z ", color, x, y);
+    x = render_text(texture, char_set, "Z ", color, x, y);
 
     color = (cpu->status & CPU_STATUS_CARRY) ? 0xff00ff00 : 0xffff0000;
-    x = render_text(surface, char_set, "C", color, x, y);
+    x = render_text(texture, char_set, "C", color, x, y);
 
     // pc
     x = 2;
@@ -333,35 +294,35 @@ void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
 
     color = 0xffffffff;
     sprintf(line, "PC: $%04X", cpu->pc);
-    render_text(surface, char_set, line, color, x, y);
+    render_text(texture, char_set, line, color, x, y);
 
     // a
     x = 2;
     y = 22;
 
     sprintf(line, "A:  $%02X", cpu->a);
-    render_text(surface, char_set, line, color, x, y);
+    render_text(texture, char_set, line, color, x, y);
 
     // x
     x = 2;
     y = 32;
 
     sprintf(line, "X:  $%02X", cpu->x);
-    render_text(surface, char_set, line, color, x, y);
+    render_text(texture, char_set, line, color, x, y);
 
     // y
     x = 2;
     y = 42;
 
     sprintf(line, "Y:  $%02X", cpu->y);
-    render_text(surface, char_set, line, color, x, y);
+    render_text(texture, char_set, line, color, x, y);
 
     // sp
     x = 2;
     y = 52;
 
     sprintf(line, "SP: $%02X", cpu->sp);
-    render_text(surface, char_set, line, color, x, y);
+    render_text(texture, char_set, line, color, x, y);
 
     // instructions
 
@@ -388,7 +349,7 @@ void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
         memcpy(&my_format[6], &instr[16], 30);
         my_format[36] = '\0';
         free(instr);
-        render_text(surface, char_set, my_format, color, x, y);
+        render_text(texture, char_set, my_format, color, x, y);
         y += 10;
     }
 
@@ -398,7 +359,7 @@ void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
     memcpy(&my_format[6], &curr_instr[16], 30);
     my_format[36] = '\0';
     free(curr_instr);
-    render_text(surface, char_set, my_format, 0xff00ff00, x, y);
+    render_text(texture, char_set, my_format, 0xff00ff00, x, y);
     y += 10;
     
     for (int i = 14; i < 14 + 13; i++) {
@@ -409,7 +370,7 @@ void render_cpu(SDL_Texture* surface, CPU* cpu, const uint8_t* char_set) {
         memcpy(&my_format[6], &instr[16], 30);
         my_format[36] = '\0';
         free(instr);
-        render_text(surface, char_set, my_format, color, x, y);
+        render_text(texture, char_set, my_format, color, x, y);
         y += 10;
     }
 
@@ -437,193 +398,20 @@ uint8_t* load_char_set() {
     return char_mem;
 }
 
-void inspect_soft() {
-    Bus* bus = Bus_CreateNES();
-
-    if (bus == NULL)
-        return;
-
-    CPU* cpu = bus->cpu;
-    Cart* cart = bus->cart;
-    PPU* ppu = bus->ppu;
-
-    const char* rom_name = "roms/iceclimbers.nes";
-    if (!Cart_LoadROM(cart, rom_name))
-        return;
-
-    Bus_PowerOn(bus);
-
-    // set up SDL
-    SDL_Event event;
-    SDL_Window* window;
-    SDL_Surface* output_surface;
-    SDL_Surface* output_render_surface;
-    SDL_Surface* ppu_surface;
-    SDL_Surface* cpu_surface;
-    SDL_Surface* pattern_surface;
-
-    SDL_Init(SDL_INIT_VIDEO);
-
-    window = SDL_CreateWindow("CNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
-    SDL_SetWindowMinimumSize(window, INSPECT_RENDER_RESOLUTION_X, INSPECT_RENDER_RESOLUTION_Y);
-
-    output_surface = SDL_GetWindowSurface(window);
-
-    output_render_surface = SDL_CreateRGBSurface(0, INSPECT_RENDER_RESOLUTION_X, INSPECT_RENDER_RESOLUTION_Y, output_surface->format->BitsPerPixel,
-        output_surface->format->Rmask, output_surface->format->Gmask, output_surface->format->Bmask,
-        output_surface->format->Amask);
-    ppu_surface = SDL_CreateRGBSurface(0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y, output_surface->format->BitsPerPixel,
-        output_surface->format->Rmask, output_surface->format->Gmask, output_surface->format->Bmask,
-        output_surface->format->Amask);
-    cpu_surface = SDL_CreateRGBSurface(0, CPU_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y, output_surface->format->BitsPerPixel,
-        output_surface->format->Rmask, output_surface->format->Gmask, output_surface->format->Bmask,
-        output_surface->format->Amask);
-    pattern_surface = SDL_CreateRGBSurface(0, PATTERN_RENDER_RESOLUTION_X, PATTERN_RENDER_RESOLUTION_Y, output_surface->format->BitsPerPixel,
-        output_surface->format->Rmask, output_surface->format->Gmask, output_surface->format->Bmask,
-        output_surface->format->Amask);
-
-    SDL_SetSurfaceBlendMode(output_surface, SDL_BLENDMODE_NONE);
-    SDL_SetSurfaceBlendMode(output_render_surface, SDL_BLENDMODE_NONE);
-    SDL_SetSurfaceBlendMode(ppu_surface, SDL_BLENDMODE_NONE);
-    SDL_SetSurfaceBlendMode(cpu_surface, SDL_BLENDMODE_NONE);
-    SDL_SetSurfaceBlendMode(pattern_surface, SDL_BLENDMODE_NONE);
-
-    SDL_Rect ppu_area = {0, 0, PPU_RESOLUTION_X*2, PPU_RESOLUTION_Y*2};
-    SDL_Rect cpu_area = {PPU_RESOLUTION_X*2, 0, PPU_RESOLUTION_X*2+CPU_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y};
-    SDL_Rect pattern_area = {PPU_RESOLUTION_X*2, CPU_RENDER_RESOLUTION_Y, PPU_RESOLUTION_X*2+PATTERN_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y+PATTERN_RENDER_RESOLUTION_Y};
-
-    // load a font from the nestest rom
-    uint8_t* chr_mem = load_char_set();
-
-    uint64_t frame_number = 0;
-    uint8_t palette = 0;
-    bool run = false;
-
-    uint64_t t0 = SDL_GetTicks64();
-
-    while (1) {
-        
-
-        uint64_t sttime = SDL_GetTicks64();
-        SDL_PollEvent(&event);
-
-
-        if (event.type == SDL_QUIT) {
-            break;
-        }
-        else if (event.type == SDL_KEYDOWN) {
-        }
-        else if (event.type == SDL_KEYUP) {
-            switch (event.key.keysym.sym) {
-            case SDLK_c:
-                // recall that the cpu clocks only once for every 3 bus clocks, so
-                // that is why we must have the second while loop
-                // additionally we also want to go to the next instr, not stay on the current one
-                while (cpu->cycles_rem > 0)
-                    Bus_Clock(bus);
-                while (cpu->cycles_rem == 0)
-                    Bus_Clock(bus);
-                break;
-            case SDLK_r:
-                Bus_Reset(bus);
-                break;
-            case SDLK_f:
-                while (!ppu->frame_complete)
-                    Bus_Clock(bus);
-                ppu->frame_complete = false;    // FIXME: might not wanna do this??
-                break;
-            case SDLK_p:
-                palette = (palette + 1) % 8;
-                break;
-            case SDLK_SPACE:
-                run = !run;
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        if (run) {
-            // FIXME: MAY WANT TO DO AS A DO WHILE
-            int foobar = 1;
-            while (!ppu->frame_complete) {
-                Bus_Clock(bus);
-            }
-
-            ppu->frame_complete = false;
-            //Bus_RenderFrame(bus);
-        }
-
-        // FIXME: ON ICE CLIMBERS WE GET STUCK HERE, CHECK LOAD ROM CODE
-        // MAYBE WE ARE GETTING LIKE 0 MEM BANKS OR SOMETHING
-
-        // render everything
-        render_pattern_memory(pattern_surface, ppu, palette);
-        render_cpu(cpu_surface, cpu, chr_mem);
-        render_ppu(ppu_surface, ppu);
-
-        // push frame to window
-        SDL_BlitSurface(cpu_surface, NULL, output_render_surface, &cpu_area);
-        SDL_BlitSurface(pattern_surface, NULL, output_render_surface, &pattern_area);
-        SDL_BlitScaled(ppu_surface, NULL, output_render_surface, &ppu_area);
-
-        output_surface = SDL_GetWindowSurface(window);
-        SDL_BlitScaled(output_render_surface, NULL, output_surface, NULL);
-        SDL_UpdateWindowSurface(window);
-
-        frame_number++;
-
-        if (frame_number % 60 == 0) {
-            printf("60 frames rendered in %dms\n", (int)(SDL_GetTicks64() - t0));
-            t0 = SDL_GetTicks64();
-        }
-
-        // FIXME: over a period of time, this is going to lead to serious inaccuracies,
-        //        as the real nes should push a frame once every 16.67 seconds
-        //        we need to find a way of getting the time in nanoseconds
-        // FIXME: APPARENTLY THE BETTER WAY TO DO THIS IS TO USE VSYNC, ALTHOUGH FOR NES HARDWARE I DON'T KNOW
-        //        IF THIS WOULD REALLY WORK
-        //        WE MAY BE FORCED TO JUST ACCEPT THE IMPRECISION OR TO USE DIFFERENT METHODS TO GET DOWN TO THE
-        //        NANOSECOND LEVEL
-        // 
-        uint64_t t1 = SDL_GetTicks64();
-        if (t1 - sttime < 16)
-            SDL_Delay(16 - (int)(t1 - sttime));
-        else
-            printf("FRAME TOOK %d MS TO RENDER\n", (int)(t1 - sttime));
-    }
-
-    // cleanup
-    free(chr_mem);
-
-    Bus_DestroyNES(bus);
-
-    SDL_FreeSurface(output_render_surface);
-    SDL_FreeSurface(ppu_surface);
-    SDL_FreeSurface(cpu_surface);
-    SDL_FreeSurface(pattern_surface);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
-
 void render_ppu_gpu(SDL_Renderer* renderer, SDL_Texture* texture, PPU* ppu) {
     if (SDL_LockMutex(ppu->frame_buffer_lock)) {
         printf("render_ppu_gpu: unable to acquire mutex\n");
-        exit(1);
+        return;
     }
 
     // FIXME: INVESTIGATE DOING THIS AS A TEXTURE LOCK/UNLOCK
-    SDL_UpdateTexture(texture, NULL, ppu->frame_buffer, PPU_RESOLUTION_X * sizeof(uint32_t));
+    SDL_UpdateTexture(texture, NULL, ppu->frame_buffer,
+        PPU_RESOLUTION_X * sizeof(uint32_t));
 
     if (SDL_UnlockMutex(ppu->frame_buffer_lock)) {
         printf("render_ppu_gpu: unable to unlock mutex\n");
-        exit(1);
+        return;
     }
-
-    // FIXME: SHOULDN'T BE 3, EVEN THOUGH 3 ACTUALLY WORKS CORRECTLY
-    /*SDL_Rect output_area = { 0, 0, PPU_RESOLUTION_X * 3, PPU_RESOLUTION_Y * 3 };
-    SDL_RenderCopy(renderer, texture, NULL, &output_area);*/
 }
 
 struct emulation_thread_struct {
@@ -663,11 +451,6 @@ int emulation_thread_func(void* data) {
 
 // single-threaded hw rendering
 void inspect_hw(const char* rom_path) {
-    // FIXME: SOME TEXT IS GETTING WEIRDLY CLIPPED, WHICH DOESN'T MAKE SENSE
-    //        SINCE WE USE NEAREST NEIGHBOR FOR UPSCALING (linear filtering makes
-    //        all pixel graphics games blurry)
-    //        CLIPPING NOT ON DESKTOP BUT ON LAPTOP
-    //        IDK WHAT TO DO 
     // Create NES and initialize to powerup state
     Bus* bus = Bus_CreateNES();
     if (bus == NULL) return;
@@ -692,7 +475,7 @@ void inspect_hw(const char* rom_path) {
     SDL_Init(SDL_INIT_VIDEO);
 
     // Create window with renderer
-    window = SDL_CreateWindow("CNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    window = SDL_CreateWindow("Nescle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
     if (window == NULL) return;
 
@@ -701,9 +484,8 @@ void inspect_hw(const char* rom_path) {
     else
         printf("Render Batching disabled\n");
     if (SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0") != SDL_TRUE)
-        printf("bad scaling\n");
-    // allow me to render to texture as well as to window with the GPU
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+        printf("Scale Quality not nearest neighbor\n");
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == NULL) return;
 
     // Check that ARGB8888 is supported
@@ -720,26 +502,32 @@ void inspect_hw(const char* rom_path) {
     if (!argb8888) return;
 
     // Create textures
-    uint32_t format = SDL_PIXELFORMAT_ARGB8888;
+    const uint32_t format = SDL_PIXELFORMAT_ARGB8888;
     ppu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PPU_RESOLUTION_X, PPU_RESOLUTION_Y);
     cpu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, CPU_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y);
     pattern_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PATTERN_RENDER_RESOLUTION_X, PATTERN_RENDER_RESOLUTION_Y);
     if (ppu_texture == NULL || cpu_texture == NULL || pattern_texture == NULL) return;
 
-    SDL_SetTextureBlendMode(cpu_texture, SDL_BLENDMODE_NONE);
+    // Blends alpha channels (ie if I give 0 I get transparency, not black)
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureBlendMode(cpu_texture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureBlendMode(pattern_texture, SDL_BLENDMODE_BLEND);
+
+    // Although this shouldn't affect anything, we do not want any background
+    // coloring for the PPU
+    SDL_SetTextureBlendMode(ppu_texture, SDL_BLENDMODE_NONE);
 
     // Create display area for each texture
     SDL_Rect ppu_rect = {0, 0, PPU_RESOLUTION_X*2*3/2, PPU_RESOLUTION_Y*2*3/2};
     SDL_Rect cpu_rect = {PPU_RESOLUTION_X*2*3/2, 0, CPU_RENDER_RESOLUTION_X*3/2, CPU_RENDER_RESOLUTION_Y*3/2};
-    //SDL_Rect pattern_rect = 
+    SDL_Rect pattern_rect = {PPU_RESOLUTION_X*2*3/2, CPU_RENDER_RESOLUTION_Y*3/2, PATTERN_RENDER_RESOLUTION_X*3/2, PATTERN_RENDER_RESOLUTION_Y*3/2};
 
-    // Give cpu blue background
+    // Give cpu texture and pattern texture transparent background
     const size_t bg_size = sizeof(uint32_t) * cpu_rect.w * cpu_rect.h;
-    uint32_t* blue_bg = malloc(bg_size);
+    uint32_t* blue_bg = calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
     if (blue_bg == NULL) return;
-    for (int i = 0; i < bg_size / sizeof(uint32_t); i++)
-        blue_bg[i] = 0xff0000ff;
     SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
+    SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
     free(blue_bg);
     
     // Load disassembler font
@@ -755,6 +543,11 @@ void inspect_hw(const char* rom_path) {
 
     while (!quit) {
         uint64_t t0 = SDL_GetTicks64();
+
+        // Give a blue background
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0xff, 0xff);
+        SDL_RenderClear(renderer);
+
         SDL_PollEvent(&event);
 
         switch (event.type) {
@@ -805,26 +598,13 @@ void inspect_hw(const char* rom_path) {
             ppu->frame_complete = false;
         }
 
-        // Make cpu_texture have blue bg 
-        // FIXME: DOESN'T WORK IF YOU LATER UPDATE THE TEXTURE 
-        //        SOLUTION, I COULD JUST MAKE A BIG ARRAY OF BLUE
-        //        AND THEN USE UPDATE TEXTURE
-        //          ANSWER, TEXTURE WAS CREATED AS STREAMING, NOT AS RENDER TARGET
-        //          SO THIS IS PROBABLY WHY IT'S BUSTED
-        //          JUST HAVE TO MANUALLY FILL THE PIXELS THEN
-        /*SDL_SetRenderTarget(renderer, cpu_texture);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0xff, SDL_ALPHA_OPAQUE);
-        SDL_RenderClear(renderer);
-
-        SDL_SetRenderTarget(renderer, NULL);*/
-
-        
-
         render_ppu_gpu(renderer, ppu_texture, ppu);
         render_cpu(cpu_texture, cpu, char_set);
+        render_pattern_memory(pattern_texture, ppu, palette);
 
         SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
         SDL_RenderCopy(renderer, ppu_texture, NULL, &ppu_rect);
+        SDL_RenderCopy(renderer, pattern_texture, NULL, &pattern_rect);
 
         SDL_RenderPresent(renderer);
         
@@ -851,6 +631,7 @@ void inspect_hw(const char* rom_path) {
 }
 
 // multi-threaded hw rendering
+// TODO: MAKE THIS HAVE THE SAME FUNCTIONALITY AS THE SINGLE THREADED
 void inspect_hw_mul(const char* rom_path) {
     // FIXME: CPU AND PALETTE MEMORY SHOULD TECHNICALLY HAVE LOCKS ON THEM WHEN RENDERING, BUT
     //        BUT FOR NOW I WILL ACCEPT THE INCORRECT RESULTS
@@ -1046,9 +827,64 @@ void inspect_hw_mul(const char* rom_path) {
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
-    //inspect_soft();
-    inspect_hw("roms/iceclimbers.nes");
-    //inspect_hw_mul("roms/iceclimbers.nes");
-    //inspect_hw_mul("roms/smb.nes");
+    /* cmdline flags */
+    // -w   width of the window     (default to 256)
+    // -h   height of the window    (default to 240)
+    // -r   path to ROM             required argument
+    
+    // getopt is not supported by msvc, as it is in the unistd header
+    // so we have to manually parse the args
+    // later this will hopefully be gui and i won't have to worry about this
+    // i assume that the user uses the program correctly
+
+    // maxpath defined in windows header which i don't wanna use
+    // its value is 260, so i define it here
+    char working_directory[260];
+    _getcwd(working_directory, 260);
+    puts(working_directory);
+
+
+    // CHANGE TO NULL FOR NON-DEBUGGING PURPOSES
+    char* rom_path = "";
+    int w = PPU_RESOLUTION_X;
+    int h = PPU_RESOLUTION_Y;
+    for (int i = 1; i < argc; i++) {
+        // can't do switch for non-integral type
+        // don't feel like writing a hashing function, so just use an if-else
+        if (strcmp(argv[i], "-w") == 0) {
+            w = atoi(argv[++i]);
+        }
+        else if (strcmp(argv[i], "-h") == 0) {
+            h = atoi(argv[++i]);
+        }
+        else if (strcmp(argv[i], "-r") == 0) {
+            rom_path = argv[++i];
+        }
+        else {
+            printf("Unrecognized flag: %s\n", argv[i]);
+        }
+    }
+
+    if (rom_path == NULL) {
+        printf("Fatal error: ROM path not supplied\n");
+        return 1;
+    }
+
+    // breaks unless run from a certain directory
+    // elegant solution: assume a linux like structure
+    // I am instlaled in bin
+    // I search for config files in $HOME
+    // config file tells me where i should write logs to etc.
+    // somewhere like appdata
+    // bad solution: ask user where the program is installed
+    //               do my search from there
+    //               if I have a resource the binary needs
+    //               I need to know where I am installed
+    //               (for instance nestest for loading the font)
+    inspect_hw("roms/nestest.nes");
+
+    // FIXME: EVEN WITH ABSOLUTE PATHS, THE FILE DOESN'T OPEN RIGHT
+    //inspect_hw(rom_path);
+
     return 0;
 }

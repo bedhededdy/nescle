@@ -69,12 +69,13 @@ static void screen_write(PPU* ppu, int x, int y, uint32_t color) {
     // Avoids buffer overflow on overscan
     if (y >= PPU_RESOLUTION_Y || x >= PPU_RESOLUTION_X || x < 0 || y < 0)
         return;
-    ppu->screen[y][x] = color;
+    ppu->screen[y * PPU_RESOLUTION_X + x] = color;
 }
 
 static void load_bg_shifters(PPU* ppu) {
     // Shift the current LSB to the MSB and then stick the 
     // next tile byte as the LSB
+    // This is for the pixel offset
     ppu->bg_shifter_pattern_lo = (ppu->bg_shifter_pattern_lo & 0xff00) 
         | ppu->bg_next_tile_lsb;
     ppu->bg_shifter_pattern_hi = (ppu->bg_shifter_pattern_hi & 0xff00) 
@@ -82,6 +83,8 @@ static void load_bg_shifters(PPU* ppu) {
 
     // The selected palette only changes every 8 pixels, so to avoid any
     // complicated logic, we pad the value to take up a full 8-bits
+    // The backgrounds only use the first 4 palettes, as the other 4 are for 
+    // foreground, so we only need 2 bits to figure out what palette to use
     ppu->bg_shifter_attr_lo = (ppu->bg_shifter_attr_lo & 0xff00) 
         | ((ppu->bg_next_tile_attr & 1) ? 0xff : 0x00);
     ppu->bg_shifter_attr_hi = (ppu->bg_shifter_attr_hi & 0xff00) 
@@ -190,7 +193,7 @@ static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette,
             uint8_t color = (tile_lsb & 1) + (tile_msb & 1);
 
             uint32_t px = PPU_GetColorFromPalette(ppu, palette, color);
-            ppu->sprpatterntbl[idx][7-j+x][i+y] = px;
+            ppu->sprpatterntbl[idx][i+y][7 - j + x] = px;
 
             tile_msb >>= 1;
             tile_lsb >>= 1;
@@ -245,6 +248,11 @@ uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
     // pixel color in that palette we want is a 1 byte offset on top of that
     // after we read that value it gives us an index into the nes's color
     // table so we want to return that color 
+
+    // Also just know that the first 4 palettes are for background and last 4 are for
+    // foreground. Unlike the pattern memory, which usually uses the first half for bg
+    // and the second half for fg, but does not force you to do that, you are forced
+    // to use the first half for bg and second half for fg for the palette selection.
     return map_color(PPU_Read(ppu, PPU_PALETTE_OFFSET + palette * 4 + pixel));
 }
 
@@ -295,6 +303,9 @@ void PPU_Clock(PPU* ppu) {
         //      STICK WITH 2 SINCE THAT IS WHAT OLC HAS
         if ((ppu->cycle >= 2 && ppu->cycle < 258)
             || (ppu->cycle >= 321 && ppu->cycle < 338)) {
+            // NOTE: If we move this to the bottom we might only wanna do one cycle
+            // cuz obviously this will get shifted before we did anything if starting
+            // at one
             update_shifters(ppu);
 
             switch ((ppu->cycle - 1) % 8) {
@@ -335,6 +346,9 @@ void PPU_Clock(PPU* ppu) {
                 break;
             case 4:
                 // Get LSB
+                // The control register tells us what half of pattern memory to read from
+                // which is why our bg_next_tile_id is only 8-bits, since it only needs
+                // to cover 256 tiles instead of the whole 512
                 my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
                 my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
                 my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
@@ -402,13 +416,8 @@ void PPU_Clock(PPU* ppu) {
             if (SDL_LockMutex(ppu->frame_buffer_lock))
                 printf("PPU_Clock: could not acquire mutex\n");
 
-            // Write to the frame buffer
-            // TODO: MAKE THIS INTO A MEMCPY
-            for (int y = 0; y < PPU_RESOLUTION_Y; y++) {
-                for (int x = 0; x < PPU_RESOLUTION_X; x++) {
-                    ppu->frame_buffer[y * PPU_RESOLUTION_X + x] = ppu->screen[y][x];
-                }
-            }
+            // Copy the new frame to the frame_buffer
+            memcpy(ppu->frame_buffer, ppu->screen, sizeof(ppu->screen));
 
             if (SDL_UnlockMutex(ppu->frame_buffer_lock))
                 printf("PPU_Clock: could not release mutex\n");
@@ -538,7 +547,6 @@ void PPU_Reset(PPU* ppu) {
     ppu->tram_addr = 0;
 }
 
-
 uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
     // Address can't be more than 16kb
     Bus* bus = ppu->bus;
@@ -609,9 +617,6 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
 }
 
 bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
-    // TODO: YOU'RE GONNA NEED TO MAP THE ADDRESS BEOFRE YOU DO 
-    // ANYTHING IN HERE
-
     Bus* bus = ppu->bus;
     addr %= 0x4000;
 

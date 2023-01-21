@@ -71,9 +71,10 @@ struct ppu {
     Bus* bus;
 
     // Current screen and last complete frame
-    // TODO: EITHER MAKE BOTH OF THESE 1D OR 2D ARRAYS
-    // TODO: CONSIDER WRAPPING THE FRAME BUFFER AND LOCK IN ITS OWN STRUCT
-    uint32_t screen[PPU_RESOLUTION_Y][PPU_RESOLUTION_X];
+    // We represent them as 1D arrays instead of 2D, because
+    // when we want to copy the frame buffer to an SDL_Texture
+    // it expects the pixels as linear arrays
+    uint32_t screen[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
     uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
     SDL_mutex* frame_buffer_lock;
 
@@ -108,8 +109,13 @@ struct ppu {
     uint8_t bg_next_tile_attr;
     uint8_t bg_next_tile_lsb;
     uint8_t bg_next_tile_msb;
+
+    // Used for pixel offset into palette based on tile_id
     uint16_t bg_shifter_pattern_lo;
     uint16_t bg_shifter_pattern_hi;
+
+    // Used to determine palette based on tile_attr (palette used for 8 pixels in a row,
+    // so we pad these out to work like the other shifters)
     uint16_t bg_shifter_attr_lo;
     uint16_t bg_shifter_attr_hi;
 
