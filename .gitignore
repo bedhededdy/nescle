@@ -3,3 +3,6 @@ logs/
 roms/
 x64/
 *vcxproj*
+include/
+obj/
+lib/

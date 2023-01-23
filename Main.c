@@ -248,7 +248,107 @@ void render_pattern_memory(SDL_Texture* texture, PPU* ppu, uint8_t palette) {
     render_sprpatterntbl(texture, ppu, palette);
 }
 
+void render_oam(SDL_Texture* texture, PPU* ppu, const uint8_t* char_set) {
+    // Keep register info from CPU
+    CPU* cpu = ppu->bus->cpu;
+
+    // each letter is 8px wide, i have 260 pixels in each row for letters, as the remaining 8px are just padding
+    // this means that i can fit 32 characters in a row
+    int x = 2;
+    int y = 2;
+
+    // array for rendering each line of screen (32 chars + 1 null);
+    char line[33];
+
+    // set up color data
+    uint32_t color;
+
+    // status register
+    color = 0xffffffff;
+    x = render_text(texture, char_set, "STATUS: ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_NEGATIVE) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "N ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_OVERFLOW) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "V ", color, x, y);
+
+    color = (cpu->status & (1 << 5)) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "- ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_BRK) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "B ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_DECIMAL) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "D ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_IRQ) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "I ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_ZERO) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "Z ", color, x, y);
+
+    color = (cpu->status & CPU_STATUS_CARRY) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, "C", color, x, y);
+
+    // pc
+    x = 2;
+    y = 12;
+
+    color = 0xffffffff;
+    sprintf(line, "PC: $%04X", cpu->pc);
+    render_text(texture, char_set, line, color, x, y);
+
+    // a
+    x = 2;
+    y = 22;
+
+    sprintf(line, "A:  $%02X", cpu->a);
+    render_text(texture, char_set, line, color, x, y);
+
+    // x
+    x = 2;
+    y = 32;
+
+    sprintf(line, "X:  $%02X", cpu->x);
+    render_text(texture, char_set, line, color, x, y);
+
+    // y
+    x = 2;
+    y = 42;
+
+    sprintf(line, "Y:  $%02X", cpu->y);
+    render_text(texture, char_set, line, color, x, y);
+
+    // sp
+    x = 2;
+    y = 52;
+
+    sprintf(line, "SP: $%02X", cpu->sp);
+    render_text(texture, char_set, line, color, x, y);
+
+    // oam
+    x = 2;
+    y = 72;
+
+    for (int i = 0; i < 26; i++) {
+        uint8_t oam_x = ppu->oam_ptr[i * 4 + 3];
+        uint8_t oam_y = ppu->oam_ptr[i * 4 + 0];
+        uint8_t oam_id = ppu->oam_ptr[i * 4 + 1];
+        uint8_t oam_at = ppu->oam_ptr[i * 4 + 2];
+        sprintf(line, "%02X: (%3d, %3d) ID: %02X AT: %02X",
+            i, oam_x, oam_y, oam_id, oam_at);
+        render_text(texture, char_set, line, color, x, y);
+        y += 10;
+    }
+}
+
 void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
+    // FIXME: POSSIBLE ISSUE WITH RETAINING TEXT, ALTHOUGH POSSIBLY NOT
+    //        SO BECAUSE WE HAVE A FIXED LENGTH DISASSEMBLY
+    //        SOLUTION IS AFTER EACH RENDER TEXT TO JUST RENDER TRANSPARENT
+    //        PIXELS TO THE END OF THE LINE
+
     // each letter is 8px wide, i have 260 pixels in each row for letters, as the remaining 8px are just padding
     // this means that i can fit 32 characters in a row
     int x = 2;
@@ -450,8 +550,44 @@ int emulation_thread_func(void* data) {
     return 0;
 }
 
+void set_renderer_hints() {
+    if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
+        printf("Render Batching enabled\n");
+    else
+        printf("Render Batching disabled\n");
+    if (SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0") != SDL_TRUE)
+        printf("Scale Quality not nearest neighbor\n");
+}
+
+void create_window_and_renderer(SDL_Window** window, SDL_Renderer** renderer) {
+    // Create window with renderer
+    *window = SDL_CreateWindow("Nescle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
+    if (*window == NULL) return;
+
+    set_renderer_hints();
+    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+    if (*renderer == NULL) return;
+
+    // Check that ARGB8888 is supported
+    SDL_RendererInfo renderer_info;
+    if (SDL_GetRendererInfo(*renderer, &renderer_info)) return;
+    printf("Video Backend: %s\n", renderer_info.name);
+
+    bool argb8888 = false;
+    for (uint32_t i = 0; i < renderer_info.num_texture_formats; i++) {
+        if (renderer_info.texture_formats[i] == SDL_PIXELFORMAT_ARGB8888) {
+            argb8888 = true;
+            break;
+        }
+    }
+    if (!argb8888) return;
+}
+
 // single-threaded hw rendering
 void inspect_hw(const char* rom_path) {
+    // TODO: SWAP OUT CPU VISUALIZATION WITH OAM VISUALIZATION
+
     // Create NES and initialize to powerup state
     Bus* bus = Bus_CreateNES();
     if (bus == NULL) return;
@@ -467,7 +603,6 @@ void inspect_hw(const char* rom_path) {
     // Initialize SDL components
     SDL_Window* window;
     SDL_Renderer* renderer;
-    SDL_RendererInfo renderer_info;
     SDL_Event event;
     SDL_Texture* pattern_texture;
     SDL_Texture* cpu_texture;
@@ -476,31 +611,7 @@ void inspect_hw(const char* rom_path) {
     SDL_Init(SDL_INIT_VIDEO);
 
     // Create window with renderer
-    window = SDL_CreateWindow("Nescle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
-    if (window == NULL) return;
-
-    if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
-        printf("Render Batching enabled\n");
-    else
-        printf("Render Batching disabled\n");
-    if (SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0") != SDL_TRUE)
-        printf("Scale Quality not nearest neighbor\n");
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL) return;
-
-    // Check that ARGB8888 is supported
-    if (SDL_GetRendererInfo(renderer, &renderer_info)) return;
-    printf("Video Backend: %s\n", renderer_info.name);
-
-    bool argb8888 = false;
-    for (uint32_t i = 0; i < renderer_info.num_texture_formats; i++) {
-        if (renderer_info.texture_formats[i] == SDL_PIXELFORMAT_ARGB8888) {
-            argb8888 = true;
-            break;
-        }
-    }
-    if (!argb8888) return;
+    create_window_and_renderer(&window, &renderer);
 
     // Create textures
     const uint32_t format = SDL_PIXELFORMAT_ARGB8888;
@@ -656,7 +767,8 @@ void inspect_hw(const char* rom_path) {
         }
 
         render_ppu_gpu(renderer, ppu_texture, ppu);
-        render_cpu(cpu_texture, cpu, char_set);
+        //render_cpu(cpu_texture, cpu, char_set);
+        render_oam(cpu_texture, ppu, char_set);
         render_pattern_memory(pattern_texture, ppu, palette);
 
         SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
@@ -1006,6 +1118,7 @@ void inspect_hw_mul(const char* rom_path) {
     SDL_Quit();
 }
 
+/*
 #pragma region tests
 // You need the volatiles here, eventually you may need to modify your code
 // for the multithreaded verison by making some things volatile
@@ -1121,6 +1234,7 @@ void mutex_thread_test() {
     SDL_DestroyMutex(mutex);
 }
 #pragma endregion tests
+*/
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
@@ -1137,7 +1251,8 @@ int main(int argc, char** argv) {
     // maxpath defined in windows header which i don't wanna use
     // its value is 260, so i define it here
     char working_directory[260];
-    _getcwd(working_directory, 260);
+    if (_getcwd(working_directory, 260) == NULL)
+        return 1;
     puts(working_directory);
 
 
@@ -1178,7 +1293,7 @@ int main(int argc, char** argv) {
     //               if I have a resource the binary needs
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
-    inspect_hw("roms/iceclimbers.nes");
+    inspect_hw("roms/dkrev1.nes");
     //inspect_hw_mul("roms/iceclimbers.nes");
 
     return 0;

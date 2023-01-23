@@ -181,7 +181,30 @@ void Bus_Clock(Bus* bus) {
     if (bus->clocks_count % 3 == 0) {
         // CPU completely halts if DMA is occuring
         if (bus->dma_transfer) {
+            // DMA takes some time, so we may have some dummy cycles
+            if (bus->dma_dummy) {
+                // Sync on odd clock cycles
+                if (bus->clocks_count % 2 == 1)
+                    bus->dma_dummy = false;
+            }
+            else {
+                // Read on even cycles, write on odd cycles
+                if (bus->clocks_count % 2 == 0) {
+                    bus->dma_data = Bus_Read(bus, 
+                        ((uint16_t)bus->dma_page << 8) | bus->dma_addr);
+                }
+                else {
+                    // DMA transfers 256 bytes to the OAM at once,
+                    // so we auto-increment the address
+                    bus->ppu->oam_ptr[bus->dma_addr++] = bus->dma_data;
 
+                    // If we overflow, we know that the transfer is done
+                    if (bus->dma_addr == 0) {
+                        bus->dma_transfer = false;
+                        bus->dma_dummy = true;
+                    }
+                }
+            }
         }
         else {
             CPU_Clock(bus->cpu);

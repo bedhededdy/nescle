@@ -190,7 +190,7 @@ static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette,
         uint8_t tile_msb = PPU_Read(ppu, 0x1000 * idx + tile * 16 + i + 8);
 
         for (int j = 0; j < 8; j++) {
-            uint8_t color = (tile_lsb & 1) + (tile_msb & 1);
+            uint8_t color = ((tile_msb & 1) << 1) | (tile_lsb & 1);
 
             uint32_t px = PPU_GetColorFromPalette(ppu, palette, color);
             ppu->sprpatterntbl[idx][i+y][7 - j + x] = px;
