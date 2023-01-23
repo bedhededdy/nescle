@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <SDL2/SDL_mutex.h>
+
 #include "MyTypes.h"
 
 /* UNCOMMENT IF YOU HAVE NOT IMPLEMENTED THE MAPPER */
@@ -14,6 +16,15 @@
     #define BUS_RAM_SIZE    (1024 * 64)
 #endif
 
+#define BUS_CONTROLLER_A        (1 << 0)
+#define BUS_CONTROLLER_B        (1 << 1)
+#define BUS_CONTROLLER_SELECT   (1 << 2)
+#define BUS_CONTROLLER_START    (1 << 3)
+#define BUS_CONTROLLER_UP       (1 << 4)
+#define BUS_CONTROLLER_DOWN     (1 << 5)
+#define BUS_CONTROLLER_LEFT     (1 << 6)
+#define BUS_CONTROLLER_RIGHT    (1 << 7)
+
 /*
  * The NES Bus connects the various components of the NES together.
  * In a way it is a stand-in for the actual NES, since it contains
@@ -23,17 +34,33 @@
 struct bus {
     uint8_t ram[BUS_RAM_SIZE];
 
+    uint8_t controller1;
+    uint8_t controller2;
+    uint8_t controller1_shifter;
+    uint8_t controller2_shifter;
+
+    uint8_t dma_page;
+    uint8_t dma_addr;
+    uint8_t dma_data;
+
+    bool dma_transfer;
+    bool dma_dummy;
+
+    SDL_mutex* controller_input_lock;
+    SDL_mutex* save_state_lock;
+
     CPU* cpu;
     PPU* ppu;
     Cart* cart;
 
     // How many system ticks have elapsed (PPU clocks at the same rate as the Bus)
     uint64_t clocks_count;      
-
-    // TODO: ADD CONTROLLER HERE AND MAYBE CONTROLELR STATE CACHE
 };
 
 /* Constructors/Destructors */
+Bus* Bus_Create(void);
+void Bus_Destroy(Bus* bus);
+
 Bus* Bus_CreateNES(void);       // Creates a Bus with connected components
 void Bus_DestroyNES(Bus* bus);  // Deallocates memory for Bus and connected components
 

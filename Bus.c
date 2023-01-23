@@ -10,8 +10,27 @@
 #include "PPU.h"
 
 /* Constructors/Destructors */
-Bus* Bus_CreateNES(void) {
+Bus* Bus_Create(void) {
     Bus* bus = malloc(sizeof(Bus));
+    if (bus == NULL)
+        return NULL;
+
+    bus->controller_input_lock = SDL_CreateMutex();
+    bus->save_state_lock = SDL_CreateMutex();
+    if (bus->controller_input_lock == NULL || bus->save_state_lock == NULL)
+        return NULL;
+
+    return bus;
+}
+
+void Bus_Destroy(Bus* bus) {
+    SDL_DestroyMutex(bus->controller_input_lock);
+    SDL_DestroyMutex(bus->save_state_lock);
+    free(bus);
+}
+
+Bus* Bus_CreateNES(void) {
+    Bus* bus = Bus_Create();
     CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Create();
     Cart* cart = Cart_Create();
@@ -34,7 +53,7 @@ void Bus_DestroyNES(Bus* bus) {
     CPU_Destroy(bus->cpu);
     PPU_Destroy(bus->ppu);
     Cart_Destroy(bus->cart);
-    free(bus);
+    Bus_Destroy(bus);
 }
 
 /* R/W */
@@ -56,7 +75,24 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
-        return 0;
+        // DOES NOT NEED TO LOCK, SINCE WE CANNOT DIRECTLY
+        // MODIFY THE SHIFT REGISTER AS THE USER
+        // WE DON'T HAVE TO WORRY ABOUT CONCURRENT READ/WRITES
+        // TO THE SHIFTER SINCE NES CPU IS SINGLE-THREADED
+
+        // Reading from controller is serialized, so we have
+        // to read one bit at a time from the shift register
+        uint8_t ret;
+        if (addr == 0x4016) {
+            // Only want the value of the LSB
+            ret = bus->controller1_shifter & 1;
+            bus->controller1_shifter >>= 1;
+        }
+        else {
+            ret = bus->controller2_shifter & 1;
+            bus->controller2_shifter >>= 1;
+        }
+        return ret;
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge (REQUIRES MAPPER) */
@@ -88,8 +124,27 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
         /* PPU Registers */
         return PPU_RegisterWrite(bus->ppu, addr, data);
     }
+    else if (addr == 0x4014) {
+        /* DMA (Direct Memory Access) */
+        bus->dma_page = data;
+        bus->dma_addr = 0;
+        bus->dma_transfer = true;
+    }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
+        // Writing saves the current state of the controller to 
+        // the controller's serialized shift register
+
+        // We need to make sure that we are not currently polling user
+        // input when we copy current controller state to the shift register
+        if (SDL_LockMutex(bus->controller_input_lock))
+            printf("Bus_Write: Unable to acquire controller lock\n");
+        if (addr == 0x4016)
+            bus->controller1_shifter = bus->controller1;
+        else
+            bus->controller2_shifter = bus->controller2;
+        if (SDL_UnlockMutex(bus->controller_input_lock))
+            printf("Bus_Write: Unable to release controller lock\n");
         return true;
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
@@ -123,8 +178,15 @@ void Bus_Clock(Bus* bus) {
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
     PPU_Clock(bus->ppu);
-    if (bus->clocks_count % 3 == 0)
-        CPU_Clock(bus->cpu);
+    if (bus->clocks_count % 3 == 0) {
+        // CPU completely halts if DMA is occuring
+        if (bus->dma_transfer) {
+
+        }
+        else {
+            CPU_Clock(bus->cpu);
+        }
+    }
 
     // PPU can optionally emit a NMI to the CPU upon entering the vertical
     // blank state
@@ -141,6 +203,15 @@ void Bus_PowerOn(Bus* bus) {
     Bus_ClearMem(bus);
     PPU_PowerOn(bus->ppu);
     CPU_PowerOn(bus->cpu);
+    bus->controller1 = 0;
+    bus->controller2 = 0;
+    bus->controller1_shifter = 0;
+    bus->controller2_shifter = 0;
+    bus->dma_page = 0;
+    bus->dma_addr = 0;
+    bus->dma_data = 0;
+    bus->dma_transfer = false;
+    bus->dma_dummy = true;
     bus->clocks_count = 0;
 }
 
@@ -149,4 +220,9 @@ void Bus_Reset(Bus* bus) {
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
     bus->clocks_count = 0;
+    bus->dma_page = 0;
+    bus->dma_addr = 0;
+    bus->dma_data = 0;
+    bus->dma_transfer = false;
+    bus->dma_dummy = true;
 }

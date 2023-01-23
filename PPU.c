@@ -480,6 +480,8 @@ void PPU_PowerOn(PPU* ppu) {
     // this
     ppu->status = 0xc0;
 
+    ppu->oam_ptr = (uint8_t*)ppu->oam;
+
     // just run the reset for safety
     PPU_Reset(ppu);
 }
@@ -515,6 +517,9 @@ void PPU_Reset(PPU* ppu) {
     // IT APPEARS THAT NOT WIPING THIS SEEMS POTENTIALLY DANGEROUS WITH CPU MAYBE
     // ENTERING VBLANK TOO EARLY, BUT WE MAY NEED TO CHANGE THIS LATER
     ppu->status = 0x00;
+
+    // MAYBE DOESN'T NEED TO BE HERE
+    ppu->oam_addr = 0;
 
     // FIXME: MAY WANNA INVESTIGATE IF THE SCANLINE SHOULD BE -1, ALTHOUGH
     // IF THE FIRST FRAME IS WRONG WHO WILL CARE
@@ -717,6 +722,7 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
     case 3: // OAM address (OAM = SPRITE)
         break;
     case 4: // OAM data
+        tmp = ppu->oam_ptr[ppu->oam_addr];
         break;
     case 5: // scroll
         break;
@@ -754,8 +760,10 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     case 2: // status
         break;
     case 3: // OAM address
+        ppu->oam_addr = data;
         break;
     case 4: // OAM data
+        ppu->oam_ptr[ppu->oam_addr] = data;
         break;
     case 5: // scroll
         if (ppu->addr_latch == 0) {

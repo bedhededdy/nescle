@@ -788,6 +788,7 @@ void CPU_Clock(CPU* cpu) {
      * cycle and count down how many cycles it actually takes 
      * to ensure proper timing 
      */
+    // TODO: ATTEMPT TO AVOID LOCKING ON EVERY INSTRUCTION
     if (cpu->cycles_rem == 0) {
         // Don't let disassembler run while in middle of instruction
         if (SDL_LockMutex(cpu->pc_lock))
@@ -1200,6 +1201,10 @@ void CPU_DisassembleLog(CPU* cpu) {
     free(str);
 }
 
+
+// TODO: TO REALLY TEST IF THIS WORKS PROPERLY, YOU SHOULD JUST
+//       LET THE EMULATION THREAD RUN INFINITELY FAST
+//       AND THEN CONTINUOUSLY CHECK IN HERE IF THE PC HAS CHANGED
 uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     // TODO: CALLING THIS EACH TIME IS SUBOPTIMAL (ALTHOUGH HAS LITTLE 
     //       PERFORMANCE IMPACT). BETTER TO GENERATE ALL ADDRS AT ONCE
@@ -1229,12 +1234,13 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     if (ret == NULL)
         return NULL;
 
-    // THIS CANNOT BE OPTIMIZED AWAY, OR THERE WILL BE BUGS
+    // Could make pc volatile and unlock immediately,
+    // but probably better to just release lock later
+    // Since there is low contention for locks, this
+    // probably performs better as well
     if (SDL_LockMutex(cpu->pc_lock))
         printf("CPU_GenerateOpStartingAddrs: failed to acquire mutex\n");
     uint16_t pc = cpu->pc;
-    if (SDL_UnlockMutex(cpu->pc_lock))
-        printf("CPU_GenerateOpStartingAddrs: failed to unlock mutex\n");
 
     // Fill with first 27 instructions
     for (int i = 0; i < ret_len; i++) {
@@ -1264,6 +1270,8 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
             ret[ret_len - 1] = addr;
         }
     }
+    if (SDL_UnlockMutex(cpu->pc_lock))
+        printf("CPU_GenerateOpStartingAddrs: failed to unlock mutex\n");
 
     for (int i = 0; i < ret_len/2; i++)
         for (int j = 1; j < 27; j++)
@@ -1277,9 +1285,6 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
         addr += instr->bytes;
         ret[i] = addr;
     }
-
-    if (pc != cpu->pc)
-        printf("CPU_GenerateOpStartingAddrs: OPTIMIZER BROKE THE CODE\n");
 
     return ret;
 }

@@ -11,6 +11,8 @@
 #define PPU_PATTERNTBL_SIZE (1024 * 4)
 #define PPU_PALETTE_SIZE    (32)
 
+#define PPU_OAM_SIZE        (64)
+
 #define PPU_TILE_NBYTES     (16)
 #define PPU_TILE_X          (8)
 #define PPU_TILE_Y          (8)
@@ -67,6 +69,14 @@
 //    int buffer_to_write;
 //}
 
+// Sprite (OAM) information container
+struct ppu_oam {
+    uint8_t y;
+    uint8_t tile_id;
+    uint8_t attributes;
+    uint8_t x;
+};
+
 struct ppu {
     Bus* bus;
 
@@ -82,6 +92,13 @@ struct ppu {
     // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
     //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
     uint8_t palette[PPU_PALETTE_SIZE];     // color palette information
+
+    // Sprite info
+    PPU_OAM oam[64];
+    // For accessing OAM as a sequence of bytes
+    uint8_t* oam_ptr;
+
+    uint8_t oam_addr;
 
     // 8x8px per tile x 256 tiles per half
     // representation of the pattern table as rgb values
