@@ -17,6 +17,8 @@
 #define PPU_TILE_X          (8)
 #define PPU_TILE_Y          (8)
 
+#define PPU_SPR_PER_LINE    (8)
+
 #define PPU_NAMETBL_X       (32)
 #define PPU_NAMETBL_Y       (32)
 
@@ -93,12 +95,23 @@ struct ppu {
     //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
     uint8_t palette[PPU_PALETTE_SIZE];     // color palette information
 
-    // Sprite info
+    // Sprite internal info
     PPU_OAM oam[64];
     // For accessing OAM as a sequence of bytes
     uint8_t* oam_ptr;
 
     uint8_t oam_addr;
+
+    // Sprite rendering info
+    PPU_OAM spr_scanline[PPU_SPR_PER_LINE];
+    int spr_count;
+    // Shifters for each sprite in the row
+    uint8_t spr_shifter_pattern_lo[PPU_SPR_PER_LINE];
+    uint8_t spr_shifter_pattern_hi[PPU_SPR_PER_LINE];
+
+    // Sprite 0
+    bool spr0_can_hit;
+    bool spr0_rendering;
 
     // 8x8px per tile x 256 tiles per half
     // representation of the pattern table as rgb values

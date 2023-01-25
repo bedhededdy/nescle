@@ -1293,7 +1293,7 @@ int main(int argc, char** argv) {
     //               if I have a resource the binary needs
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
-    inspect_hw("roms/dkrev1.nes");
+    inspect_hw("roms/smb.nes");
     //inspect_hw_mul("roms/iceclimbers.nes");
 
     return 0;
