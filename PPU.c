@@ -1130,7 +1130,10 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
         ppu->oam_addr = data;
         break;
     case 4: // OAM data
-        ppu->oam_ptr[ppu->oam_addr] = data;
+        // FIXME: OLC DOES NOT INCREMENT, BUT TEST ROMS DO
+        // NOBODY EVER DOES THIS ANYWAY, SO THIS WORKING
+        // IS NOT A HUGE DEAL
+        ppu->oam_ptr[ppu->oam_addr++] = data;
         break;
     case 5: // scroll
         if (ppu->addr_latch == 0) {

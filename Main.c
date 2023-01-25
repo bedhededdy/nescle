@@ -1093,7 +1093,7 @@ void inspect_hw_mul(const char* rom_path) {
             // in release mode i get 1-2ms per frame which gives us between 500 and 1000fps uncapped
             // most of time spent comes from emulation, not from the rendering
             // rendering went from about 3-4ms in software to 0-1ms in hw
-            printf("60 frames rendered in %dms\n", (int)(frame60_t1 - frame60_t0));
+            //printf("60 frames rendered in %dms\n", (int)(frame60_t1 - frame60_t0));
             frame60_t0 = frame60_t1;
         }
 
@@ -1293,8 +1293,8 @@ int main(int argc, char** argv) {
     //               if I have a resource the binary needs
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
-    inspect_hw("roms/smb.nes");
-    //inspect_hw_mul("roms/iceclimbers.nes");
+    inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/sprite_ram.nes");
+    //inspect_hw_mul("roms/smb.nes");
 
     return 0;
 }
