@@ -42,6 +42,7 @@ struct bus {
     uint8_t dma_page;
     uint8_t dma_addr;
     uint8_t dma_data;
+    uint8_t dma_2003_off;
 
     bool dma_transfer;
     bool dma_dummy;

@@ -126,8 +126,13 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     else if (addr == 0x4014) {
         /* DMA (Direct Memory Access) */
+        // FIXME: THE STARTING DMA ADDRESS SHOULD START AT THE VALUE
+        //        IN 0x2003 AND WRAP
+        //        DMA ADDR IS FINE, WE NEED TO MESS WITH PPU OAM_ADDR, BUT
+        //        AT THE END ITS VALUE MUST REMAIN IN TACT
         bus->dma_page = data;
         bus->dma_addr = 0;
+        bus->dma_2003_off = PPU_RegisterRead(bus->ppu, 0x2003);
         bus->dma_transfer = true;
     }
     else if (addr == 0x4016 || addr == 0x4017) {

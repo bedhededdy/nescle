@@ -411,17 +411,36 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     render_text(texture, char_set, line, color, x, y);
 
     // y
-    x = 2;
+    /*x = 2;
     y = 42;
 
     sprintf(line, "Y:  $%02X", cpu->y);
+    render_text(texture, char_set, line, color, x, y);*/
+
+    x = 2;
+    y = 42;
+
+    sprintf(line, "*VRAM: $%02X", PPU_Read(cpu->bus->ppu, cpu->bus->ppu->vram_addr));
     render_text(texture, char_set, line, color, x, y);
 
     // sp
-    x = 2;
+    /*x = 2;
     y = 52;
 
     sprintf(line, "SP: $%02X", cpu->sp);
+    render_text(texture, char_set, line, color, x, y);*/
+
+    x = 2;
+    y = 52;
+
+    sprintf(line, "VRAM: $%04X", cpu->bus->ppu->vram_addr);
+    render_text(texture, char_set, line, color, x, y);
+
+    // ppu vram address
+    x = 2;
+    y = 62;
+
+    sprintf(line, "BUF: $%02X", cpu->bus->ppu->data_buffer);
     render_text(texture, char_set, line, color, x, y);
 
     // instructions
@@ -767,8 +786,8 @@ void inspect_hw(const char* rom_path) {
         }
 
         render_ppu_gpu(renderer, ppu_texture, ppu);
-        //render_cpu(cpu_texture, cpu, char_set);
-        render_oam(cpu_texture, ppu, char_set);
+        render_cpu(cpu_texture, cpu, char_set);
+        //render_oam(cpu_texture, ppu, char_set);
         render_pattern_memory(pattern_texture, ppu, palette);
 
         SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
@@ -1073,7 +1092,7 @@ void inspect_hw_mul(const char* rom_path) {
         //        SINCE THE DOUBLE BUFFERING LOCKS THE PPU 
         //        ACTUALLY JUST TELL EMU THREAD NOT TO INCREMENT THE POST VALUE IF
         //        IT IS 1
-        SDL_CondWait(signal_frame_ready, frame_ready_mutex);
+        //SDL_CondWait(signal_frame_ready, frame_ready_mutex);
         SDL_UnlockMutex(frame_ready_mutex);
 
         render_ppu_gpu(renderer, ppu_texture, ppu);
@@ -1293,8 +1312,10 @@ int main(int argc, char** argv) {
     //               if I have a resource the binary needs
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
-    inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/sprite_ram.nes");
-    //inspect_hw_mul("roms/smb.nes");
+    // FIXME: HOW TF DOES THIS WRITE TO CHR_RAM WITHOUT ME DETECTING IT
+    inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
+    //inspect_hw("roms/smb.nes");
+    //inspect_hw_mul("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
 
     return 0;
 }

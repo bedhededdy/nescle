@@ -981,6 +981,37 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
             break;
         }
 
+        // FIXME: MAY BREAK SOME STUFF
+        // palette read also reads vram into the data buffer
+        // but we also must prevent infinite recursion
+        // FIXME: FAILS TO PASS TEST PROBABYL BECAUSE I STILL NEED TO DO THIS
+        // EVEN WITH THESE ADDRESSES
+        // FIXME: TRY HARD CODING IT FOR THE PALETTE READ CASE
+        // FIXME: DOESN'T WORK, THINKS I'M CHANGING THE DATA BUFFER ON A 
+        //        PALETTE WRITE EVEN THOUGH THIS IS READ FUNCTION
+        /*
+        if (ppu->vram_addr < 0x3f00 || ppu->vram_addr >= 0x4000)
+            PPU_Read(ppu, ppu->vram_addr);
+        else {
+            uint16_t addr2 = ppu->vram_addr % 32;
+            switch (addr2) {
+            case 0x10:
+                addr2 = 0;
+                break;
+            case 0x14:
+                addr2 = 4;
+                break;
+            case 0x18:
+                addr2 = 8;
+                break;
+            case 0x1c:
+                addr2 = 0x0c;
+                break;
+            }
+
+            ppu->data_buffer = ppu->palette[addr2];
+        }*/
+
         return ppu->palette[addr] & ((ppu->mask & PPU_MASK_GREYSCALE) ? 0x30 : 0x3f);
     }
 
@@ -994,7 +1025,7 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        printf("writing to patterntbl\n");
+        //printf("writing to patterntbl\n");
         //ppu->patterntbl[(addr & 0x1000) >> 12][addr & 0x0fff] = data;
         Cart* cart = bus->cart;
         Mapper* mapper = cart->mapper;
@@ -1063,6 +1094,8 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
         }
 
         ppu->palette[addr] = data;
+
+        
     }
 
     return true;
@@ -1100,6 +1133,17 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
         ppu->data_buffer = PPU_Read(ppu, ppu->vram_addr);
 
         // Palette memory isn't delayed by one cycle like the rest of memory
+
+        // FIXME: THIS IS BROKEN IN PPU TEST BECAUSE THE WAY THAT WE READ FROM
+        // PALETTE RAM IS WRONG. THE PALETTE RAM IS ALMOST ALWAYS A MIRROR OF 0X2000
+        // TO 0X2FFF. WE NEED TO IMPLEMENT THAT AND THEN TELL THAT WHOLE THING
+        // WHEN TO READ FROM PALETTE MEM
+        // For info on how to fix, read this
+        // https://forums.nesdev.org/viewtopic.php?t=22459
+
+        // FIXME: THE PPU NEVER ACTUALLY READS FROM 0X3000-0X3FFF BY ITSELF, SO WE
+        // CAN MORE OR LESS MIRROR THE WHOLE THING IN READ, BUT HAVE THE WRITE BEHAVE CORRECTLY
+
         if (ppu->vram_addr >= 0x3f00)
             tmp = ppu->data_buffer;
         ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
@@ -1174,5 +1218,42 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
 }
 
 uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
-    return 0xff;
+    uint8_t tmp = 0xff;
+    addr %= 8;
+
+    switch (addr) {
+    case 0: // control
+        tmp = ppu->control;
+        break;
+    case 1: // mask
+        tmp = ppu->mask;
+        break;
+    case 2: // status
+        // only read certain bits
+        tmp = (ppu->status & 0xe0) | (ppu->data_buffer & 0x1f);
+        // reading the status register clears vblank and resets addr_latch
+        //ppu->status &= ~PPU_STATUS_VBLANK;
+        //ppu->addr_latch = 0;
+        break;
+    case 3: // OAM address (OAM = SPRITE)
+        break;
+    case 4: // OAM data
+        tmp = ppu->oam_ptr[ppu->oam_addr];
+        break;
+    case 5: // scroll
+        break;
+    case 6: // ppu address
+        break;
+    case 7: // ppu data
+        tmp = ppu->data_buffer;
+        //ppu->data_buffer = PPU_Read(ppu, ppu->vram_addr);
+
+        // Palette memory isn't delayed by one cycle like the rest of memory
+        if (ppu->vram_addr >= 0x3f00)
+            tmp = PPU_Read(ppu, ppu->vram_addr);
+        //ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
+        break;
+    }
+
+    return tmp;
 }
