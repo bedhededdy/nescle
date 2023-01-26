@@ -30,7 +30,9 @@
 
 // FIXME: MISSING THE PLUGIN I NEED TO DOWNLOAD FOR AUDIO
 #include <SDL2/SDL.h>
+//#include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_thread.h>
+
 
 #include "Bus.h"
 #include "Cart.h"
@@ -344,6 +346,14 @@ void render_oam(SDL_Texture* texture, PPU* ppu, const uint8_t* char_set) {
 }
 
 void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
+    uint8_t ram_before[2048];
+    uint8_t ram_after[2048];
+    uint16_t pc_before = cpu->pc;
+    uint8_t a_before = cpu->a;
+    uint8_t status_before = cpu->bus->ppu->status;
+
+    memcpy(ram_before, cpu->bus->ram, sizeof(uint8_t) * 2048);
+
     // FIXME: POSSIBLE ISSUE WITH RETAINING TEXT, ALTHOUGH POSSIBLY NOT
     //        SO BECAUSE WE HAVE A FIXED LENGTH DISASSEMBLY
     //        SOLUTION IS AFTER EACH RENDER TEXT TO JUST RENDER TRANSPARENT
@@ -411,37 +421,64 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     render_text(texture, char_set, line, color, x, y);
 
     // y
-    /*x = 2;
+    x = 2;
     y = 42;
 
     sprintf(line, "Y:  $%02X", cpu->y);
-    render_text(texture, char_set, line, color, x, y);*/
-
-    x = 2;
-    y = 42;
-
-    sprintf(line, "*VRAM: $%02X", PPU_Read(cpu->bus->ppu, cpu->bus->ppu->vram_addr));
     render_text(texture, char_set, line, color, x, y);
 
-    // sp
-    /*x = 2;
+    //x = 2;
+    //y = 42;
+
+    //sprintf(line, "*VRAM: $%02X", PPU_Read(cpu->bus->ppu, cpu->bus->ppu->vram_addr));
+    //render_text(texture, char_set, line, color, x, y);
+
+    //// sp
+    x = 2;
     y = 52;
 
     sprintf(line, "SP: $%02X", cpu->sp);
-    render_text(texture, char_set, line, color, x, y);*/
-
-    x = 2;
-    y = 52;
-
-    sprintf(line, "VRAM: $%04X", cpu->bus->ppu->vram_addr);
     render_text(texture, char_set, line, color, x, y);
 
-    // ppu vram address
+    // controller
     x = 2;
     y = 62;
 
-    sprintf(line, "BUF: $%02X", cpu->bus->ppu->data_buffer);
-    render_text(texture, char_set, line, color, x, y);
+    // FIXME: MAY WANT TO BE SHIFTER
+    // FIXME: ADD LOCK
+    uint8_t controller = cpu->bus->controller1;
+
+    sprintf(line, "A ");
+    color = (controller & BUS_CONTROLLER_A) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "B ");
+    color = (controller & BUS_CONTROLLER_B) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "SL ");
+    color = (controller & BUS_CONTROLLER_SELECT) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "ST ");
+    color = (controller & BUS_CONTROLLER_START) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "U ");
+    color = (controller & BUS_CONTROLLER_UP) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "D ");
+    color = (controller & BUS_CONTROLLER_DOWN) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "L ");
+    color = (controller & BUS_CONTROLLER_LEFT) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
+
+    sprintf(line, "R");
+    color = (controller & BUS_CONTROLLER_RIGHT) ? 0xff00ff00 : 0xffff0000;
+    x = render_text(texture, char_set, line, color, x, y);
 
     // instructions
 
@@ -449,6 +486,8 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     // because the addressing mode is what tells us how many bytes each instruction is
     x = 2;
     y = 72;
+    color = 0xffffffff;
+    
     char* curr_instr = CPU_DisassembleString(cpu, cpu->pc);
     // FIXME: THE FORMAT FROM THE NESLOG FILE IS TOO BIG TO FIT ON THE SCREEN
     //          SO I HAVE TO HACK IT TO SEE WHAT I WANT (although it will still run off)
@@ -458,7 +497,12 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     
 
     uint16_t* op_starting_addrs = CPU_GenerateOpStartingAddrs(cpu);
+    /*for (int i = 0; i < 27; i++) {
+        printf("%04X ", op_starting_addrs[i]);
+    }
+    printf("\n");*/
 
+    // FIXME: SOMETHING IN HERE IS BROKEN, THIS MAKING MARIO RANDOMLY PAUSE
     // filler (13 before and 13 after) with the real one in the middle
     for (int i = 0; i < 13; i++) {
         char* instr = CPU_DisassembleString(cpu, op_starting_addrs[i]);
@@ -494,6 +538,21 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     }
 
     free(op_starting_addrs);
+
+    memcpy(ram_after, cpu->bus->ram, sizeof(uint8_t) * 2048);
+    
+    for (int i = 0; i < 2048; i++) {
+        if (ram_before[i] != ram_after[i])
+            printf("DISASSEMBLER CHANGED RAM\n");
+    }
+
+    if (cpu->pc != pc_before)
+        printf("PC CHANGED\n");
+    if (cpu->a != a_before)
+        printf("A CHANGED\n");
+    if (cpu->bus->ppu->status != status_before)
+        printf("PPU STATUS CHANGED\n");
+        
 }
 
 uint8_t* load_char_set() {
@@ -628,6 +687,14 @@ void inspect_hw(const char* rom_path) {
     SDL_Texture* ppu_texture;
 
     SDL_Init(SDL_INIT_VIDEO);
+    //Mix_Init(MIX_INIT_MP3 | MIX_INIT_OGG);
+
+    // Play some placeholder music
+    //Mix_Music* music = Mix_LoadMUS("music/metal-mario-land.mp3");
+    //if (music == NULL)
+      //  printf("Can't play music\n");
+    //if (Mix_PlayMusic(music, -1) == -1)
+      //  printf("Can't play music\n");
 
     // Create window with renderer
     create_window_and_renderer(&window, &renderer);
@@ -786,8 +853,8 @@ void inspect_hw(const char* rom_path) {
         }
 
         render_ppu_gpu(renderer, ppu_texture, ppu);
-        render_cpu(cpu_texture, cpu, char_set);
-        //render_oam(cpu_texture, ppu, char_set);
+        //render_cpu(cpu_texture, cpu, char_set);
+        render_oam(cpu_texture, ppu, char_set);
         render_pattern_memory(pattern_texture, ppu, palette);
 
         SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
@@ -1257,6 +1324,36 @@ void mutex_thread_test() {
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
+    // FIXME: RANDOMLY HANGS ALL THE TIME, SEEMS TO HAVE STOPPED DOING THAT UPON
+    // STOPPING RNEDERIN GHT EDISASSMEBLER
+    // TEST FURTHER
+
+    // FIXME: THE ISSUE MAY BE CAUSED BY THE NEW WAY IN WHICH WE DO THE PALETTE RENDERING
+    // BUT I THINK IT'S FROZEN BEFORE THAT SO I DOUBT IT??
+
+    // FIXME: IT APPEARS THAT THE FREEZING IS THE GAME ACTUALLY RANDOMLY PAUSING ITSELF, SO
+    //        THIS IS AN INPUT POLLING ERROR OR A WRITING INPUT ERROR
+    //        CHECK DISASSEMBLER FOR POSSIBLY INTERFERING WITH THE CONTROLLER REGISTER READS
+    //        IT APPEARS THAT THIS IS POSSIBLY A DMA GLITCH
+
+    //          MAYBE ALSO A SPR OVRFLOW BUG
+
+    // We randomly get stukc in this code
+    /* 
+    Sprite0Clr:    lda PPU_STATUS            ;wait for sprite 0 flag to clear, which will
+               and #%01000000            ;not happen until vblank has ended
+               bne Sprite0Clr
+               lda GamePauseStatus       ;if in pause mode, do not bother with sprites at all
+               lsr
+               bcs Sprite0Hit
+               jsr MoveSpritesOffscreen
+               jsr SpriteShuffler*/
+
+    // somehow addres 0x0776 is becoming one without us pressing pause
+
+    // MAYBE DISASSEMBLER AND SPR0 DON'T PLAY NICE, BECAUSE I CAN ALWAYS ENABLE SPR0
+    // AND WHEN I DO I DON'T SEEM TO HAVE THE BUG
+
     /* cmdline flags */
     // -w   width of the window     (default to 256)
     // -h   height of the window    (default to 240)
@@ -1313,9 +1410,23 @@ int main(int argc, char** argv) {
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
     // FIXME: HOW TF DOES THIS WRITE TO CHR_RAM WITHOUT ME DETECTING IT
-    inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
-    //inspect_hw("roms/smb.nes");
+    //inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
+    //inspect_hw("roms/nes-test-roms/cpu_timing_test6/cpu_timing_test.nes");
+    //inspect_hw("roms/nestest.nes");
+    
+    //inspect_hw("roms/nes-test-roms/sprite_hit_tests_2005.10.05/11.edge_timing.nes");
     //inspect_hw_mul("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
+
+    //inspect_hw("roms/smb.nes");
+    //inspect_hw("roms/arkanoid.nes");
+    //inspect_hw("roms/solomons-key.nes");
+    //inspect_hw("roms/mega-man.nes");
+
+    // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
+    // FAILS RIGHT EDGE WITH CODE 2
+    // FAILS TIMING WITH CODE 3
+    // FAILS EDGE TIMING WITH CODE 3
+
 
     return 0;
 }

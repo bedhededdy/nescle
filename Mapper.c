@@ -112,18 +112,41 @@ return false;
 
 /* Mapper003 */
 void Mapper003(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
+    mapper->id = 3;
+    mapper->prg_rom_banks = rom_banks;
+    mapper->chr_rom_banks = char_banks;
+
+    mapper->bank_select = 0;
+
+    mapper->map_cpu_read = &Mapper003_CPURead;
+    mapper->map_cpu_write = &Mapper003_CPUWrite;
+    mapper->map_ppu_read = &Mapper003_PPURead;
+    mapper->map_ppu_write = &Mapper003_PPUWrite;
 }
-bool Mapper003_CPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){
-return false;
+
+bool Mapper003_CPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
+    *mapped_addr = addr % (mapper->prg_rom_banks > 1 ? 0x8000 : 0x4000);
+    return true;
 }
-bool Mapper003_CPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){
-return false;
+bool Mapper003_CPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
+    // Bank select will be handled by the bus
+    return true;
 }
-bool Mapper003_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){
-return false;
+
+bool Mapper003_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
+    // only care abt bottom 2 bits
+    uint8_t select = mapper->bank_select & 3;
+    // The first bit that would potentially let us address outside 0x2000 is the
+    // 14th bit
+    *mapped_addr = addr | (select << 13);
+    return true;
 }
-bool Mapper003_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){
-return false;
+
+bool Mapper003_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr) {
+    // TODO: Leave this alone for now, but I probably need to acct for 
+    // RAM here
+    printf("Mapper003: attempt to write chr_rom\n");
+    return false;
 }
 
 /* Mapper004 */

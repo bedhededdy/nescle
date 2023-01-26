@@ -12,6 +12,7 @@ struct mapper {
     uint8_t id; 
     uint8_t prg_rom_banks;  // How many 16kb chunks of memory for prg_rom
     uint8_t chr_rom_banks;  // How many 8kb chunks of memory for char_rom
+    uint8_t bank_select;    // Select which banks of memory to use
 
     // Map address for each of the four possible types of memory access
     bool (*map_cpu_read)(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr);

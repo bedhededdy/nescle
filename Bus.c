@@ -62,6 +62,9 @@ void Bus_ClearMem(Bus* bus) {
 }
 
 uint8_t Bus_Read(Bus* bus, uint16_t addr) {
+    //if (addr == 0x0776 && bus->ram[addr] == 1)
+        //printf("paused\n");
+
     if (addr >= 0 && addr < 0x2000) {
         /* RAM */
         // The system reserves the first 0x2000 bytes of addressable memory
@@ -105,6 +108,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         uint32_t mapped_addr;
         if (bus->cart->mapper->map_cpu_read(bus->cart->mapper, addr, &mapped_addr))
             return bus->cart->prg_rom[mapped_addr];
+        
     }
 
     // Return 0 on failed read
@@ -112,6 +116,8 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
 }
 
 bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
+    //if (addr == 0x0776 && data == 1)
+        //printf("pausing\n");
     if (addr >= 0 && addr < 0x2000) {
         /* RAM */
         // The system reserves the first 0x2000 bytes of addressable memory
@@ -158,7 +164,10 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
         // FIXME: SEE READ FOR POTENTIAL OTHER ERRORS
         uint32_t mapped_addr;
         if (bus->cart->mapper->map_cpu_write(bus->cart->mapper, addr, &mapped_addr)) {
-            bus->cart->prg_rom[mapped_addr] = data;
+            //bus->cart->prg_rom[mapped_addr] = data;
+            // We don't actually write the data to the prg_rom (for now), rather we write
+            // to the bank select register
+            bus->cart->mapper->bank_select = data;
             return true;
         }
         return false;

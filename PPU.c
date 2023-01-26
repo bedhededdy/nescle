@@ -293,7 +293,12 @@ uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
     // foreground. Unlike the pattern memory, which usually uses the first half for bg
     // and the second half for fg, but does not force you to do that, you are forced
     // to use the first half for bg and second half for fg for the palette selection.
-    return map_color(PPU_Read(ppu, PPU_PALETTE_OFFSET + palette * 4 + pixel));
+    
+    // OLD WAY OF DOING FROM WHEN THE PPU DIDN'T PROPERLY MIRROR 0X3000 TO 0X4000 TO 0X2000 TO 0X3000
+    //return map_color(PPU_Read(ppu, PPU_PALETTE_OFFSET + palette * 4 + pixel));
+
+    // FIXME: MAY BE WRONG B/C OF LACK OF MIRRORING???
+    return map_color(ppu->palette[palette * 4 + pixel]);
 }
 
 /* Constructors/Destructors */
@@ -318,6 +323,12 @@ void PPU_Destroy(PPU* ppu) {
 // https://www.nesdev.org/wiki/PPU_rendering
 void PPU_Clock(PPU* ppu) {
     // TODO: MAY WANNA DECOUPEL THE FG RENDER FROM THE BG RENDER
+
+    // FIXME: SPRITE 0 COLLLIISION IS NOT FULLY CORRECT
+    //        OR WE HAVE SOME TIMING DESYNC ISSUE, POSSIBLY
+    //        WITH DMA
+    //        BUT WE FREEZE IN MARIO RANDOMLY
+    //        BECAUSE OF SPRITE 0 HITS
 
     // NES rendered in 340x260p, with many invisible pixels in the 
     // overscan area. NES actually displayed in 256x240p, but many TVs
@@ -798,15 +809,23 @@ break;
                     && ~(ppu->mask & PPU_MASK_SPR_LEFT_COLUMN_ENABLE)) {
                     // can only have hit after first 8 pixels
                     // TODO: INVESTIGATE CORRECNESS OF CYCLE VALUES
-                    if (ppu->cycle >= 9 && ppu->cycle < 258)
+                    if (ppu->cycle >= 9 && ppu->cycle < 258) {
                         ppu->status |= PPU_STATUS_SPR_HIT;
+                        //printf("enabling spr0_hit\n");
+                    }
                 }
                 else {
-                    if (ppu->cycle >= 1 && ppu->cycle < 258)
+                    if (ppu->cycle >= 1 && ppu->cycle < 258) {
                         ppu->status |= PPU_STATUS_SPR_HIT;
+                        //printf("enabling spr0_hit\n");
+                    }
                 }
             }
         }
+
+        // PREVENT FROM GETTING STUCK IN INFINITE LOOP
+        // TODO: REMOVE ME
+        //ppu->status |= PPU_STATUS_SPR_HIT;
             
     }
 
@@ -932,7 +951,7 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
         if (mapper->map_ppu_read(mapper, addr, &mapped_addr))
             return cart->chr_rom[mapped_addr];
     }
-    else if (addr >= 0x2000 && addr < 0x3f00) {
+    else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
@@ -961,6 +980,7 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
 
         }
     }
+    /*
     else if (addr >= 0x3f00 && addr < 0x4000) {
         // only 32 colors
         // we also have mirroring going on top of that for the last pixel transparency effect
@@ -989,7 +1009,7 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
         // FIXME: TRY HARD CODING IT FOR THE PALETTE READ CASE
         // FIXME: DOESN'T WORK, THINKS I'M CHANGING THE DATA BUFFER ON A 
         //        PALETTE WRITE EVEN THOUGH THIS IS READ FUNCTION
-        /*
+        
         if (ppu->vram_addr < 0x3f00 || ppu->vram_addr >= 0x4000)
             PPU_Read(ppu, ppu->vram_addr);
         else {
@@ -1010,10 +1030,10 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
             }
 
             ppu->data_buffer = ppu->palette[addr2];
-        }*/
+        }
 
         return ppu->palette[addr] & ((ppu->mask & PPU_MASK_GREYSCALE) ? 0x30 : 0x3f);
-    }
+    }*/
 
     // FIXME: I WOULDN'T BE SURPRISED IF THIS BREAKS SOMETHING THAT ASSUMES RAM DEFAULT VAL OF 0
     return 0xff;
@@ -1030,8 +1050,11 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
         Cart* cart = bus->cart;
         Mapper* mapper = cart->mapper;
         uint32_t mapped_addr;
-        if (mapper->map_ppu_write(mapper, addr, &mapped_addr))
+        if (mapper->map_ppu_write(mapper, addr, &mapped_addr)) {
+            // FIXME: WORKAROUND, YOU NEED TO CHNAGE HOW MAPPERS WORK
+            //        TO HANDLE BANK SELECTION
             cart->chr_rom[mapped_addr] = data;
+        }
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
         //printf("writing to naemtable\n");
@@ -1074,8 +1097,6 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
     else if (addr >= 0x3f00 && addr < 0x4000) {
         // only 32 colors
         // we also have mirroring going on top of that
-        //printf("WRITING TO PALETTE MEMORY\n");
-
         addr %= 32;
 
         switch (addr) {
@@ -1094,8 +1115,6 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
         }
 
         ppu->palette[addr] = data;
-
-        
     }
 
     return true;
@@ -1144,8 +1163,24 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
         // FIXME: THE PPU NEVER ACTUALLY READS FROM 0X3000-0X3FFF BY ITSELF, SO WE
         // CAN MORE OR LESS MIRROR THE WHOLE THING IN READ, BUT HAVE THE WRITE BEHAVE CORRECTLY
 
-        if (ppu->vram_addr >= 0x3f00)
-            tmp = ppu->data_buffer;
+        if (ppu->vram_addr >= 0x3f00) {
+            int pal_addr = ppu->vram_addr % 32;
+            switch (pal_addr) {
+            case 0x10:
+                pal_addr = 0;
+                break;
+            case 0x14:
+                pal_addr = 4;
+                break;
+            case 0x18:
+                pal_addr = 8;
+                break;
+            case 0x1c:
+                pal_addr = 0xc;
+                break;
+            }
+            tmp = ppu->palette[pal_addr];
+        }
         ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
         break;
     }
