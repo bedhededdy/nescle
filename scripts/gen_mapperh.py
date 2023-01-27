@@ -12,10 +12,10 @@ def main():
             f.write(f'void Mapper{padded_no}(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks);\n')
 
             # read/write functions
-            f.write(f'bool Mapper{padded_no}_CPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr);\n')
-            f.write(f'bool Mapper{padded_no}_CPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr);\n')
-            f.write(f'bool Mapper{padded_no}_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr);\n')
-            f.write(f'bool Mapper{padded_no}_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr);\n')
+            f.write(f'uint8_t Mapper{padded_no}_CPURead(Mapper* mapper, uint16_t addr);\n')
+            f.write(f'bool Mapper{padded_no}_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);\n')
+            f.write(f'uint8_t Mapper{padded_no}_PPURead(Mapper* mapper, uint16_t addr);\n')
+            f.write(f'bool Mapper{padded_no}_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);\n')
 
             # blank line
             f.write('\n')
@@ -45,10 +45,10 @@ def main():
             f.write(f'void Mapper{padded_no}(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {{\n}}\n')
 
             # read/write functions
-            f.write(f'bool Mapper{padded_no}_CPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){{\nreturn false;\n}}\n')
-            f.write(f'bool Mapper{padded_no}_CPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){{\nreturn false;\n}}\n')
-            f.write(f'bool Mapper{padded_no}_PPURead(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){{\nreturn false;\n}}\n')
-            f.write(f'bool Mapper{padded_no}_PPUWrite(Mapper* mapper, uint16_t addr, uint32_t* mapped_addr){{\nreturn false;\n}}\n')
+            f.write(f'uint8_t Mapper{padded_no}_CPURead(Mapper* mapper, uint16_t addr){{\nreturn 0;\n}}\n')
+            f.write(f'bool Mapper{padded_no}_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){{\nreturn false;\n}}\n')
+            f.write(f'uint8_t Mapper{padded_no}_PPURead(Mapper* mapper, uint16_t addr){{\nreturn 0;\n}}\n')
+            f.write(f'bool Mapper{padded_no}_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){{\nreturn false;\n}}\n')
 
             # blank line
             f.write('\n')

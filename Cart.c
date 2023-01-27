@@ -145,7 +145,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Initialize cart's mapper
     cart->mapper = Mapper_Create(mapper_id, 
-        header->prg_rom_size, header->chr_rom_size);
+        header->prg_rom_size, header->chr_rom_size, cart);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
         return false;

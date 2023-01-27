@@ -945,11 +945,8 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Cart* cart = bus->cart;
-        Mapper* mapper = cart->mapper;
-        uint32_t mapped_addr;
-        if (mapper->map_ppu_read(mapper, addr, &mapped_addr))
-            return cart->chr_rom[mapped_addr];
+        Mapper* mapper = bus->cart->mapper;
+        return mapper->map_ppu_read(mapper, addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
@@ -1045,16 +1042,8 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        //printf("writing to patterntbl\n");
-        //ppu->patterntbl[(addr & 0x1000) >> 12][addr & 0x0fff] = data;
-        Cart* cart = bus->cart;
-        Mapper* mapper = cart->mapper;
-        uint32_t mapped_addr;
-        if (mapper->map_ppu_write(mapper, addr, &mapped_addr)) {
-            // FIXME: WORKAROUND, YOU NEED TO CHNAGE HOW MAPPERS WORK
-            //        TO HANDLE BANK SELECTION
-            cart->chr_rom[mapped_addr] = data;
-        }
+        Mapper* mapper = bus->cart->mapper;
+        return mapper->map_ppu_write(mapper, addr, data);
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
         //printf("writing to naemtable\n");
@@ -1253,6 +1242,7 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
 }
 
 uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
+    
     uint8_t tmp = 0xff;
     addr %= 8;
 

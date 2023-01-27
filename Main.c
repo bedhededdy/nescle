@@ -488,6 +488,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     y = 72;
     color = 0xffffffff;
     
+    // Possibly a problem
     char* curr_instr = CPU_DisassembleString(cpu, cpu->pc);
     // FIXME: THE FORMAT FROM THE NESLOG FILE IS TOO BIG TO FIT ON THE SCREEN
     //          SO I HAVE TO HACK IT TO SEE WHAT I WANT (although it will still run off)
@@ -496,14 +497,25 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     char my_format[37];
     
 
+    // Possibly  aproblem
     uint16_t* op_starting_addrs = CPU_GenerateOpStartingAddrs(cpu);
+
+
     /*for (int i = 0; i < 27; i++) {
         printf("%04X ", op_starting_addrs[i]);
     }
     printf("\n");*/
 
     // FIXME: SOMETHING IN HERE IS BROKEN, THIS MAKING MARIO RANDOMLY PAUSE
+    // FIXME: ALTHOUGH UNLIKELY, THE MAIRO ROM THAT I HAVE COULD BE THE ISSUES
+    //          THE ONE ON VIMMS LAIR IS ACTUALLY AN EU ROM, WHICH COULD EXPLAIN 
+    //        THE DISCREPANCY
+    //        BUT THAT STILL WOULDN'T EXPLAIN WHY THE ISSUE ONLY HAPPENS RUNNING
+    // /      DISASSEMBLER
     // filler (13 before and 13 after) with the real one in the middle
+
+    // definitely a problem
+    /*
     for (int i = 0; i < 13; i++) {
         char* instr = CPU_DisassembleString(cpu, op_starting_addrs[i]);
         memcpy(my_format, instr, 4);
@@ -537,7 +549,8 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
         y += 10;
     }
 
-    free(op_starting_addrs);
+    free(op_starting_addrs);*/
+    
 
     memcpy(ram_after, cpu->bus->ram, sizeof(uint8_t) * 2048);
     
@@ -853,8 +866,8 @@ void inspect_hw(const char* rom_path) {
         }
 
         render_ppu_gpu(renderer, ppu_texture, ppu);
-        //render_cpu(cpu_texture, cpu, char_set);
-        render_oam(cpu_texture, ppu, char_set);
+        render_cpu(cpu_texture, cpu, char_set);
+        //render_oam(cpu_texture, ppu, char_set);
         render_pattern_memory(pattern_texture, ppu, palette);
 
         SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
@@ -1420,7 +1433,9 @@ int main(int argc, char** argv) {
     //inspect_hw("roms/smb.nes");
     //inspect_hw("roms/arkanoid.nes");
     //inspect_hw("roms/solomons-key.nes");
-    //inspect_hw("roms/mega-man.nes");
+    //inspect_hw("roms/mega-man-vimm.nes");
+    inspect_hw("roms/castlevania.nes");
+    //inspect_hw("roms/smb.nes");
 
     // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
     // FAILS RIGHT EDGE WITH CODE 2

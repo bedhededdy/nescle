@@ -101,14 +101,8 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        // AND MAY HAVE TO BE DONE BEFORE ANYTHING ELSE
-        // A LA MAPPING THE ADDRESS BEFORE CHECKING WHAT TO DO 
-        // WITH IT
-        // ALSO THIS SHIT CAN SEGFAULT IF FOR INSTANCE YOU SEE A BAD OPCODE AND GET YOUR SHIT ALL FUCKED UP 
-        uint32_t mapped_addr;
-        if (bus->cart->mapper->map_cpu_read(bus->cart->mapper, addr, &mapped_addr))
-            return bus->cart->prg_rom[mapped_addr];
-        
+        Mapper* mapper = bus->cart->mapper;
+        return mapper->map_cpu_read(mapper, addr);
     }
 
     // Return 0 on failed read
@@ -160,17 +154,8 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        // FIXME: DOESN'T MAKE SENSE TO WRITE TO CARTRIDGE, SHOULD RETURN AN ERROR?????
-        // FIXME: SEE READ FOR POTENTIAL OTHER ERRORS
-        uint32_t mapped_addr;
-        if (bus->cart->mapper->map_cpu_write(bus->cart->mapper, addr, &mapped_addr)) {
-            //bus->cart->prg_rom[mapped_addr] = data;
-            // We don't actually write the data to the prg_rom (for now), rather we write
-            // to the bank select register
-            bus->cart->mapper->bank_select = data;
-            return true;
-        }
-        return false;
+        Mapper* mapper = bus->cart->mapper;
+        return mapper->map_cpu_write(mapper, addr, data);
     }
 
     // Return false on failed read
