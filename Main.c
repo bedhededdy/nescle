@@ -1434,8 +1434,17 @@ int main(int argc, char** argv) {
     //inspect_hw("roms/arkanoid.nes");
     //inspect_hw("roms/solomons-key.nes");
     //inspect_hw("roms/mega-man-vimm.nes");
-    inspect_hw("roms/castlevania.nes");
+    //
+    //inspect_hw("roms/castlevania.nes");
+    //inspect_hw("roms/duckhunt.nes");
+    //inspect_hw("roms/battletoads.nes");
+    //inspect_hw("roms/mega-man-2.nes");
+    //inspect_hw("roms/ninja-gaiden.nes");
+    inspect_hw("roms/zelda.nes");
+    //inspect_hw("roms/zelda2.nes");
     //inspect_hw("roms/smb.nes");
+    //inspect_hw("roms/nes-test-roms/MMC1_A12/mmc1_a12.nes");
+    //inspect_hw("roms/nes-test-roms/mappers/M1_P128K.nes");
 
     // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
     // FAILS RIGHT EDGE WITH CODE 2

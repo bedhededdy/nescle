@@ -29,8 +29,9 @@ Mapper* Mapper_Create(uint8_t id, uint8_t rom_banks, uint8_t char_banks, Cart* c
     Mapper* mapper = malloc(sizeof(Mapper));
     if (mapper == NULL)
         return NULL;
-    mapper_funcs[id](mapper, rom_banks, char_banks);
     mapper->cart = cart;
+    mapper_funcs[id](mapper, rom_banks, char_banks);
+
     return mapper;
 }
 
@@ -83,12 +84,48 @@ bool Mapper000_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 
 /* Mapper001 */
 // https://www.nesdev.org/wiki/MMC1
+static void calculate_prg_ptrs(Mapper* mapper) {
+    uint8_t select = (mapper->m1_ctrl & 0xc) >> 2;
+    printf("selection: %d\n", select);
+    
+    if (select < 2) {
+        // 32kb
+        mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x8000 * (mapper->m1_prg_select >> 1)];
+        //mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x4000 * (mapper->m1_prg_select & ~1)];
+        mapper->m1_prg_bank2 = mapper->m1_prg_bank1 + 0x4000;
+    }
+    else if (select == 2) {
+        // fix first, switch second
+        mapper->m1_prg_bank1 = mapper->cart->prg_rom;
+        mapper->m1_prg_bank2 = mapper->m1_prg_bank1 + 0x4000 * mapper->m1_prg_select;
+    }
+    else {
+        // switch first, fix second
+        mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x4000 * mapper->m1_prg_select];
+        mapper->m1_prg_bank2 = &mapper->cart->prg_rom[(mapper->prg_rom_banks - 1) * 0x4000];
+    }
+}
+
 void Mapper001(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
+    // FIXME: PARTIALLY WORKS, MEGA MAN 2 PLAYS BUT ZELDAS DO NOT
     mapper->id = 1;
     mapper->prg_rom_banks = rom_banks;
     mapper->chr_rom_banks = char_banks;
 
-    mapper->bank_select = 0;
+    // FIXME: MAY NEED DIFFERENET DEFAULT VALUES HERE
+    mapper->m1_load = 0;
+    mapper->m1_ctrl = 0x1c;
+    mapper->m1_write_count = 0;
+    mapper->cart->mirror_mode = CART_MIRRORMODE_HORZ;
+    // select
+    mapper->m1_chr_bank0 = mapper->cart->chr_rom;
+    mapper->m1_chr_bank1 = mapper->cart->chr_rom + 0x1000;
+    mapper->m1_chr0_select = 0;
+    mapper->m1_chr1_select = 0;
+    // ptrs
+    mapper->m1_prg_bank1 = mapper->cart->prg_rom;
+    mapper->m1_prg_bank2 = &mapper->cart->prg_rom[(mapper->prg_rom_banks - 1) * 0x4000];
+    mapper->m1_prg_select = 0;
 
     mapper->map_cpu_read = &Mapper001_CPURead;
     mapper->map_cpu_write = &Mapper001_CPUWrite;
@@ -96,18 +133,142 @@ void Mapper001(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
     mapper->map_ppu_write = &Mapper001_PPUWrite;
 }
 
-uint8_t Mapper001_CPURead(Mapper* mapper, uint16_t addr){
-    return 0;
+uint8_t Mapper001_CPURead(Mapper* mapper, uint16_t addr) {
+    // TODO: NEED TO ADD OPTIONAL PRG RAM TO CART, BUT IT IS RARELY USED
+    // SO WE WILL ASUSME THAT IT DOENS'T EXIST
+    if (addr < 0x8000) {
+        return 0;
+    }
+    else if (addr < 0xc000) {
+        return mapper->m1_prg_bank1[addr % 0x4000];
+    }
+    else {
+        return mapper->m1_prg_bank2[addr % 0x4000];
+    }
 }
 
-bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+    // FIXME: PROBABLY COMPLETELY WRONG
+    if (data & 0x80) {
+        //calculate_prg_ptrs(mapper);
+        printf("reset\n");
+        mapper->m1_ctrl = mapper->m1_ctrl | 0x0c;
+        mapper->m1_write_count = 0;
+        mapper->m1_load = 0;
+        //mapper->m1_chr_bank0 = mapper->cart->chr_rom;
+        //mapper->m1_chr_bank1 = mapper->m1_chr_bank0 + 0x1000;
+        // first swtich, second fixed
+        /*mapper->m1_prg_bank1 = &mapper->cart->chr_rom[0x4000 * mapper->m1_prg_select];
+        mapper->m1_prg_bank2 = &mapper->cart->chr_rom[(mapper->prg_rom_banks - 1) * 0x4000];*/
+        calculate_prg_ptrs(mapper);
+    }
+    else {
+        mapper->m1_load = (mapper->m1_load >> 1) | ((data & 1) << 4);
+        mapper->m1_write_count++;
+
+        if (mapper->m1_write_count == 5) {
+            if (addr < 0xa000) {
+                /* CTRL */
+                // maybe the and is unnecessary
+                mapper->m1_ctrl = mapper->m1_load & 0x1f;
+                switch (mapper->m1_ctrl & 3) {
+                case 0:
+                    mapper->cart->mirror_mode = CART_MIRRORMODE_OSLO;
+                    break;
+                case 1:
+                    mapper->cart->mirror_mode = CART_MIRRORMODE_OSHI;
+                    break;
+                case 2:
+                    mapper->cart->mirror_mode = CART_MIRRORMODE_VERT;
+                    break;
+                case 3:
+                    mapper->cart->mirror_mode = CART_MIRRORMODE_HORZ;
+                    break;
+                }
+
+                // recalculate prg and chr ptrs
+                calculate_prg_ptrs(mapper);
+
+                if (mapper->m1_ctrl & 0x10) {
+                    // 8kb mode
+                    // last bit ignored in 8kb mode
+                    mapper->m1_chr_bank0 = &mapper->cart->chr_rom[0x1000
+                        * (mapper->m1_chr0_select | 1)];
+                    mapper->m1_chr_bank1 = mapper->m1_chr_bank0 + 0x1000;
+                }
+                else {
+                    // 4kb mode
+                    mapper->m1_chr_bank0 = &mapper->cart->chr_rom[0x1000
+                        * mapper->m1_chr0_select];
+                    mapper->m1_chr_bank1 = &mapper->cart->chr_rom[0x1000 *
+                        mapper->m1_chr1_select];
+                }
+            }
+            else if (addr < 0xc000) {
+                printf("b0\n");
+                mapper->m1_chr0_select = mapper->m1_load;
+                uint8_t mode = (mapper->m1_ctrl & 0x10) >> 4;
+                // or with 1 if 8kb mode
+                mapper->m1_chr_bank0 = &mapper->cart->chr_rom[0x1000 * (mapper->m1_load | (1 - mode))];
+                if (mode == 0)
+                    mapper->m1_chr_bank1 = mapper->m1_chr_bank0 + 0x1000;
+            }
+            else if (addr < 0xe000) {
+                printf("b1\n");
+                // only can change if we are in mode that allows
+                // separate banks
+                mapper->m1_chr1_select = mapper->m1_load;
+                uint8_t mode = (mapper->m1_ctrl & 0x10) >> 4;
+                if (mode)
+                    mapper->m1_chr_bank1 = &mapper->cart->chr_rom[0x1000 * mapper->m1_load];
+            }
+            else {
+
+                mapper->m1_prg_select = mapper->m1_load & 0xf;
+                //mapper->m1_prg_select = mapper->m1_load;
+
+                // calculate prg ptrs
+                calculate_prg_ptrs(mapper);
+            }
+
+            mapper->m1_load = 0;
+            mapper->m1_write_count = 0;
+        }
+    }
+
+    return true;
 }
-uint8_t Mapper001_PPURead(Mapper* mapper, uint16_t addr){
-return 0;
+
+uint8_t Mapper001_PPURead(Mapper* mapper, uint16_t addr) {
+    if (mapper->chr_rom_banks == 0) {
+        return mapper->cart->chr_rom[addr];
+    }
+    else {
+        if (addr < 0x1000) {
+            return mapper->m1_chr_bank0[addr % 0x1000];
+        }
+        else {
+            return mapper->m1_chr_bank1[addr % 0x1000];
+        }
+    }
+    
 }
-bool Mapper001_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+
+bool Mapper001_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+    if (mapper->chr_rom_banks == 0) {
+        /*if (addr < 0x1000) {
+            mapper->m1_chr_bank0[addr % 0x1000] = data;
+        }
+        else {
+            mapper->m1_chr_bank1[addr % 0x1000] = data;
+
+        }*/
+        mapper->cart->chr_rom[addr] = data;
+        //mapper->m1_chr_bank0[addr] = data;
+        //mapper->cart->chr_rom[addr] = data;
+        return true;
+    }
+    return false;
 }
 
 /* Mapper002 */
@@ -117,7 +278,7 @@ void Mapper002(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
     mapper->prg_rom_banks = rom_banks;
     mapper->chr_rom_banks = char_banks;
 
-    mapper->bank_select = 0;
+    mapper->m2_bank_select = 0;
 
     mapper->map_cpu_read = &Mapper002_CPURead;
     mapper->map_cpu_write = &Mapper002_CPUWrite;
@@ -133,7 +294,7 @@ uint8_t Mapper002_CPURead(Mapper* mapper, uint16_t addr){
     if (addr < 0xc000) {
         // FIXME: NORMAL GAMES ONLY CARE ABT BTM 4 BITS, BUT NES2.0 GAMES
         // CAN USE ALL 8 BITS
-        uint8_t select = mapper->bank_select & 0x0f;
+        uint8_t select = mapper->m2_bank_select & 0x0f;
         
         // Since banks are only 16kb, we must mod our address by 0x4000.
         // This gives us a 14 bit address. So our select will use the
@@ -149,7 +310,7 @@ uint8_t Mapper002_CPURead(Mapper* mapper, uint16_t addr){
      
 }
 bool Mapper002_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    mapper->bank_select = data;
+    mapper->m2_bank_select = data;
     return true;
 }
 
@@ -174,7 +335,7 @@ void Mapper003(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
     mapper->prg_rom_banks = rom_banks;
     mapper->chr_rom_banks = char_banks;
 
-    mapper->bank_select = 0;
+    mapper->m3_bank_select = 0;
 
     mapper->map_cpu_read = &Mapper003_CPURead;
     mapper->map_cpu_write = &Mapper003_CPUWrite;
@@ -190,13 +351,13 @@ uint8_t Mapper003_CPURead(Mapper* mapper, uint16_t addr) {
 }
 bool Mapper003_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
     // Select bank of chr_rom
-    mapper->bank_select = data;
+    mapper->m3_bank_select = data;
     return true;
 }
 
 uint8_t Mapper003_PPURead(Mapper* mapper, uint16_t addr) {
     // only care abt bottom 2 bits
-    uint8_t select = mapper->bank_select & 3;
+    uint8_t select = mapper->m3_bank_select & 3;
 
     // Without selection, we can only address from 0 to 0x1fff, which is 13
     // bits. Therefore to determine the bank, we must examine the 14th and
@@ -212,6 +373,7 @@ bool Mapper003_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 }
 
 /* Mapper004 */
+// https://www.nesdev.org/wiki/MMC3
 void Mapper004(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
 }
 uint8_t Mapper004_CPURead(Mapper* mapper, uint16_t addr){
@@ -260,19 +422,43 @@ return false;
 }
 
 /* Mapper007 */
+// https://www.nesdev.org/wiki/AxROM
 void Mapper007(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
+    mapper->id = 3;
+    mapper->prg_rom_banks = rom_banks;
+    mapper->chr_rom_banks = char_banks;
+
+    mapper->m7_bank_select = 0;
+
+    mapper->map_cpu_read = &Mapper007_CPURead;
+    mapper->map_cpu_write = &Mapper007_CPUWrite;
+    mapper->map_ppu_read = &Mapper007_PPURead;
+    mapper->map_ppu_write = &Mapper007_PPUWrite;
 }
+
 uint8_t Mapper007_CPURead(Mapper* mapper, uint16_t addr){
-return 0;
+    addr %= 0x8000;
+    // use bottom 3 bits for bank select
+    uint8_t select = mapper->m7_bank_select & 7;
+    return mapper->cart->prg_rom[((uint32_t)select << 15) | addr];
 }
-bool Mapper007_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+
+bool Mapper007_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+    mapper->m7_bank_select = data;
+    mapper->cart->mirror_mode = (data & 0x10) ? CART_MIRRORMODE_OSHI : CART_MIRRORMODE_OSLO;
+    return true;
 }
+
 uint8_t Mapper007_PPURead(Mapper* mapper, uint16_t addr){
-return 0;
+    return mapper->cart->chr_rom[addr];
 }
+
 bool Mapper007_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+    if (mapper->chr_rom_banks == 0) {
+        mapper->cart->chr_rom[addr] = data;
+        return true;
+    }
+    return false;
 }
 
 /* Mapper008 */
@@ -1204,19 +1390,40 @@ return false;
 }
 
 /* Mapper066 */
+// https://www.nesdev.org/wiki/GxROM
 void Mapper066(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
+    mapper->id = 66;
+    mapper->prg_rom_banks = rom_banks;
+    mapper->chr_rom_banks = char_banks;
+
+    mapper->m66_bank_select = 0;
+
+    mapper->map_cpu_read = &Mapper066_CPURead;
+    mapper->map_cpu_write = &Mapper066_CPUWrite;
+    mapper->map_ppu_read = &Mapper066_PPURead;
+    mapper->map_ppu_write = &Mapper066_PPUWrite;
 }
+
 uint8_t Mapper066_CPURead(Mapper* mapper, uint16_t addr){
-return 0;
+    addr %= 0x8000;
+    uint8_t select = (mapper->m66_bank_select & 0x30) >> 4;
+    return mapper->cart->prg_rom[(select << 15) | addr];
 }
-bool Mapper066_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+bool Mapper066_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+    mapper->m66_bank_select = data;
+    return true;
 }
-uint8_t Mapper066_PPURead(Mapper* mapper, uint16_t addr){
-return 0;
+uint8_t Mapper066_PPURead(Mapper* mapper, uint16_t addr) {
+    uint8_t select = mapper->m66_bank_select & 3;
+    return mapper->cart->chr_rom[(select << 13) | addr];
 }
-bool Mapper066_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data){
-return false;
+bool Mapper066_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+    if (mapper->chr_rom_banks == 0) {
+        uint8_t select = mapper->m66_bank_select & 3;
+        mapper->cart->chr_rom[(select << 13) | addr] = data;
+        return true;
+    }
+    return false;
 }
 
 /* Mapper067 */

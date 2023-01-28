@@ -10,22 +10,46 @@
 
 #include "MyTypes.h"
 
-// This is going to a have a mess of stuff that most mappers
-// don't use, because I am unable to use OOP
+// There are two solutions to the fact that C has no OOP: either I can
+// use the workaround described here 
+// (https://www.codementor.io/@michaelsafyan/object-oriented-programming-in-c-du1081gw2)
+// or I can clutter the struct with the variables for each mapper.
+// Since most mappers will not be implemented, as they are only used for a 
+// handful of games, and it would cause a massive rewrite to simulate
+// polymorphism, I choose to clutter the struct
 struct mapper {
     uint8_t id; 
     uint8_t prg_rom_banks;  // How many 16kb chunks of memory for prg_rom
     uint8_t chr_rom_banks;  // How many 8kb chunks of memory for char_rom
-    uint8_t bank_select;    // Select which banks of memory to use
 
     Cart* cart;
 
-    // MMC1 Registers
-    uint8_t load;
-    uint8_t ctrl;
-    uint8_t chr_bank0;
-    uint8_t chr_bank1;
-    uint8_t prg_bank;
+    // Mapper001
+    uint8_t m1_load;
+    uint8_t m1_ctrl;
+    uint8_t* m1_chr_bank0;
+    uint8_t* m1_chr_bank1;
+    uint8_t* m1_prg_bank1;
+    uint8_t* m1_prg_bank2;
+
+    uint8_t m1_chr0_select;
+    uint8_t m1_chr1_select;
+    uint8_t m1_prg_select;
+    uint8_t m1_write_count;
+
+    // Mapper002
+    uint8_t m2_bank_select;
+
+    // Mapper003
+    uint8_t m3_bank_select;
+
+    // Mapper004
+
+    // Mapper007
+    uint8_t m7_bank_select;
+
+    // Mapper066
+    uint8_t m66_bank_select;
 
     // Map address for each of the four possible types of memory access
     uint8_t (*map_cpu_read)(Mapper* mapper, uint16_t addr);
@@ -72,6 +96,7 @@ uint8_t Mapper003_PPURead(Mapper* mapper, uint16_t addr);
 bool Mapper003_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
 /* Mapper004 */
+// https://www.nesdev.org/wiki/MMC3
 void Mapper004(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks);
 uint8_t Mapper004_CPURead(Mapper* mapper, uint16_t addr);
 bool Mapper004_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
@@ -93,6 +118,7 @@ uint8_t Mapper006_PPURead(Mapper* mapper, uint16_t addr);
 bool Mapper006_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
 /* Mapper007 */
+// https://www.nesdev.org/wiki/AxROM
 void Mapper007(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks);
 uint8_t Mapper007_CPURead(Mapper* mapper, uint16_t addr);
 bool Mapper007_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
@@ -506,6 +532,7 @@ uint8_t Mapper065_PPURead(Mapper* mapper, uint16_t addr);
 bool Mapper065_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
 /* Mapper066 */
+// https://www.nesdev.org/wiki/GxROM
 void Mapper066(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks);
 uint8_t Mapper066_CPURead(Mapper* mapper, uint16_t addr);
 bool Mapper066_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);

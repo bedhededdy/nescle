@@ -973,8 +973,14 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
             else if (addr >= 0xc00 && addr < 0x1000)
                 return ppu->nametbl[1][addr % 0x400];
         }
+        else if (bus->cart->mirror_mode == CART_MIRRORMODE_OSLO) {
+            return ppu->nametbl[0][addr % 0x400];
+        }
+        else if (bus->cart->mirror_mode == CART_MIRRORMODE_OSHI) {
+            return ppu->nametbl[1][addr % 0x400];
+        }
         else {
-
+            printf("INVALID MIRROR MODE\n");
         }
     }
     /*
@@ -1079,8 +1085,17 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
                 return true;
             }
         } 
+        else if (bus->cart->mirror_mode == CART_MIRRORMODE_OSLO) {
+            ppu->nametbl[0][addr % 0x400] = data;
+            return true;
+        }
+        else if (bus->cart->mirror_mode == CART_MIRRORMODE_OSHI) {
+            ppu->nametbl[1][addr % 0x400] = data;
+            return true;
+        }
         else {
-
+            printf("INVALID MIRROR MODE\n");
+            return false;
         }
     }
     else if (addr >= 0x3f00 && addr < 0x4000) {

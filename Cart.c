@@ -53,7 +53,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Copy data into header struct and allow the cart to reference it
     Cart_ROMHeader* header = malloc(sizeof(Cart_ROMHeader));
-    memcpy(header, buf, sizeof(header));    // THIS IS RISKY, BUT WORKS
+    memcpy(header, buf, sizeof(Cart_ROMHeader));    // THIS IS RISKY, BUT WORKS
 
     cart->metadata = header;
 
@@ -80,6 +80,11 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         break;
     }
 
+    // FIXME: THIS HAS COMPLETELY NON DETERMINISTIC VALUES, INDICATING A 
+    // BUFFER OVERFLOW SOMEWHERE
+    // THIS COULD ALSO SEEM TO EXPLAIN WHY MARIO RANDOMLY PAUSES
+    // SOMEGTIMES WHERE MY ISSUE WAS NOT GOING FULLY RIGHT ON A MEMCPY
+    printf("PRG RAM size: %d\n", cart->metadata->prg_ram_size);
     // Now that we know the program rom size, we can allocate memory for it
     const size_t prg_rom_nbytes = sizeof(uint8_t) 
         * CART_PRG_ROM_CHUNK_SIZE * header->prg_rom_size;
@@ -154,6 +159,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Fill in some fields
     cart->file_type = file_type;
     cart->rom_path = path;
+
+    
 
     // Don't forget to close the file and return true
     fclose(rom);
