@@ -1,7 +1,7 @@
  # NESCLE
  ## What is NESCLE?
  NESCLE (pronounced like Nestlé) is a free and open-source NES (Nintendo Entertainment System) emulator written
- the C programming language, with minimal parts of the front-end written in C++. It uses SDL2 for graphics, audio,
+ in the C programming language, with minimal parts of the front-end written in C++. It uses SDL2 for graphics, audio,
  and input, and ImGui for the graphical user interface. NESCLE also provides a command line interface for users
  who prefer to use the terminal.
  
