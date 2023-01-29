@@ -12,12 +12,16 @@
  maintains the readability of C code compared to the often hard to parse, bloated C++ code. I do not claim to be the
  only person to write a NES emulator in C, but I do claim that popular forms of such emulators are rare.
  
- ## Acknowledgements
- This software makes use of the following third-party libraries
- SDL2 under the terms and conditions of the zlib license
- ImGUI under the terms and conditions of the MIT license
+ ## Requirements and Dependencies
+ As of now, NESCLE has not been packaged for any operating system. This means that you have to compile it yourself from the source code.
+ To build the code you need a C compiler that supports C99 or MSVC Legacy (ADD CPP VERSION)
+ You need to manually install the below third party libraries  
  
- ## Special Thanks
+ This software makes use of the following third-party libraries:  
+ SDL2 under the terms and conditions of the zlib license  
+ ImGUI under the terms and conditions of the MIT license  
+ 
+ ## Acknowledgements
  I would like to provide a massive thank you to javidx9 (aka the One Lone Coder) for his excellent YouTube series
  on NES emulation and to the SimpleNES repository for providing countless help and inspiration for my own emulator
  implementation. By no means does this software copy verbatim from either of their implementations, nor any other
