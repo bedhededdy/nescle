@@ -28,7 +28,9 @@
  NES emulator implementation, this is simply an acknowledgement that those sources were used by me as inspiration.
  The NESdev wiki also deserves a mention as a "one-stop shop" for finding out information about the NES.
  
+ ## Contact Me
+ You can contact me at the email address <edward.pinkston@gmail.com>
+ 
  ## License
- This software is licensed under the terms and conditions of the GPLv3 and is copyrighted by Edward Pinkston
- 2022-2023. See LICENSE.txt for more information.
+ This software is licensed under the GNU Public License version 3 (GPLv3). See LICENSE.txt for more information.
  
