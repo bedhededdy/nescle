@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023  Edward C. Pinkston
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 // TODO: NEED TO MAKE EVERYTHING WRITE TO SAME DIRECTORY REGARDLESS OF TERMINAL
 //       CURRENT WORKING DIRECTORY. NEED SOME WAY TO DETERMINE OUR "INSTALL"
 //       DIRECTORY OR HAVE THE USER SPECIFY THE RELATIVE PATH TO WHERE WE ARE
@@ -33,6 +49,7 @@
 //#include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_thread.h>
 
+#include "tinyfiledialogs.h"
 
 #include "Bus.h"
 #include "Cart.h"
@@ -1430,7 +1447,6 @@ int main(int argc, char** argv) {
     //inspect_hw("roms/nes-test-roms/sprite_hit_tests_2005.10.05/11.edge_timing.nes");
     //inspect_hw_mul("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
 
-    //inspect_hw("roms/smb.nes");
     //inspect_hw("roms/arkanoid.nes");
     //inspect_hw("roms/solomons-key.nes");
     //inspect_hw("roms/mega-man-vimm.nes");
@@ -1440,17 +1456,24 @@ int main(int argc, char** argv) {
     //inspect_hw("roms/battletoads.nes");
     //inspect_hw("roms/mega-man-2.nes");
     //inspect_hw("roms/ninja-gaiden.nes");
-    inspect_hw("roms/zelda.nes");
+    //inspect_hw("roms/zelda.nes");
+    //inspect_hw("roms/tmnt.nes");
+    //inspect_hw("roms/double-dragon.nes");
     //inspect_hw("roms/zelda2.nes");
     //inspect_hw("roms/smb.nes");
-    //inspect_hw("roms/nes-test-roms/MMC1_A12/mmc1_a12.nes");
-    //inspect_hw("roms/nes-test-roms/mappers/M1_P128K.nes");
-
+    //inspect_hw("roms/castlevania2.nes");
     // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
     // FAILS RIGHT EDGE WITH CODE 2
     // FAILS TIMING WITH CODE 3
     // FAILS EDGE TIMING WITH CODE 3
+    char const* filter_patterns[] = { "*.nes" };
+    char const* rom = tinyfd_openFileDialog("Select ROM",
+        "", 1, filter_patterns, NULL, 0);
 
+    if (rom != NULL)
+        inspect_hw(rom);
+    else
+        printf("FATAL: UNABLE TO OPEN ROM\n");
 
     return 0;
 }

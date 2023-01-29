@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023  Edward C. Pinkston
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 #include "Mapper.h"
 
 #include <stdio.h>
@@ -86,12 +102,13 @@ bool Mapper000_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 // https://www.nesdev.org/wiki/MMC1
 static void calculate_prg_ptrs(Mapper* mapper) {
     uint8_t select = (mapper->m1_ctrl & 0xc) >> 2;
-    printf("selection: %d\n", select);
+    
+    if (select != 3)
+        printf("selection: %d\n", select);
     
     if (select < 2) {
         // 32kb
         mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x8000 * (mapper->m1_prg_select >> 1)];
-        //mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x4000 * (mapper->m1_prg_select & ~1)];
         mapper->m1_prg_bank2 = mapper->m1_prg_bank1 + 0x4000;
     }
     else if (select == 2) {
@@ -107,6 +124,9 @@ static void calculate_prg_ptrs(Mapper* mapper) {
 }
 
 void Mapper001(Mapper* mapper, uint8_t rom_banks, uint8_t char_banks) {
+    // FIXME: BANK SELECTION IS DEFINITELY BROKEN, AT LEAST FOR CHAR
+    // BUT PROBABLY FOR PRG TOO
+
     // FIXME: PARTIALLY WORKS, MEGA MAN 2 PLAYS BUT ZELDAS DO NOT
     mapper->id = 1;
     mapper->prg_rom_banks = rom_banks;
@@ -151,7 +171,7 @@ bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
     // FIXME: PROBABLY COMPLETELY WRONG
     if (data & 0x80) {
         //calculate_prg_ptrs(mapper);
-        printf("reset\n");
+        //printf("reset\n");
         mapper->m1_ctrl = mapper->m1_ctrl | 0x0c;
         mapper->m1_write_count = 0;
         mapper->m1_load = 0;
@@ -207,6 +227,8 @@ bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
             else if (addr < 0xc000) {
                 printf("b0\n");
                 mapper->m1_chr0_select = mapper->m1_load;
+                if ((mapper->m1_load & 0x1f) != mapper->m1_load)
+                    printf("need and\n");
                 uint8_t mode = (mapper->m1_ctrl & 0x10) >> 4;
                 // or with 1 if 8kb mode
                 mapper->m1_chr_bank0 = &mapper->cart->chr_rom[0x1000 * (mapper->m1_load | (1 - mode))];
@@ -217,6 +239,8 @@ bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
                 printf("b1\n");
                 // only can change if we are in mode that allows
                 // separate banks
+                if ((mapper->m1_load & 0x1f) != mapper->m1_load)
+                    printf("need and\n");
                 mapper->m1_chr1_select = mapper->m1_load;
                 uint8_t mode = (mapper->m1_ctrl & 0x10) >> 4;
                 if (mode)

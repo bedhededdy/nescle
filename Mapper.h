@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2023  Edward C. Pinkston
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 // TODO: IDEA -> MAKE EACH MAPPER IT'S OWN STRUCT BUT STORE A GENERIC MAPPER STRUCT
 //               IN THE CART. THEN THROUGH SOME MAGIC, FIGURE OUT WHICH WEIRD MAPPER
 //               TO CAST IT TO SO THAT WE CAN HAVE DIFFERENT VARS FOR DIFFERENT MAPPERS
