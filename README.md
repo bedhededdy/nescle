@@ -18,8 +18,8 @@
  You need to manually install the below third party libraries  
  
  This software makes use of the following third-party libraries:  
- SDL2 under the terms and conditions of the zlib license  
- ImGUI under the terms and conditions of the MIT license  
+ * SDL2 under the terms and conditions of the [zlib license](https://www.zlib.net/zlib_license.html)  
+ * ImGUI under the terms and conditions of the [MIT license](https://opensource.org/licenses/MIT)
  
  ## Acknowledgements
  I would like to provide a massive thank you to javidx9 (aka the One Lone Coder) for his excellent YouTube series
