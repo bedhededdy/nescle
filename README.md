@@ -32,5 +32,5 @@
  You can contact me at the email address <edward.pinkston@gmail.com>
  
  ## License
- This software is licensed under the GNU Public License version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt) for more information.
+ This software is licensed under the GNU General Public License version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt) for more information.
  
