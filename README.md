@@ -18,8 +18,8 @@
  You need to manually install the below third party libraries  
  
  This software makes use of the following third-party libraries:  
- SDL2 under the terms and conditions of the zlib license  
- ImGUI under the terms and conditions of the MIT license  
+ * SDL2 under the terms and conditions of the [zlib license](https://www.libsdl.org/license.php)
+ * ImGUI under the terms and conditions of the [MIT license](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
  
  ## Acknowledgements
  I would like to provide a massive thank you to javidx9 (aka the One Lone Coder) for his excellent YouTube series
@@ -32,5 +32,5 @@
  You can contact me at the email address <edward.pinkston@gmail.com>
  
  ## License
- This software is licensed under the GNU Public License version 3 (GPLv3). See LICENSE.txt for more information.
+ This software is licensed under the GNU General Public License version 3 (GPLv3). See [LICENSE.txt](LICENSE.txt) for more information.
  
