@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #pragma once
 
 typedef struct cpu CPU;
@@ -28,3 +32,7 @@ typedef struct ppu_oam PPU_OAM;
 typedef enum cart_mirror_mode Cart_MirrorMode;
 typedef enum cpu_addrmode CPU_AddrMode;
 typedef enum cpu_op_type CPU_OpType;
+
+#ifdef __cplusplus
+}
+#endif

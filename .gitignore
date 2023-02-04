@@ -7,3 +7,9 @@ include/
 obj/
 lib/
 music/
+imgui/
+tinyfiledialogs/
+SDL2/
+build/
+Debug/
+Release/

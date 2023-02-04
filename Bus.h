@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 #pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <SDL2/SDL_mutex.h>
+#include <SDL_mutex.h>
 
 #include "MyTypes.h"
 
@@ -92,3 +95,7 @@ bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data);
 void Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick
 void Bus_PowerOn(Bus* bus); // Sets entire system to powerup state
 void Bus_Reset(Bus* bus);   // Equivalent to pushing the RESET button on a NES
+
+#ifdef __cplusplus
+}
+#endif

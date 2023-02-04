@@ -17,7 +17,9 @@
 //               IN THE CART. THEN THROUGH SOME MAGIC, FIGURE OUT WHICH WEIRD MAPPER
 //               TO CAST IT TO SO THAT WE CAN HAVE DIFFERENT VARS FOR DIFFERENT MAPPERS
 //               INSTEAD OF SHOVING THEM ALL IN HERE IN A MESS
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #pragma once
 
 #include <stdbool.h>
@@ -1876,3 +1878,7 @@ uint8_t Mapper255_CPURead(Mapper* mapper, uint16_t addr);
 bool Mapper255_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 uint8_t Mapper255_PPURead(Mapper* mapper, uint16_t addr);
 bool Mapper255_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
+
+#ifdef __cplusplus
+}
+#endif

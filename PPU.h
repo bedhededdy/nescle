@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 #pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <SDL2/SDL_mutex.h>
+#include <SDL_mutex.h>
 
 #include "MyTypes.h"
 
@@ -189,3 +192,7 @@ uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr);
 /* Public Helper Functions */
 uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel);
 void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette);
+
+#ifdef __cplusplus
+}
+#endif

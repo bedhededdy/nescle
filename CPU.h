@@ -14,10 +14,13 @@
  * limitations under the License. 
  */
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
+#ifdef __cplusplus
+extern "C" {
+#endif
 #pragma once
 
 #include <stdint.h>
-#include <SDL2/SDL_mutex.h>
+#include <SDL_mutex.h>
 #include "MyTypes.h"
 
 /* 
@@ -202,3 +205,7 @@ static void op_txa(CPU* cpu);    // transfer index x to accumulator          (N 
 static void op_txs(CPU* cpu);    // transfer index x to stack pointer
 static void op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
 */
+
+#ifdef __cplusplus
+}
+#endif

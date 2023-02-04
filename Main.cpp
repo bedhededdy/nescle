@@ -41,12 +41,12 @@
 
 // TODO: REMOVE ME WHEN POSSIBLE
 //#include <Windows.h>
-#include <direct.h>
+//#include <direct.h>
 
 // FIXME: MISSING THE PLUGIN I NEED TO DOWNLOAD FOR AUDIO
-#include <SDL2/SDL.h>
+#include <SDL.h>
 //#include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_thread.h>
+#include <SDL_thread.h>
 
 #include "tinyfiledialogs.h"
 
@@ -589,12 +589,12 @@ uint8_t* load_char_set() {
 
     if (cart == NULL)
         return NULL;
-    if (!Cart_LoadROM(cart, "roms/nestest.nes"))
+    if (!Cart_LoadROM(cart, "../roms/nestest.nes"))
         return NULL;
 
     size_t char_mem_bytes = sizeof(uint8_t) 
         * CART_CHR_ROM_CHUNK_SIZE * cart->metadata->chr_rom_size;
-    uint8_t* char_mem = malloc(char_mem_bytes);
+    uint8_t* char_mem = (uint8_t*)malloc(char_mem_bytes);
 
     if (char_mem == NULL)
         return NULL;
@@ -751,7 +751,7 @@ void inspect_hw(const char* rom_path) {
 
     // Give cpu texture and pattern texture transparent background
     const size_t bg_size = sizeof(uint32_t) * cpu_rect.w * cpu_rect.h;
-    uint32_t* blue_bg = calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
+    uint32_t* blue_bg = (uint32_t*)calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
     if (blue_bg == NULL) return;
     SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
     SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
@@ -1004,7 +1004,7 @@ void inspect_hw_mul(const char* rom_path) {
 
     // Give cpu texture and pattern texture transparent background
     const size_t bg_size = sizeof(uint32_t) * cpu_rect.w * cpu_rect.h;
-    uint32_t* blue_bg = calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
+    uint32_t* blue_bg = (uint32_t*)calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
     if (blue_bg == NULL) return;
     SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
     SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
@@ -1396,10 +1396,10 @@ int main(int argc, char** argv) {
 
     // maxpath defined in windows header which i don't wanna use
     // its value is 260, so i define it here
-    char working_directory[260];
-    if (_getcwd(working_directory, 260) == NULL)
-        return 1;
-    puts(working_directory);
+    //char working_directory[260];
+    //if (_getcwd(working_directory, 260) == NULL)
+    //    return 1;
+    //puts(working_directory);
 
 
     // CHANGE TO NULL FOR NON-DEBUGGING PURPOSES

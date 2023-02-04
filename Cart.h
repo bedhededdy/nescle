@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 #pragma once
 
 #include <stdbool.h>
@@ -60,3 +63,7 @@ Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
 
 bool Cart_LoadROM(Cart* cart, const char* path);
+
+#ifdef __cplusplus
+}
+#endif
