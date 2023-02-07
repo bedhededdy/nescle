@@ -11,7 +11,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. 
+# limitations under the License.
 #
 
 # Require version 3.15 for generator expressions
@@ -54,10 +54,10 @@ ENDFUNCTION(PREPEND)
 PREPEND(IMGUI_SRC ${IMGUI_DIR} ${IMGUI_SRC})
 PREPEND(IMGUI_BACKENDS ${IMGUI_BACKENDS_DIR} ${IMGUI_BACKENDS})
 
-# FIXME: NOT PROPERLY GETTING THE INCLUDE DIRS FOR BACKEND FOR WHATEVER 
+# FIXME: NOT PROPERLY GETTING THE INCLUDE DIRS FOR BACKEND FOR WHATEVER
 #        REASON
-#add_library(imgui STATIC ${IMGUI_SRC} ${IMGUI_BACKENDS})
-add_library(imgui STATIC ${IMGUI_SRC})
+add_library(imgui STATIC ${IMGUI_SRC} ${IMGUI_BACKENDS})
+#add_library(imgui STATIC ${IMGUI_SRC})
 
 # Locate SDL libraries
 set(SDL2_DIR ${PROJECT_SOURCE_DIR}/SDL2/cmake)
@@ -67,16 +67,17 @@ find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2)
 find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2main)
 
 # Add nescle as executable
-set(SRC Bus.c Cart.c CPU.c Main.cpp Mapper.c PPU.c)
+set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp Main.cpp Mapper.c PPU.c)
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 add_executable(nescle ${SRC})
 
 # Include directories
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
-                                 INTERFACE ${IMGUI_INC})
+                                 PUBLIC ${IMGUI_INC})
 #target_include_directories(imgui INTERFACE ${IMGUI_INC})
 target_include_directories(nescle PRIVATE ${INC})
 
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES})
-target_link_libraries(nescle PRIVATE imgui tinyfiledialogs ${SDL2_LIBRARIES})
+target_link_libraries(nescle PRIVATE tinyfiledialogs
+   PUBLIC imgui ${SDL2_LIBRARIES})

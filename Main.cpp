@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,13 +11,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 // TODO: NEED TO MAKE EVERYTHING WRITE TO SAME DIRECTORY REGARDLESS OF TERMINAL
 //       CURRENT WORKING DIRECTORY. NEED SOME WAY TO DETERMINE OUR "INSTALL"
 //       DIRECTORY OR HAVE THE USER SPECIFY THE RELATIVE PATH TO WHERE WE ARE
 //       COMPARED TO THEIR TERMINAL. DOING SOMETHING LIKE FOPEN("ROMS/NESTEST.NES")
-//       WILL BREAK UNLESS THE USER IS IN A SPECIFIC DIRECTORY. 
+//       WILL BREAK UNLESS THE USER IS IN A SPECIFIC DIRECTORY.
 //       TO AVOID MAJOR REWRITES, WE COULD JUST TO A CHDIR TO SET THE WORKING
 //       DIRECTORY TO WHERE I WANT IT TO BE
 
@@ -50,11 +50,17 @@
 
 #include "tinyfiledialogs.h"
 
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdlrenderer.h"
+
 #include "Bus.h"
 #include "Cart.h"
 #include "CPU.h"
 #include "Mapper.h"
 #include "PPU.h"
+
+#include "EmulationWindow.h"
 
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
 //        OF HARD-CODING IT
@@ -72,8 +78,8 @@
 #define PADDING_Y 2
 
 // Renders a tile with the provided color from chr_mem
-void render_tile_with_provided_color(SDL_Texture* texture, 
-    const uint8_t* chr_mem, int tile, uint32_t color, 
+void render_tile_with_provided_color(SDL_Texture* texture,
+    const uint8_t* chr_mem, int tile, uint32_t color,
     int pos_x, int pos_y) {
     // FIXME: NEED TO SUPPLY A SCALE FACTOR
     SDL_Rect area = {pos_x, pos_y, PPU_TILE_X, PPU_TILE_Y};
@@ -138,9 +144,9 @@ void test_cpu_with_mapper() {
 }
 
 int char_to_tile(char ch) {
-    // Recall that the first 32 (0x20) characters in the ASCII table are 
+    // Recall that the first 32 (0x20) characters in the ASCII table are
     // special chars.
-    // I can then fall through to one of the other cases after 
+    // I can then fall through to one of the other cases after
     // converting my number to ascii
 
     // If my char is actually an 8-bit number
@@ -163,7 +169,7 @@ int char_to_tile(char ch) {
     else {
         switch (ch) {
         case '@':
-            // actually is the copyright symbol b/c there is not 
+            // actually is the copyright symbol b/c there is not
             // an @ symbol in the nestest charset
             return 0x81;
         case '$':
@@ -195,11 +201,11 @@ int char_to_tile(char ch) {
     }
 }
 
-int render_text(SDL_Texture* texture, const uint8_t* chr_mem, const char* text, 
+int render_text(SDL_Texture* texture, const uint8_t* chr_mem, const char* text,
     uint32_t color, int pos_x, int pos_y) {
     while (*text != '\0') {
         int tile = char_to_tile(*text);
-        render_tile_with_provided_color(texture, chr_mem, tile, 
+        render_tile_with_provided_color(texture, chr_mem, tile,
             color, pos_x, pos_y);
 
         text++;
@@ -379,7 +385,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     // this means that i can fit 32 characters in a row
     int x = 2;
     int y = 2;
-    
+
     // array for rendering each line of screen (32 chars + 1 null);
     char line[33];
 
@@ -389,7 +395,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     // status register
     color = 0xffffffff;
     x = render_text(texture, char_set, "STATUS: ", color, x, y);
-    
+
     color = (cpu->status & CPU_STATUS_NEGATIVE) ? 0xff00ff00 : 0xffff0000;
     x = render_text(texture, char_set, "N ", color, x, y);
 
@@ -503,7 +509,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     x = 2;
     y = 72;
     color = 0xffffffff;
-    
+
     // Possibly a problem
     char* curr_instr = CPU_DisassembleString(cpu, cpu->pc);
     // FIXME: THE FORMAT FROM THE NESLOG FILE IS TOO BIG TO FIT ON THE SCREEN
@@ -511,7 +517,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     // 4 chars for pc + 1 for colon + 1 for space + 30 for instruction (will not render the *) + 1 for null
     // will not fit in 32 chars, so it will run off the screen
     char my_format[37];
-    
+
 
     // Possibly  aproblem
     uint16_t* op_starting_addrs = CPU_GenerateOpStartingAddrs(cpu);
@@ -524,7 +530,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
 
     // FIXME: SOMETHING IN HERE IS BROKEN, THIS MAKING MARIO RANDOMLY PAUSE
     // FIXME: ALTHOUGH UNLIKELY, THE MAIRO ROM THAT I HAVE COULD BE THE ISSUES
-    //          THE ONE ON VIMMS LAIR IS ACTUALLY AN EU ROM, WHICH COULD EXPLAIN 
+    //          THE ONE ON VIMMS LAIR IS ACTUALLY AN EU ROM, WHICH COULD EXPLAIN
     //        THE DISCREPANCY
     //        BUT THAT STILL WOULDN'T EXPLAIN WHY THE ISSUE ONLY HAPPENS RUNNING
     // /      DISASSEMBLER
@@ -552,7 +558,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     free(curr_instr);
     render_text(texture, char_set, my_format, 0xff00ff00, x, y);
     y += 10;
-    
+
     for (int i = 14; i < 14 + 13; i++) {
         char* instr = CPU_DisassembleString(cpu, op_starting_addrs[i]);
         memcpy(my_format, instr, 4);
@@ -566,10 +572,10 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
     }
 
     free(op_starting_addrs);*/
-    
+
 
     memcpy(ram_after, cpu->bus->ram, sizeof(uint8_t) * 2048);
-    
+
     for (int i = 0; i < 2048; i++) {
         if (ram_before[i] != ram_after[i])
             printf("DISASSEMBLER CHANGED RAM\n");
@@ -581,7 +587,7 @@ void render_cpu(SDL_Texture* texture, CPU* cpu, const uint8_t* char_set) {
         printf("A CHANGED\n");
     if (cpu->bus->ppu->status != status_before)
         printf("PPU STATUS CHANGED\n");
-        
+
 }
 
 uint8_t* load_char_set() {
@@ -592,7 +598,7 @@ uint8_t* load_char_set() {
     if (!Cart_LoadROM(cart, "../roms/nestest.nes"))
         return NULL;
 
-    size_t char_mem_bytes = sizeof(uint8_t) 
+    size_t char_mem_bytes = sizeof(uint8_t)
         * CART_CHR_ROM_CHUNK_SIZE * cart->metadata->chr_rom_size;
     uint8_t* char_mem = (uint8_t*)malloc(char_mem_bytes);
 
@@ -756,7 +762,7 @@ void inspect_hw(const char* rom_path) {
     SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
     SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
     free(blue_bg);
-    
+
     // Load disassembler font
     uint8_t* char_set = load_char_set();
     if (char_set == NULL) return;
@@ -874,7 +880,7 @@ void inspect_hw(const char* rom_path) {
                 break;
             }
         }
-        
+
         if (run_emulation) {
             while (!ppu->frame_complete)
                 Bus_Clock(bus);
@@ -891,7 +897,7 @@ void inspect_hw(const char* rom_path) {
         SDL_RenderCopy(renderer, pattern_texture, NULL, &pattern_rect);
 
         SDL_RenderPresent(renderer);
-        
+
         frame_counter++;
         if (frame_counter % 60 == 0) {
             uint64_t frame60_t1 = SDL_GetTicks64();
@@ -918,12 +924,12 @@ void inspect_hw(const char* rom_path) {
 void inspect_hw_mul(const char* rom_path) {
     // NOTE: THE PALETTE MEMORY DOES NOT HAVE THE PROPER LOCKING MECHANISMS ON IT, BUT
     // IT RARELY EVER CHANGES, SO I'M FINE WITH IT BEING WRONG FOR A FRAME OR TWO
-    
+
     /*
     * We have 2 threads, one for rendering another for emulation
     * The emulation thread completes 1 frame's worth of emulation, then waits until
     * 16ms have elapsed so that we run our NES emulation at 60hz
-    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that since 
+    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that since
     * the NES will be incapable of outputting more than 60fps without speeding up the game
     * So we have the rendering thread wait on a signal from the emulation thread that a new frame is ready
     * to be rendered
@@ -1024,7 +1030,7 @@ void inspect_hw_mul(const char* rom_path) {
     struct emulation_thread_struct arg = { bus, run_emulation_ptr, quit_ptr, signal_frame_ready };
     SDL_Thread* emulation_thread = SDL_CreateThread(emulation_thread_func, "Emulation Thread", (void*)&arg);
     if (emulation_thread == NULL) return;
-    
+
     // Main loop
     uint8_t palette = 0;
     uint64_t frame_counter = 0;
@@ -1036,7 +1042,7 @@ void inspect_hw_mul(const char* rom_path) {
         SDL_RenderClear(renderer);
 
         uint64_t t0 = SDL_GetTicks64();
-        
+
         if (SDL_LockMutex(bus->controller_input_lock))
             printf("inspect_hw_mul: Unable to lock controller\n");
         while (SDL_PollEvent(&event)) {
@@ -1149,7 +1155,7 @@ void inspect_hw_mul(const char* rom_path) {
         //        THIS COULD LEAD TO SOME FRAMES NEVER GETTING DISPLAYED AND OTHERS
         //        BEING DISPLAYED TWICE
         //        IN THIS SENSE, THE SINGLE-THREADED APPROACH IS VASTLY SUPERIOR
-        //        IF WE ARE SO CONCERNED WITH ACCURACY HERE, IT IS PROBABLY 
+        //        IF WE ARE SO CONCERNED WITH ACCURACY HERE, IT IS PROBABLY
         //        MORE PERFORMANT TO BE SINGLE THREADED
         //        WE COULD HAVE A SIGNAL TO THE EMULATION THREAD THAT WE ARE
         //        READY FOR IT TO RENDER, BUT THEN THAT MORE OR LESS COMPLETELY
@@ -1158,7 +1164,7 @@ void inspect_hw_mul(const char* rom_path) {
         //        HELPING WITH SMOOTHNESS (BUT ADDING LATENCY), AND TO JUST DISPLAY
         //        WHATEVER IS ON THE FRAME_BUFFER ON EACH REFRESH, COMPLETELY NEGATING THE NEED
         //        FOR SIGNALING, BUT WASTING PERFORMANCE ON MONITORS HIGHER THAN 60HZ
-        //        THE CRUX OF THE ISSUE IS THAT THE NES HAS TO RUN AT 60HZ BASED ON AN 
+        //        THE CRUX OF THE ISSUE IS THAT THE NES HAS TO RUN AT 60HZ BASED ON AN
         //        IMPRECISE DELAY, AND WHEN WE SIGNAL WE ARE READY TO RENDER EVERY 16MS, IT WILL
         //        STILL TAKE TIME TO ACTUALLY GET THE FRAME OUT, SO WE WILL ALWAYS BE A LITTLE
         //        BEHIND. ANY SOLUTION INVOLVING US WAITING FOR A FRAME TO BE READY
@@ -1170,13 +1176,13 @@ void inspect_hw_mul(const char* rom_path) {
         //        LOST AND I HAVE TO WAIT FOR A WHOLE OTHER FRAME
         //        THIS SHOULD BE REWRITTEN USING A SEMAPHORE
         //        YOU MAY NEED A MUTEX TO PROTECT THE SEMAPHORE
-        //        YOU ALSO NEED THE THREAD FUNC TO WAIT UNTIL THE 
+        //        YOU ALSO NEED THE THREAD FUNC TO WAIT UNTIL THE
         //        SEMAPHORE HAS A VALUE OF 0 TO WRITE TO IT AGAIN
         //        YOU SHOULD JUST SPIN UNTIL IT HAPPENS, SINCE IT SHOULD
         //        NEVER HAPPEN IN THE FIRST PLACE
         //        UNFORTUNATELY THERE IS NO SEMAPHORE WAKE ON CONDITION,
         //        ONLY WAKE ON POSITIVE VALUE
-        //        YOU COULD USE A SECOND SEMAPHORE TO POSSIBLY SIGNAL TO THE OTHER ONE 
+        //        YOU COULD USE A SECOND SEMAPHORE TO POSSIBLY SIGNAL TO THE OTHER ONE
         //        THAT IT'S READY, BUT AT THAT POINT YOU MAY JUST WANNA USE AN ATOMIC
         //        VARIABLE THAT ACTS AS A NEW_FRAME_READY BOOLEAN
         //        I SAY THE BEST SOLUTION IS SPINNING SEMAPHORE, ALTHOUGH IT LIKELY
@@ -1185,7 +1191,7 @@ void inspect_hw_mul(const char* rom_path) {
         //        IT DOESN'T MATTER IF I HAVE 1 OR 10 FRAMES COMPLETED SINCE IT GOING AS FAST
         //        AS IT CAN STILL ISN'T FAST ENOUGH TO GET OUT IN TIME
         //        ACTUALLY IT IS IMPOSSIBLE TO GET A VALUE GREATER THAN 1 FOR THE SEMAPHORE
-        //        SINCE THE DOUBLE BUFFERING LOCKS THE PPU 
+        //        SINCE THE DOUBLE BUFFERING LOCKS THE PPU
         //        ACTUALLY JUST TELL EMU THREAD NOT TO INCREMENT THE POST VALUE IF
         //        IT IS 1
         //SDL_CondWait(signal_frame_ready, frame_ready_mutex);
@@ -1214,7 +1220,7 @@ void inspect_hw_mul(const char* rom_path) {
 
         //printf("Frametime: %d\n", (int)(SDL_GetTicks64() - t0));
     }
- 
+
     // Cleanup
     SDL_WaitThread(emulation_thread, NULL);
     SDL_DestroyCond(signal_frame_ready);
@@ -1252,7 +1258,7 @@ void thread_test() {
     b = true;
     while (b == true);
 
-    
+
 
     printf("success\n");
 }
@@ -1312,7 +1318,7 @@ void mutex_thread_test() {
     SDL_Thread* thread = SDL_CreateThread(mutex_thread_test_fn, "Test", &arg);
 
     // Theoretically this code could get stuck forever
-    // if I always manage to reaquire before the 
+    // if I always manage to reaquire before the
     // other thread gets a chance
     // This is really why we should use signals
     // to signal that we can check a shared variable
@@ -1326,7 +1332,7 @@ void mutex_thread_test() {
     while (arg.ping == true) {
         printf("spinlock1\n");
         SDL_UnlockMutex(arg.mutex);
-        
+
         SDL_LockMutex(arg.mutex);
         //printf("spinlock\n");
     }
@@ -1338,7 +1344,7 @@ void mutex_thread_test() {
     while (arg.ping == true) {
         printf("spinlock2\n");
         SDL_UnlockMutex(arg.mutex);
-        
+
         SDL_LockMutex(arg.mutex);
     }
     SDL_UnlockMutex(arg.mutex);
@@ -1350,6 +1356,144 @@ void mutex_thread_test() {
 }
 #pragma endregion tests
 */
+
+void emulate()
+{
+    Bus *bus = Bus_CreateNES();
+    if (!Cart_LoadROM(bus->cart, "../roms/smb.nes"))
+        return;
+    Bus_PowerOn(bus);
+
+    CPU* cpu = bus->cpu;
+    PPU* ppu = bus->ppu;
+
+
+    EmulationWindow emuWin = EmulationWindow(256 * 3, 240 * 3);
+
+    bool quit = false;
+    bool run_emulation = false;
+    int palette = 0;
+    while (!quit)
+    {
+        uint64_t t0 = SDL_GetTicks64();
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                quit = true;
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_w:
+                    bus->controller1 |= BUS_CONTROLLER_UP;
+                    break;
+                case SDLK_a:
+                    bus->controller1 |= BUS_CONTROLLER_LEFT;
+                    break;
+                case SDLK_s:
+                    bus->controller1 |= BUS_CONTROLLER_DOWN;
+                    break;
+                case SDLK_d:
+                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
+                    break;
+                case SDLK_j:
+                    bus->controller1 |= BUS_CONTROLLER_B;
+                    break;
+                case SDLK_k:
+                    bus->controller1 |= BUS_CONTROLLER_A;
+                    break;
+                case SDLK_BACKSPACE:
+                    bus->controller1 |= BUS_CONTROLLER_SELECT;
+                    break;
+                case SDLK_RETURN:
+                    bus->controller1 |= BUS_CONTROLLER_START;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_c:
+                    // recall that the cpu clocks only once for every 3 bus clocks, so
+                    // that is why we must have the second while loop
+                    // additionally we also want to go to the next instr, not stay on the current one
+                    while (cpu->cycles_rem > 0)
+                        Bus_Clock(bus);
+                    while (cpu->cycles_rem == 0)
+                        Bus_Clock(bus);
+                    break;
+                case SDLK_r:
+                    Bus_Reset(bus);
+                    break;
+                case SDLK_f:
+                    // FIXME: may wanna do a do while
+                    while (!ppu->frame_complete)
+                        Bus_Clock(bus);
+                    ppu->frame_complete = false;
+                    break;
+                case SDLK_p:
+                    palette = (palette + 1) % 8;
+                    break;
+                case SDLK_SPACE:
+                    run_emulation = !run_emulation;
+                    break;
+
+                case SDLK_w:
+                    bus->controller1 &= ~BUS_CONTROLLER_UP;
+                    break;
+                case SDLK_a:
+                    bus->controller1 &= ~BUS_CONTROLLER_LEFT;
+                    break;
+                case SDLK_s:
+                    bus->controller1 &= ~BUS_CONTROLLER_DOWN;
+                    break;
+                case SDLK_d:
+                    bus->controller1 &= ~BUS_CONTROLLER_RIGHT;
+                    break;
+                case SDLK_j:
+                    bus->controller1 &= ~BUS_CONTROLLER_B;
+                    break;
+                case SDLK_k:
+                    bus->controller1 &= ~BUS_CONTROLLER_A;
+                    break;
+                case SDLK_BACKSPACE:
+                    bus->controller1 &= ~BUS_CONTROLLER_SELECT;
+                    break;
+                case SDLK_RETURN:
+                    bus->controller1 &= ~BUS_CONTROLLER_START;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        if (run_emulation) {
+            while (!bus->ppu->frame_complete)
+                Bus_Clock(bus);
+            bus->ppu->frame_complete = false;
+        }
+
+        emuWin.Show(bus->ppu->frame_buffer);
+
+        uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
+        if (frametime < 16)
+            SDL_Delay(16 - frametime);
+    }
+}
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
@@ -1368,7 +1512,7 @@ int main(int argc, char** argv) {
     //          MAYBE ALSO A SPR OVRFLOW BUG
 
     // We randomly get stukc in this code
-    /* 
+    /*
     Sprite0Clr:    lda PPU_STATUS            ;wait for sprite 0 flag to clear, which will
                and #%01000000            ;not happen until vblank has ended
                bne Sprite0Clr
@@ -1388,7 +1532,7 @@ int main(int argc, char** argv) {
     // -w   width of the window     (default to 256)
     // -h   height of the window    (default to 240)
     // -r   path to ROM             required argument
-    
+
     // getopt is not supported by msvc, as it is in the unistd header
     // so we have to manually parse the args
     // later this will hopefully be gui and i won't have to worry about this
@@ -1443,7 +1587,7 @@ int main(int argc, char** argv) {
     //inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
     //inspect_hw("roms/nes-test-roms/cpu_timing_test6/cpu_timing_test.nes");
     //inspect_hw("roms/nestest.nes");
-    
+
     //inspect_hw("roms/nes-test-roms/sprite_hit_tests_2005.10.05/11.edge_timing.nes");
     //inspect_hw_mul("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
 
@@ -1466,14 +1610,16 @@ int main(int argc, char** argv) {
     // FAILS RIGHT EDGE WITH CODE 2
     // FAILS TIMING WITH CODE 3
     // FAILS EDGE TIMING WITH CODE 3
-    char const* filter_patterns[] = { "*.nes" };
-    char const* rom = tinyfd_openFileDialog("Select ROM",
-        "", 1, filter_patterns, NULL, 0);
+    // char const* filter_patterns[] = { "*.nes" };
+    // char const* rom = tinyfd_openFileDialog("Select ROM",
+    //     "", 1, filter_patterns, NULL, 0);
 
-    if (rom != NULL)
-        inspect_hw(rom);
-    else
-        printf("FATAL: UNABLE TO OPEN ROM\n");
+    // if (rom != NULL)
+    //     inspect_hw(rom);
+    // else
+    //     printf("FATAL: UNABLE TO OPEN ROM\n");
+
+    emulate();
 
     return 0;
 }
