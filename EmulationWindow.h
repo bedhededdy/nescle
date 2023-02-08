@@ -3,6 +3,8 @@
 #include <SDL.h>
 #include <imgui.h>
 
+#include "MyTypes.h"
+
 class EmulationWindow {
 private:
     SDL_Window* window;
@@ -16,5 +18,5 @@ public:
     EmulationWindow(int w, int h);
     ~EmulationWindow();
 
-    void Show(uint32_t* frame);
+    void Show(Bus* bus);
 };

@@ -5,6 +5,10 @@
 #include <imgui_impl_sdlrenderer.h>
 
 #include "PPU.h"
+#include "Cart.h"
+#include "Bus.h"
+
+#include "tinyfiledialogs.h"
 
 void EmulationWindow::set_hints() {
     if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
@@ -51,20 +55,28 @@ EmulationWindow::~EmulationWindow() {
     SDL_DestroyWindow(window);
 }
 
-void EmulationWindow::Show(uint32_t* frame) {
+void EmulationWindow::Show(Bus* bus) {
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open ROM", "Ctrl+O"))
-                SDL_Log("open ROM");
+            if (ImGui::MenuItem("Open ROM", "Ctrl+O")) {
+                char* rom = tinyfd_openFileDialog("Select ROM", NULL,
+                    0, NULL, NULL, 0);
+                if (!Cart_LoadROM(bus->cart, rom))
+                    return;
+                Bus_Reset(bus);
+            }
             if (ImGui::MenuItem("Save state", "Ctrl+S"))
                 SDL_Log("savestate");
             if (ImGui::MenuItem("Load state", "Ctrl+L"))
                 SDL_Log("Load state");
             ImGui::EndMenu();
+        } else {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                "EmulationWindow::Show(): Unable to create File menu");
         }
         if (ImGui::BeginMenu("Debug")) {
             if (ImGui::MenuItem("Show Disassembler", "Ctrl+D"))
@@ -72,12 +84,19 @@ void EmulationWindow::Show(uint32_t* frame) {
             if (ImGui::MenuItem("Show pattern mem", "Ctrl+P"))
                 SDL_Log("pattern mem");
             ImGui::EndMenu();
+        } else {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                "EmulationWindow::Show(): Unable to create Debug menu");
         }
         ImGui::EndMainMenuBar();
+    } else {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "EmulationWindow::Show(): unable to create MainMenuBar");
     }
 
     ImGui::Render();
-    SDL_UpdateTexture(texture, NULL, (void*)frame, PPU_RESOLUTION_X * sizeof(uint32_t));
+    SDL_UpdateTexture(texture, NULL, (void*)bus->ppu->frame_buffer,
+        PPU_RESOLUTION_X * sizeof(uint32_t));
     SDL_RenderCopy(renderer, texture, NULL, NULL);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(renderer);

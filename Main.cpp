@@ -1487,7 +1487,7 @@ void emulate()
             bus->ppu->frame_complete = false;
         }
 
-        emuWin.Show(bus->ppu->frame_buffer);
+        emuWin.Show(bus);
 
         uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
         if (frametime < 16)
