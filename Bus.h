@@ -43,6 +43,8 @@ extern "C" {
 #define BUS_CONTROLLER_LEFT     (1 << 6)
 #define BUS_CONTROLLER_RIGHT    (1 << 7)
 
+#define BUS_CLOCK_FREQ          (5369318.0)
+
 /*
  * The NES Bus connects the various components of the NES together.
  * In a way it is a stand-in for the actual NES, since it contains
@@ -75,6 +77,9 @@ struct bus {
 
     // What is the current audio output
     double audio_sample;
+    double time_per_sample;
+    double time_per_clock;
+    double audio_time;
 
     // How many system ticks have elapsed (PPU clocks at the same rate as the Bus)
     uint64_t clocks_count;
@@ -96,9 +101,11 @@ uint16_t Bus_Read16(Bus* bus, uint16_t addr);
 bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data);
 
 /* NES functions */
-void Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick
+bool Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick
 void Bus_PowerOn(Bus* bus); // Sets entire system to powerup state
 void Bus_Reset(Bus* bus);   // Equivalent to pushing the RESET button on a NES
+
+void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_rate);
 
 #ifdef __cplusplus
 }

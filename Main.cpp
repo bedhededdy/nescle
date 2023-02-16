@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: USE BUFFERED AUDIO INSTEAD OF PUSHING IN REAL TIME
+
 // TODO: NEED TO MAKE EVERYTHING WRITE TO SAME DIRECTORY REGARDLESS OF TERMINAL
 //       CURRENT WORKING DIRECTORY. NEED SOME WAY TO DETERMINE OUR "INSTALL"
 //       DIRECTORY OR HAVE THE USER SPECIFY THE RELATIVE PATH TO WHERE WE ARE
@@ -70,13 +72,12 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 
+#include "APU.h"
 #include "Bus.h"
 #include "Cart.h"
 #include "CPU.h"
 #include "Mapper.h"
 #include "PPU.h"
-
-#include "beeper.h"
 
 #include "EmulationWindow.h"
 #include "DebugWindow.h"
@@ -698,7 +699,8 @@ void create_window_and_renderer(SDL_Window** window, SDL_Renderer** renderer) {
     if (*window == NULL) return;
 
     set_renderer_hints();
-    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED
+        | SDL_RENDERER_PRESENTVSYNC);
     if (*renderer == NULL) return;
 
     // Check that ARGB8888 is supported
@@ -1376,22 +1378,77 @@ void mutex_thread_test() {
 #pragma endregion tests
 */
 
-void emulate()
+struct audio_callback_struct {
+
+};
+
+void audio_callback(void* userdata, uint8_t* stream, int len) {
+    // Bus* bus = (Bus*)userdata;
+    // // Clock until there is a sample ready
+    // while (!Bus_Clock(bus));
+
+    // uint16_t* my_stream = (uint16_t*)stream;
+    // my_stream[0] = bus->audio_sample;
+
+    Bus* bus = (Bus*)userdata;
+    int16_t* my_stream = (int16_t*)stream;
+
+    int count = 0;
+    while (count < len/sizeof(int16_t)) {
+       while (!Bus_Clock(bus)) {
+            // if (bus->ppu->frame_complete) {
+            //     frame_count++;
+            //     printf("%d\n", frame_count);
+            //     bus->ppu->frame_complete = false;
+            // }
+       }
+
+       // multiply to make louder
+        my_stream[count] = 3000.0 * bus->audio_sample;
+        count++;
+    }
+
+    // SYNC TO THE FRAME TO AVOID CHOPPY EMULATION
+    // TAKE 735 SAMPLES IN A BUFFER FOR PUSHING APPROXIMATELY ONCE PER FRAME
+}
+
+void emulate(void)
 {
+    uint64_t initial_time = SDL_GetTicks64();
     Bus *bus = Bus_CreateNES();
     if (!Cart_LoadROM(bus->cart, "../roms/smb.nes"))
         return;
     Bus_PowerOn(bus);
+    Bus_SetSampleFrequency(bus, 44100);
 
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;
 
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+
+    SDL_AudioSpec audio_spec = {0};
+    audio_spec.freq = 44100;
+    audio_spec.channels = 1;
+    // SUBJECT TO CHANGE
+    audio_spec.format = AUDIO_S16SYS;
+    // FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
+    // AS 60 GOES INTO 44100 735 TIMES
+    audio_spec.samples = 512;
+    audio_spec.callback = &audio_callback;
+    audio_spec.userdata = bus;
+
+    SDL_AudioSpec obtained;
+    SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
+        0, &audio_spec, &obtained, 0);
 
     EmulationWindow emuWin = EmulationWindow(256 * 3, 240 * 3);
 
     bool quit = false;
     bool run_emulation = false;
     int palette = 0;
+
+    SDL_PauseAudioDevice(device, 0);
+
     while (!quit)
     {
         uint64_t t0 = SDL_GetTicks64();
@@ -1500,18 +1557,25 @@ void emulate()
             }
         }
 
-        if (run_emulation) {
-            while (!bus->ppu->frame_complete)
-                Bus_Clock(bus);
-            bus->ppu->frame_complete = false;
-        }
+        // if (run_emulation) {
+        //     while (!bus->ppu->frame_complete)
+        //         Bus_Clock(bus);
+        //     bus->ppu->frame_complete = false;
+
+        // }
 
         emuWin.Show(bus);
 
-        uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
-        if (frametime < 16)
-            SDL_Delay(16 - frametime);
+        // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
+        // if (frametime < 16)
+        //     SDL_Delay(16 - frametime);
+        // else
+        //     SDL_Log("LONG FRAMETIME\n");
     }
+
+    printf("Total time elapsed: %d\n", (int)(SDL_GetTicks64() - initial_time));
+    SDL_CloseAudioDevice(device);
+    SDL_Quit();
 }
 
 void emulate_debug() {
@@ -1652,79 +1716,72 @@ void emulate_debug() {
     }
 }
 
-void play_half_note(int16_t* buf, int16_t freq,
-    float sample_interval, float* sample_time, int16_t volume) {
-    for (int i = 0; i < 22050; i++) {
-        buf[i] = volume * sin(2 * 3.14159 * freq * *sample_time);
-        *sample_time = *sample_time + sample_interval;
+struct pulse_wave_gen {
+    double freq;
+    double duty_cycle;
+    double amplitude;
+    double pi;
+    double harmonics;
+    double time;
+};
+
+int16_t pulse_sample(struct pulse_wave_gen* wave) {
+    double a = 0;
+    double b = 0;
+    double p = wave->duty_cycle * 2.0 * wave->pi;
+
+    for (double n = 1; n < wave->harmonics; n++) {
+        double c = n * wave->freq * 2.0 * wave->pi * wave->time;
+        a += -sin(c) / n;
+        b += -sin(c - p * n) / n;
+    }
+
+    return (2.0 * wave->amplitude / wave->pi) * (a - b);
+
+    //return wave->amplitude * sin(2.0 * wave->pi * wave->freq * wave->time);
+}
+
+void audio_test_callback(void* userdata, uint8_t* stream, int len) {
+    int16_t* stream16 = (int16_t*)stream;
+    struct pulse_wave_gen* wave = (struct pulse_wave_gen*)userdata;
+    for (int i = 0; i < len/sizeof(uint16_t); i++) {
+        wave->time += 1.0/44100.0;
+        stream16[i] = pulse_sample(wave);
     }
 }
 
 void audio_test() {
-    printf("begin\n");
     SDL_Init(SDL_INIT_AUDIO);
 
-    SDL_AudioSpec audio_settings = {0};
-    audio_settings.freq = 44100;
-    audio_settings.format = AUDIO_S16SYS;
-    audio_settings.channels = 1;
-    //audio_settings.
+    struct pulse_wave_gen pulse_wave_generator;
+    pulse_wave_generator.freq = 440.0;
+    pulse_wave_generator.duty_cycle = 0.5;
+    pulse_wave_generator.amplitude = 3000;
+    pulse_wave_generator.pi = 3.14159;
+    pulse_wave_generator.harmonics = 20;
+    pulse_wave_generator.time = 0.0;
+
+    SDL_AudioSpec audio_spec = {0};
+    audio_spec.freq = 44100;
+    audio_spec.channels = 1;
     // SUBJECT TO CHANGE
-    audio_settings.samples = 4096;
+    audio_spec.format = AUDIO_S16SYS;
+    // FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
+    // AS 60 GOES INTO 44100 735 TIMES
+    audio_spec.samples = 512;
+    audio_spec.callback = &audio_test_callback;
+    audio_spec.userdata = &pulse_wave_generator;
 
-    SDL_AudioSpec given_settings;
+    SDL_AudioSpec obtained;
+    SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
+        0, &audio_spec, &obtained, 0);
 
-    SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(NULL,
-        0, &audio_settings, &given_settings, 0);
-
-    char* ptr1 = (char*)&audio_settings;
-    char* ptr2 = (char*)&given_settings;
-
-    if (audio_settings.format != given_settings.format)
-        printf("diff fmt\n");
-
-    const uint32_t sample_size = sizeof(int16_t) * 22050;
-    int16_t* buf = (int16_t*)malloc(sample_size);
-
-    // Play an A major scale (each note 0.5 seconds)
-    const float sample_interval = 1.0f / 44100;
-    float sample_time = 0;
-
-    play_half_note(buf, 440/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, (void*)buf, sample_size);
-
-    play_half_note(buf, 493/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 554/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 587/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 659/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 739/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 830/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    play_half_note(buf, 880/2, sample_interval, &sample_time, 3000);
-    SDL_QueueAudio(audio_device, buf, sample_size);
-
-    // Begin playing
-    SDL_PauseAudioDevice(audio_device, 0);
-
-    // Give time for audio to finish
+    SDL_PauseAudioDevice(device, 0);
     SDL_Delay(4000);
 
-    SDL_CloseAudioDevice(audio_device);
+    SDL_CloseAudioDevice(device);
     SDL_Quit();
 }
-
-
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
@@ -1815,28 +1872,7 @@ int main(int argc, char** argv) {
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
     // FIXME: HOW TF DOES THIS WRITE TO CHR_RAM WITHOUT ME DETECTING IT
-    //inspect_hw("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
-    //inspect_hw("roms/nes-test-roms/cpu_timing_test6/cpu_timing_test.nes");
-    //inspect_hw("roms/nestest.nes");
 
-    //inspect_hw("roms/nes-test-roms/sprite_hit_tests_2005.10.05/11.edge_timing.nes");
-    //inspect_hw_mul("roms/nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes");
-
-    //inspect_hw("roms/arkanoid.nes");
-    //inspect_hw("roms/solomons-key.nes");
-    //inspect_hw("roms/mega-man-vimm.nes");
-    //
-    //inspect_hw("roms/castlevania.nes");
-    //inspect_hw("roms/duckhunt.nes");
-    //inspect_hw("roms/battletoads.nes");
-    //inspect_hw("roms/mega-man-2.nes");
-    //inspect_hw("roms/ninja-gaiden.nes");
-    //inspect_hw("roms/zelda.nes");
-    //inspect_hw("roms/tmnt.nes");
-    //inspect_hw("roms/double-dragon.nes");
-    //inspect_hw("roms/zelda2.nes");
-    //inspect_hw("roms/smb.nes");
-    //inspect_hw("roms/castlevania2.nes");
     // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
     // FAILS RIGHT EDGE WITH CODE 2
     // FAILS TIMING WITH CODE 3
@@ -1845,105 +1881,8 @@ int main(int argc, char** argv) {
     // char const* rom = tinyfd_openFileDialog("Select ROM",
     //     "", 1, filter_patterns, NULL, 0);
 
-    // if (rom != NULL)
-    //     inspect_hw(rom);
-    // else
-    //     printf("FATAL: UNABLE TO OPEN ROM\n");
-
-    //emulate();
-    //audio_test();
-
-    // SDL_Init(SDL_INIT_AUDIO);
-
-    // Beeper beeper;
-    // beeper.initializeAudio();
-
-    // beeper.setWaveType(0);
-    // short* buf = (short*)malloc(sizeof(short) * 22050);
-
-    // beeper.setWaveTone(220);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-    // beeper.setWaveTone(493/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(554/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(587/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(659/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(739/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(830/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // beeper.setWaveTone(880/2);
-    // beeper.generateSamples(buf, sizeof(short) * 22050);
-    // SDL_Delay(500);
-
-    // // SDL_Delay(4000);
-    // SDL_Quit();
-
-    // NOTE: SIN WAVE GENERATION WILL REQUIRE MULTIPLYING THE ARGUMENT BY
-    //       2PI TO CONVERT THE FREQUENCY INTO RADIANS
-
-    // SDL_Init(SDL_INIT_AUDIO);
-
-    // int samples_per_second = 44100;
-    // int tone = 440;
-    // int16_t volume = 3000;
-    // int sample_index = 0;
-    // int square_wave_period = samples_per_second / tone;
-    // int half_square_wave_period = square_wave_period / 2;
-    // // mono, not stereo
-    // int bytes_per_sample = sizeof(int16_t) * 1;
-
-    // SDL_AudioSpec audio_settings = {0};
-    // audio_settings.freq = samples_per_second;
-    // audio_settings.format = AUDIO_S16SYS;
-    // audio_settings.channels = 1;
-    // audio_settings.samples = 1024;
-
-    // SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
-    //     0, &audio_settings, NULL, 0);
-
-    // // 22050 samples in 0.5 sec
-    // int16_t* buf = (int16_t*)malloc(sizeof(uint16_t) * samples_per_second / 2);
-
-    // for (int idx = 0; idx < samples_per_second / 2; idx++) {
-    //     buf[idx] = ((sample_index++ / half_square_wave_period) % 2) ? volume : -volume;
-    // }
-
-    // SDL_QueueAudio(device, buf, 44100);
-
-    // tone = 880;
-    // square_wave_period = samples_per_second / tone;
-    // half_square_wave_period = square_wave_period / 2;
-    // for (int idx = 0; idx < samples_per_second / 2; idx++)
-    // {
-    //     buf[idx] = ((sample_index++ / half_square_wave_period) % 2) ? volume : -volume;
-    // }
-
-    // SDL_QueueAudio(device, buf, 44100);
-    // SDL_PauseAudioDevice(device, 0);
-
-    // SDL_Delay(2000);
-
-    // SDL_CloseAudioDevice(device);
-    // SDL_Quit();
-
-    audio_test();
+    // audio_test();
+    emulate();
 
     return 0;
 }

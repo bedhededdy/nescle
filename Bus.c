@@ -62,6 +62,7 @@ Bus* Bus_CreateNES(void) {
     bus->ppu = ppu;
     ppu->bus = bus;
     bus->cart = cart;
+
     bus->apu = apu;
     apu->bus = bus;
 
@@ -99,7 +100,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         return PPU_RegisterRead(bus->ppu, addr);
     }
     else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
-        return APU_Read(bus->apu);
+        return APU_Read(bus->apu, addr);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -162,7 +163,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
     else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
-        return APU_Write(bus->apu);
+        return APU_Write(bus->apu, addr, data);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -201,10 +202,11 @@ bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data) {
 }
 
 /* NES functions */
-void Bus_Clock(Bus* bus) {
+bool Bus_Clock(Bus* bus) {
     // PPU runs 3x faster than the CPU
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
+
     PPU_Clock(bus->ppu);
     APU_Clock(bus->apu);
 
@@ -241,6 +243,18 @@ void Bus_Clock(Bus* bus) {
         }
     }
 
+    bool audio_ready = false;
+    bus->audio_time += bus->time_per_clock;
+
+    // enough time has elapsed to push an audio sample
+    if (bus->audio_time >= bus->time_per_sample) {
+        bus->audio_time -= bus->time_per_sample;
+        bus->audio_sample = APU_GetOutputSample(bus->apu);
+
+        audio_ready = true;
+    }
+
+
     // PPU can optionally emit a NMI to the CPU upon entering the vertical
     // blank state
     if (bus->ppu->nmi) {
@@ -249,6 +263,7 @@ void Bus_Clock(Bus* bus) {
     }
 
     bus->clocks_count++;
+    return audio_ready;
 }
 
 void Bus_PowerOn(Bus* bus) {
@@ -256,6 +271,7 @@ void Bus_PowerOn(Bus* bus) {
     Bus_ClearMem(bus);
     PPU_PowerOn(bus->ppu);
     CPU_PowerOn(bus->cpu);
+    APU_PowerOn(bus->apu);
     bus->controller1 = 0;
     bus->controller2 = 0;
     bus->controller1_shifter = 0;
@@ -266,16 +282,27 @@ void Bus_PowerOn(Bus* bus) {
     bus->dma_transfer = false;
     bus->dma_dummy = true;
     bus->clocks_count = 0;
+
+    bus->time_per_sample = 0.0;
+    bus->audio_sample = 0.0;
+    bus->time_per_clock = 0.0;
+    bus->audio_time = 0.0;
 }
 
 void Bus_Reset(Bus* bus) {
     // Contents of RAM do not clear on reset
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
+    APU_Reset(bus->apu);
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;
     bus->dma_data = 0;
     bus->dma_transfer = false;
     bus->dma_dummy = true;
+}
+
+void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_frequency) {
+    bus->time_per_sample = 1.0 / (double)sample_frequency;
+    bus->time_per_clock = 1.0 / BUS_CLOCK_FREQ;
 }

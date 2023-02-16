@@ -1,5 +1,8 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -28,6 +31,21 @@ struct apu_sample_wave {
 
 };
 
+struct apu_sequencer {
+    uint32_t sequence;
+    uint16_t timer;
+    uint16_t reload;
+    uint8_t output;
+};
+
+typedef struct oscpulse {
+    double freq;
+    double duty_cycle;
+    double amplitude;
+    double pi;
+    double harmonics;
+} oscpulse;
+
 struct apu {
     Bus* bus;
 
@@ -37,17 +55,38 @@ struct apu {
     APU_Noise_Wave* noise;
     APU_Sample_Wave* sample;
 
-    // TODO: IMPLEMENT VOICE CHANNEL
 
+    // TODO: ADD SEQUENCERS FOR EACH CHANNEL
+    APU_Sequencer* sequencer;
+    APU_Sequencer* sequencer2;
+
+    oscpulse* oscpulse;
+
+    struct oscpulse* oscpulse2;
+
+    uint64_t clock_count;
+    uint64_t frame_clock_count;
+
+    double global_time;
+
+    // TODO: IMPLEMENT VOICE CHANNEL
 };
 
 APU* APU_Create(void);
 void APU_Destroy(APU* apu);
 
-uint8_t APU_Read(APU* apu);
-bool APU_Write(APU* apu);
+void APU_PowerOn(APU* apu);
+void APU_Reset(APU* apu);
+
+uint8_t APU_Read(APU* apu, uint16_t addr);
+bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
 
 void APU_Clock(APU* apu);
 void APU_Reset(APU* apu);
 
+void APU_SequencerClock(APU* apu, bool enable, void (*func)(uint32_t*));
 double APU_GetOutputSample(APU* apu);
+
+#ifdef __cplusplus
+}
+#endif

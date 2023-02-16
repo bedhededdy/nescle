@@ -33,6 +33,7 @@ typedef struct apu_pulse_wave APU_Pulse_Wave;
 typedef struct apu_triangle_wave APU_Triangle_Wave;
 typedef struct apu_noise_wave APU_Noise_Wave;
 typedef struct apu_sample_wave APU_Sample_Wave;
+typedef struct apu_sequencer APU_Sequencer;
 
 typedef enum cart_mirror_mode Cart_MirrorMode;
 typedef enum cpu_addrmode CPU_AddrMode;
