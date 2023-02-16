@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 #ifdef __cplusplus
 extern "C" {
@@ -71,9 +71,13 @@ struct bus {
     CPU* cpu;
     PPU* ppu;
     Cart* cart;
+    APU* apu;
+
+    // What is the current audio output
+    double audio_sample;
 
     // How many system ticks have elapsed (PPU clocks at the same rate as the Bus)
-    uint64_t clocks_count;      
+    uint64_t clocks_count;
 };
 
 /* Constructors/Destructors */

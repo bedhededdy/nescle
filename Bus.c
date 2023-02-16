@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 #include "Bus.h"
 
@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "APU.h"
 #include "CPU.h"
 #include "Cart.h"
 #include "Mapper.h"
@@ -49,6 +50,7 @@ Bus* Bus_CreateNES(void) {
     CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Create();
     Cart* cart = Cart_Create();
+    APU* apu = APU_Create();
 
     if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
         printf("Bus_CreateNES: alloc failed\n");
@@ -60,6 +62,10 @@ Bus* Bus_CreateNES(void) {
     bus->ppu = ppu;
     ppu->bus = bus;
     bus->cart = cart;
+    bus->apu = apu;
+    apu->bus = bus;
+
+    bus->audio_sample = 0.0;
 
     return bus;
 }
@@ -68,6 +74,7 @@ void Bus_DestroyNES(Bus* bus) {
     CPU_Destroy(bus->cpu);
     PPU_Destroy(bus->ppu);
     Cart_Destroy(bus->cart);
+    APU_Destroy(bus->apu);
     Bus_Destroy(bus);
 }
 
@@ -90,6 +97,9 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
     else if (addr >= 0x2000 && addr < 0x4000) {
         /* PPU Registers */
         return PPU_RegisterRead(bus->ppu, addr);
+    }
+    else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
+        return APU_Read(bus->apu);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -150,9 +160,13 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
         bus->dma_2003_off = PPU_RegisterRead(bus->ppu, 0x2003);
         bus->dma_transfer = true;
     }
+    // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
+    else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
+        return APU_Write(bus->apu);
+    }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
-        // Writing saves the current state of the controller to 
+        // Writing saves the current state of the controller to
         // the controller's serialized shift register
 
         // We need to make sure that we are not currently polling user
@@ -182,7 +196,7 @@ uint16_t Bus_Read16(Bus* bus, uint16_t addr) {
 }
 
 bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data) {
-    return Bus_Write(bus, addr, (uint8_t)data) 
+    return Bus_Write(bus, addr, (uint8_t)data)
         && Bus_Write(bus, addr, data >> 8);
 }
 
@@ -192,6 +206,8 @@ void Bus_Clock(Bus* bus) {
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
     PPU_Clock(bus->ppu);
+    APU_Clock(bus->apu);
+
     if (bus->clocks_count % 3 == 0) {
         // CPU completely halts if DMA is occuring
         if (bus->dma_transfer) {
@@ -204,7 +220,7 @@ void Bus_Clock(Bus* bus) {
             else {
                 // Read on even cycles, write on odd cycles
                 if (bus->clocks_count % 2 == 0) {
-                    bus->dma_data = Bus_Read(bus, 
+                    bus->dma_data = Bus_Read(bus,
                         ((uint16_t)bus->dma_page << 8) | bus->dma_addr);
                 }
                 else {
