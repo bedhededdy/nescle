@@ -1,6 +1,7 @@
 #include "APU.h"
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 // normal sin is too slow, so we use this approximation to speed up the
 // emulation
@@ -22,7 +23,6 @@ double oscpulse_sample(oscpulse* pulse, double t) {
     }
 
     return (2.0 * pulse->amplitude / pulse->pi) * (a - b);
-    //return sin(2.0 * pulse->pi * t * pulse->freq);
 }
 
 bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
@@ -140,20 +140,24 @@ void APU_Clock(APU* apu) {
 
         // update sequencers
         // APU_Pulse1Clock(apu);
-        APU_SequencerClock(apu, apu->pulse1->enable, &pulse1_clock);
-        apu->pulse1->sample = (double)apu->sequencer->output;
+        // APU_SequencerClock(apu, apu->pulse1->enable, &pulse1_clock);
+        // apu->pulse1->sample = (double)apu->sequencer->output;
+        // apu->oscpulse->freq = 440.0;
 
-        APU_SequencerClock2(apu, apu->pulse2->enable, &pulse1_clock);
-        apu->pulse2->sample = (double)apu->sequencer2->output;
+        // APU_SequencerClock2(apu, apu->pulse2->enable, &pulse1_clock);
+        // apu->pulse2->sample = (double)apu->sequencer2->output;
+        // apu->oscpulse->freq = 1789773.0 / (16.0 + (double)(440.0 + 1));
+        // apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
+        // apu->pulse1->sample = 3000 * fast_sin(2 * 3.14159 * 440.0 * apu->global_time);
 
         // apu->oscpulse->freq = 1789773.0 / (16.0 + (double)(apu->sequencer->timer + 1));
         // apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
 
         // modulate frequency down 4 octaves cuz something here is busted
-        // apu->oscpulse->freq = 1789773.0 / (16.0 + (double)(apu->sequencer->reload + 1)) / 16;
-        // apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
-        // apu->oscpulse2->freq = 1789773.0 / (16.0 + (double)(apu->sequencer2->reload + 1)) / 16;
-        // apu->pulse2->sample = oscpulse_sample(apu->oscpulse2, apu->global_time);
+        apu->oscpulse->freq = 1789773.0 / (16.0 * (double)(apu->sequencer->reload + 1));
+        apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
+        apu->oscpulse2->freq = 1789773.0 / (16.0 * (double)(apu->sequencer2->reload + 1));
+        apu->pulse2->sample = oscpulse_sample(apu->oscpulse2, apu->global_time);
     }
 
     apu->clock_count++;

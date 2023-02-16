@@ -1416,7 +1416,7 @@ void emulate(void)
 {
     uint64_t initial_time = SDL_GetTicks64();
     Bus *bus = Bus_CreateNES();
-    if (!Cart_LoadROM(bus->cart, "../roms/smb.nes"))
+    if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
         return;
     Bus_PowerOn(bus);
     Bus_SetSampleFrequency(bus, 44100);
@@ -1581,7 +1581,7 @@ void emulate(void)
 void emulate_debug() {
 
     Bus *bus = Bus_CreateNES();
-    if (!Cart_LoadROM(bus->cart, "../roms/smb.nes"))
+    if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
         return;
     Bus_PowerOn(bus);
 
