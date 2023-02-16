@@ -76,6 +76,8 @@
 #include "Mapper.h"
 #include "PPU.h"
 
+#include "beeper.h"
+
 #include "EmulationWindow.h"
 #include "DebugWindow.h"
 
@@ -1650,6 +1652,80 @@ void emulate_debug() {
     }
 }
 
+void play_half_note(int16_t* buf, int16_t freq,
+    float sample_interval, float* sample_time, int16_t volume) {
+    for (int i = 0; i < 22050; i++) {
+        buf[i] = volume * sin(2 * 3.14159 * freq * *sample_time);
+        *sample_time = *sample_time + sample_interval;
+    }
+}
+
+void audio_test() {
+    printf("begin\n");
+    SDL_Init(SDL_INIT_AUDIO);
+
+    SDL_AudioSpec audio_settings = {0};
+    audio_settings.freq = 44100;
+    audio_settings.format = AUDIO_S16SYS;
+    audio_settings.channels = 1;
+    //audio_settings.
+    // SUBJECT TO CHANGE
+    audio_settings.samples = 4096;
+
+    SDL_AudioSpec given_settings;
+
+    SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(NULL,
+        0, &audio_settings, &given_settings, 0);
+
+    char* ptr1 = (char*)&audio_settings;
+    char* ptr2 = (char*)&given_settings;
+
+    if (audio_settings.format != given_settings.format)
+        printf("diff fmt\n");
+
+    const uint32_t sample_size = sizeof(int16_t) * 22050;
+    int16_t* buf = (int16_t*)malloc(sample_size);
+
+    // Play an A major scale (each note 0.5 seconds)
+    const float sample_interval = 1.0f / 44100;
+    float sample_time = 0;
+
+    play_half_note(buf, 440/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, (void*)buf, sample_size);
+
+    play_half_note(buf, 493/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 554/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 587/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 659/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 739/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 830/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    play_half_note(buf, 880/2, sample_interval, &sample_time, 3000);
+    SDL_QueueAudio(audio_device, buf, sample_size);
+
+    // Begin playing
+    SDL_PauseAudioDevice(audio_device, 0);
+
+    // Give time for audio to finish
+    SDL_Delay(4000);
+
+    SDL_CloseAudioDevice(audio_device);
+    SDL_Quit();
+}
+
+
+
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
 int main(int argc, char** argv) {
     // FIXME: RANDOMLY HANGS ALL THE TIME, SEEMS TO HAVE STOPPED DOING THAT UPON
@@ -1774,7 +1850,100 @@ int main(int argc, char** argv) {
     // else
     //     printf("FATAL: UNABLE TO OPEN ROM\n");
 
-    emulate_debug();
+    //emulate();
+    //audio_test();
+
+    // SDL_Init(SDL_INIT_AUDIO);
+
+    // Beeper beeper;
+    // beeper.initializeAudio();
+
+    // beeper.setWaveType(0);
+    // short* buf = (short*)malloc(sizeof(short) * 22050);
+
+    // beeper.setWaveTone(220);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+    // beeper.setWaveTone(493/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(554/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(587/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(659/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(739/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(830/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // beeper.setWaveTone(880/2);
+    // beeper.generateSamples(buf, sizeof(short) * 22050);
+    // SDL_Delay(500);
+
+    // // SDL_Delay(4000);
+    // SDL_Quit();
+
+    // NOTE: SIN WAVE GENERATION WILL REQUIRE MULTIPLYING THE ARGUMENT BY
+    //       2PI TO CONVERT THE FREQUENCY INTO RADIANS
+
+    // SDL_Init(SDL_INIT_AUDIO);
+
+    // int samples_per_second = 44100;
+    // int tone = 440;
+    // int16_t volume = 3000;
+    // int sample_index = 0;
+    // int square_wave_period = samples_per_second / tone;
+    // int half_square_wave_period = square_wave_period / 2;
+    // // mono, not stereo
+    // int bytes_per_sample = sizeof(int16_t) * 1;
+
+    // SDL_AudioSpec audio_settings = {0};
+    // audio_settings.freq = samples_per_second;
+    // audio_settings.format = AUDIO_S16SYS;
+    // audio_settings.channels = 1;
+    // audio_settings.samples = 1024;
+
+    // SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
+    //     0, &audio_settings, NULL, 0);
+
+    // // 22050 samples in 0.5 sec
+    // int16_t* buf = (int16_t*)malloc(sizeof(uint16_t) * samples_per_second / 2);
+
+    // for (int idx = 0; idx < samples_per_second / 2; idx++) {
+    //     buf[idx] = ((sample_index++ / half_square_wave_period) % 2) ? volume : -volume;
+    // }
+
+    // SDL_QueueAudio(device, buf, 44100);
+
+    // tone = 880;
+    // square_wave_period = samples_per_second / tone;
+    // half_square_wave_period = square_wave_period / 2;
+    // for (int idx = 0; idx < samples_per_second / 2; idx++)
+    // {
+    //     buf[idx] = ((sample_index++ / half_square_wave_period) % 2) ? volume : -volume;
+    // }
+
+    // SDL_QueueAudio(device, buf, 44100);
+    // SDL_PauseAudioDevice(device, 0);
+
+    // SDL_Delay(2000);
+
+    // SDL_CloseAudioDevice(device);
+    // SDL_Quit();
+
+    audio_test();
 
     return 0;
 }

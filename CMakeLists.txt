@@ -67,7 +67,7 @@ find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2)
 find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2main)
 
 # Add nescle as executable
-set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp DebugWindow.cpp Main.cpp Mapper.c PPU.c)
+set(SRC Bus.c Cart.c CPU.c Beeper.cpp EmulationWindow.cpp DebugWindow.cpp Main.cpp Mapper.c PPU.c APU.c)
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 add_executable(nescle ${SRC})
 
