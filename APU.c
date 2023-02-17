@@ -25,6 +25,11 @@ double oscpulse_sample(oscpulse* pulse, double t) {
     return (2.0 * pulse->amplitude / pulse->pi) * (a - b);
 }
 
+double osctriangle_sample(osctriangle* osctriangle, double t) {
+    // sin wave for now
+    return -fast_sin(2.0 * osctriangle->pi * osctriangle->freq * t);
+}
+
 bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
     switch (addr) {
     case 0x4000:
@@ -71,6 +76,19 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
     case 0x4007:
         apu->sequencer2->reload = (uint16_t)((data & 7)) << 8 | (apu->sequencer2->reload & 0x00ff);
         apu->sequencer2->timer = apu->sequencer2->reload;
+
+    case 0x4008:
+        break;
+    case 0x4009:
+        break;
+    case 0x400a:
+        apu->triangle_sequencer->reload = (apu->triangle_sequencer->reload & 0xff00) | data;
+        break;
+    case 0x400b:
+        apu->triangle_sequencer->reload = (uint16_t)((data & 7)) << 8
+            | (apu->triangle_sequencer->reload & 0x00ff);
+        apu->triangle_sequencer->timer = apu->triangle_sequencer->reload;
+        break;
 
     case 0x4015:
         apu->pulse1->enable = data & 1;
@@ -139,25 +157,35 @@ void APU_Clock(APU* apu) {
         }
 
         // update sequencers
-        // APU_Pulse1Clock(apu);
+
+        // bad sound, good performance
         // APU_SequencerClock(apu, apu->pulse1->enable, &pulse1_clock);
         // apu->pulse1->sample = (double)apu->sequencer->output;
-        // apu->oscpulse->freq = 440.0;
-
         // APU_SequencerClock2(apu, apu->pulse2->enable, &pulse1_clock);
         // apu->pulse2->sample = (double)apu->sequencer2->output;
-        // apu->oscpulse->freq = 1789773.0 / (16.0 + (double)(440.0 + 1));
-        // apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
-        // apu->pulse1->sample = 3000 * fast_sin(2 * 3.14159 * 440.0 * apu->global_time);
 
-        // apu->oscpulse->freq = 1789773.0 / (16.0 + (double)(apu->sequencer->timer + 1));
-        // apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
-
-        // modulate frequency down 4 octaves cuz something here is busted
+        // TODO: SPEED THIS UP AS MUCH AS POSSIBLE, CONSIDER REDUCING
+        // NUMBER OF HARMONICS
+        // ALSO CONSIDER JUST DOING THE FLAT SQUARE WAVE WITH MAYBE LIKE A
+        // SMOOTHING EFFECT AT THE EDGE
         apu->oscpulse->freq = 1789773.0 / (16.0 * (double)(apu->sequencer->reload + 1));
         apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
         apu->oscpulse2->freq = 1789773.0 / (16.0 * (double)(apu->sequencer2->reload + 1));
         apu->pulse2->sample = oscpulse_sample(apu->oscpulse2, apu->global_time);
+
+        // TRIANGLE WAVE IS AN OCTAVE LOWER SO DIVIDE THE OUTPUT
+        // BY 2
+        apu->osctriangle->freq = 1789773.0 / (16.0 * (double)(apu->triangle_sequencer->reload + 1)) / 2;
+        apu->triangle->sample = osctriangle_sample(apu->osctriangle, apu->global_time);
+
+        // Mute super high frequencies to save the children's ears until I fix
+        // the emulation
+        if (apu->oscpulse->freq > 8000)
+            apu->pulse1->sample = 0;
+        if (apu->oscpulse2->freq > 8000)
+            apu->pulse2->sample = 0;
+        if (apu->osctriangle->freq > 8000)
+            apu->triangle->sample = 0;
     }
 
     apu->clock_count++;
@@ -187,6 +215,16 @@ void APU_Reset(APU* apu) {
     apu->oscpulse->amplitude = 1;
     apu->oscpulse->pi = 3.14159;
     apu->oscpulse->harmonics = 20;
+
+    apu->triangle_sequencer->sequence = 0;
+    apu->triangle_sequencer->timer = 0;
+    apu->triangle_sequencer->reload = 0;
+    apu->triangle_sequencer->output = 0;
+
+    apu->osctriangle->freq  = 0;
+    apu->osctriangle->amplitude = 1;
+    apu->osctriangle->pi = 3.14159;
+    apu->osctriangle->harmonics = 20;
 }
 
 void APU_PowerOn(APU* apu) {
@@ -208,11 +246,21 @@ void APU_PowerOn(APU* apu) {
     apu->oscpulse2->pi = 3.14159;
     apu->oscpulse2->harmonics = 20;
 
-    apu->oscpulse->freq  = 0;
+    apu->oscpulse->freq = 0;
     apu->oscpulse->duty_cycle = 0;
     apu->oscpulse->amplitude = 1;
     apu->oscpulse->pi = 3.14159;
     apu->oscpulse->harmonics = 20;
+
+    apu->triangle_sequencer->sequence = 0;
+    apu->triangle_sequencer->timer = 0;
+    apu->triangle_sequencer->reload = 0;
+    apu->triangle_sequencer->output = 0;
+
+    apu->osctriangle->freq = 0;
+    apu->osctriangle->amplitude = 1;
+    apu->osctriangle->pi = 3.14159;
+    apu->osctriangle->harmonics = 20;
 }
 
 void APU_SequencerClock(APU* apu, bool enable, void (*func)(uint32_t*)) {
@@ -246,6 +294,9 @@ APU* APU_Create(void) {
     apu->oscpulse = malloc(sizeof(oscpulse));
     apu->oscpulse2 = malloc(sizeof(oscpulse));
 
+    apu->triangle_sequencer = malloc(sizeof(APU_Sequencer));
+    apu->osctriangle = malloc(sizeof(osctriangle));
+
     return apu;
 }
 
@@ -259,9 +310,11 @@ void APU_Destroy(APU* apu) {
     free(apu->sequencer2);
     free(apu->oscpulse);
     free(apu->oscpulse2);
+    free(apu->triangle_sequencer);
+    free(apu->osctriangle);
     free(apu);
 }
 
 double APU_GetOutputSample(APU* apu) {
-    return apu->pulse1->sample + apu->pulse2->sample;
+    return apu->pulse1->sample + apu->pulse2->sample + apu->triangle->sample;
 }

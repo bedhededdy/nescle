@@ -20,7 +20,12 @@ struct apu_pulse_wave {
 };
 
 struct apu_triangle_wave {
+    bool enable;
 
+    // TYPES SUBJECT TO CHANGE
+    double sample;
+    uint8_t length;
+    uint8_t freq;
 };
 
 struct apu_noise_wave {
@@ -46,6 +51,13 @@ typedef struct oscpulse {
     double harmonics;
 } oscpulse;
 
+typedef struct osctriangle {
+    double freq;
+    double amplitude;
+    double pi;
+    double harmonics;
+} osctriangle;
+
 struct apu {
     Bus* bus;
 
@@ -59,10 +71,13 @@ struct apu {
     // TODO: ADD SEQUENCERS FOR EACH CHANNEL
     APU_Sequencer* sequencer;
     APU_Sequencer* sequencer2;
+    APU_Sequencer* triangle_sequencer;
 
     oscpulse* oscpulse;
 
     struct oscpulse* oscpulse2;
+
+    osctriangle* osctriangle;
 
     uint64_t clock_count;
     uint64_t frame_clock_count;
