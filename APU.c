@@ -168,6 +168,9 @@ void APU_Clock(APU* apu) {
         // NUMBER OF HARMONICS
         // ALSO CONSIDER JUST DOING THE FLAT SQUARE WAVE WITH MAYBE LIKE A
         // SMOOTHING EFFECT AT THE EDGE
+        // apu->oscpulse2->harmonics = 30;
+        // apu->oscpulse->harmonics = 30;
+
         apu->oscpulse->freq = 1789773.0 / (16.0 * (double)(apu->sequencer->reload + 1));
         apu->pulse1->sample = oscpulse_sample(apu->oscpulse, apu->global_time);
         apu->oscpulse2->freq = 1789773.0 / (16.0 * (double)(apu->sequencer2->reload + 1));

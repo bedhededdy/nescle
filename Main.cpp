@@ -1564,6 +1564,9 @@ void emulate(void)
 
         // }
 
+        // Note that the event loop blocks this, so when moving the window,
+        // we still emulate since the emulation is on the audio thread,
+        // but we will not show the updates visually
         emuWin.Show(bus);
 
         // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
