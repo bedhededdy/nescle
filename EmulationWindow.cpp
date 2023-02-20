@@ -4,11 +4,11 @@
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
 
+#include <tinyfiledialogs.h>
+
 #include "PPU.h"
 #include "Cart.h"
 #include "Bus.h"
-
-#include "tinyfiledialogs.h"
 
 void EmulationWindow::set_hints() {
     if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
@@ -95,8 +95,10 @@ void EmulationWindow::Show(Bus* bus) {
     }
 
     ImGui::Render();
+	SDL_LockMutex(bus->ppu->frame_buffer_lock);
     SDL_UpdateTexture(texture, NULL, (void*)bus->ppu->frame_buffer,
         PPU_RESOLUTION_X * sizeof(uint32_t));
+	SDL_UnlockMutex(bus->ppu->frame_buffer_lock);
     SDL_RenderCopy(renderer, texture, NULL, NULL);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(renderer);
