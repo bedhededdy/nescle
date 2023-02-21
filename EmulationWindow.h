@@ -1,18 +1,14 @@
-// TODO: MAYBE REPLACE STDINT.H WITH CSTDINT
-#include <stdint.h>
 #include <SDL.h>
 #include <imgui.h>
-
 #include "MyTypes.h"
 
 class EmulationWindow {
 private:
     SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Texture* texture;
-    //ImGuiIO& io;
+    SDL_GLContext gl_context;
+    // ImGuiIO& io;
 
-    void set_hints();
+    void set_gl_options();
 
 public:
     EmulationWindow(int w, int h);

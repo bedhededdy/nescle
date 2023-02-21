@@ -13,3 +13,4 @@ SDL2/
 build/
 Debug/
 Release/
+glad/

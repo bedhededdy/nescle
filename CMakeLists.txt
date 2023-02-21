@@ -39,7 +39,7 @@ set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/imgui)
 set(IMGUI_BACKENDS_DIR ${IMGUI_DIR}/backends)
 set(IMGUI_SRC imgui_demo.cpp imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui.cpp)
 set(IMGUI_INC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
-set(IMGUI_BACKENDS imgui_impl_sdl.cpp imgui_impl_sdlrenderer.cpp)
+set(IMGUI_BACKENDS imgui_impl_sdl2.cpp imgui_impl_opengl3.cpp)
 
 # Function to prepend directory to the source
 # Stolen from StackOverflow (https://stackoverflow.com/questions/4346412/how-to-prepend-all-filenames-on-the-list-with-common-path)
@@ -66,6 +66,14 @@ find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2)
 #        ABOUT WMAIN AND MAIN FROM THE LINKER
 find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2main)
 
+# Build glad as a library
+set(GLAD_SRC ${PROJECT_SOURCE_DIR}/glad/src/glad.c)
+set(GLAD_INC ${PROJECT_SOURCE_DIR}/glad/include)
+add_library(glad STATIC ${GLAD_SRC})
+
+# Add OpenGL
+find_package(OpenGL REQUIRED)
+
 # Add nescle as executable
 set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp Main.cpp Mapper.c PPU.c APU.c)
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
@@ -74,10 +82,11 @@ add_executable(nescle ${SRC})
 # Include directories
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
                                  PUBLIC ${IMGUI_INC})
-#target_include_directories(imgui INTERFACE ${IMGUI_INC})
-target_include_directories(nescle PRIVATE ${INC})
+target_include_directories(glad PUBLIC ${GLAD_INC})
+target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
 
 # Link libraries
-target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES})
-target_link_libraries(nescle PRIVATE tinyfiledialogs
-   PUBLIC imgui ${SDL2_LIBRARIES})
+target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
+target_link_libraries(glad PRIVATE opengl32)
+target_link_libraries(nescle PRIVATE tinyfiledialogs glad
+   PUBLIC imgui ${SDL2_LIBRARIES} opengl32)

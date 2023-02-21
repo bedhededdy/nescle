@@ -29,11 +29,11 @@ struct apu_triangle_wave {
 };
 
 struct apu_noise_wave {
-
+    int foo;
 };
 
 struct apu_sample_wave {
-
+    int bar;
 };
 
 struct apu_sequencer {

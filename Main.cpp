@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// FIXME: USE BUFFERED AUDIO INSTEAD OF PUSHING IN REAL TIME
-
+// TODO: REMOVE CERTAIN LOCKS IN THE CODE SUCH AS THE PC LOCK IN CPU
+//       CPU CLOCKS SO OFTEN THAT IT MAKES NO SENSE TO HAVE A
+//       SEPARATE LOCK FOR IT FROM THE GLOBAL STATE LOCK
 // TODO: NEED TO MAKE EVERYTHING WRITE TO SAME DIRECTORY REGARDLESS OF TERMINAL
 //       CURRENT WORKING DIRECTORY. NEED SOME WAY TO DETERMINE OUR "INSTALL"
 //       DIRECTORY OR HAVE THE USER SPECIFY THE RELATIVE PATH TO WHERE WE ARE
@@ -23,33 +24,7 @@
 //       TO AVOID MAJOR REWRITES, WE COULD JUST TO A CHDIR TO SET THE WORKING
 //       DIRECTORY TO WHERE I WANT IT TO BE
 
-// FIXME: TRY AND MAKE THE FRAMETIMES MORE CONSISTENT
-//        I SEEM TO BE GETTING INTO SCENARIOS WHERE I EITHER
-//        RENDER AT 59 OR 61 FPS (61 when not running, 59/60 when running)
-//        VERY BIZARRE THAT NOT RUNNING ACTUALLY GIVES LARGER FRAMETIMES
-//        CHECKING EACH FRAMETIME MANUALLY IT SEEMS I GET A BIT DESYNCED AT THE BEGINNING
-//        BUT OTHER THAN THAT I STAY CONSISTENT AT 16-17MS PER FRAME
-//        BUT THAT DOESN'T EXPLAIN WHY IT GETS SO OFF WITH THE OTHER METHOD, BECAUSE AFTER THE FIRST
-//        FRAME IT SHOULD STABILIZE
 
-// FIXME: IF YOU GO THE ROUTE OF SDL LOCKING PIXELS AS OPPOSED TO THE UPDATE
-//        TEXTURE METHOD, YOU WILL NEED TO EITHER STORE THE TEXTURE WITH PPU
-//        STRUCT OR MEMCPY THE FRAMEBUFFER AND THEN COPY IT BACK
-//        ALTERNATIVELY YOU COULD ELIMINATE THE FRAME BUFFER ENTIRELY
-//        AND MAKE THE "FRAMEBUFFER" THE MEMCPY OF THE SCREEN INSIDE
-//        THE TEXTURE COPY
-//        MUCH EASIER TO DO THIS THE RIGHT WAY WHEN YOU ARE RENDERING OTHER
-//        UI ELEMENTS
-//        MAYBE THE BENEFIT OF GPU IS NOT EVEN WORTH IT ON THEM AND SHOULD
-//        JUST DO SOFTWARE RENDERING
-//        OTHER ALTERNATIVE IS DOING ONE BIG BUFFER COPY AT THE END FOR THE UI
-//        ELEMENTS OR DOING A TEXTURE LOCK WITH A MEMCPY FOR EACH LINE OF TEXT
-//        IN THINGS LIKE DISASSEMBLER
-//        THE MEMCPYS WOULD BE RELATIVELY INEXPENSIVE DUE TO THE SMALL SIZE OF
-//        THE ARRAYS
-
-// ISSUE COULD ALSO BE RELATED TO CACHE OR SOMETHING ELSE THAT ISN'T MY FAULT CUZ ON LAPTOP
-// I EVENTUALLY CONVERGE TO AROUDN 1000MS FOR 60 FRAMES REGARDLESS OF RUNNING OR NOT
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -57,20 +32,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TODO: REMOVE ME WHEN POSSIBLE
-//#include <Windows.h>
-//#include <direct.h>
-
-// FIXME: MISSING THE PLUGIN I NEED TO DOWNLOAD FOR AUDIO
 #include <SDL.h>
-//#include <SDL2/SDL_mixer.h>
-#include <SDL_thread.h>
-
-#include "tinyfiledialogs.h"
-
-#include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_sdlrenderer.h"
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
 
 #include "APU.h"
 #include "Bus.h"
@@ -80,6 +44,10 @@
 #include "PPU.h"
 
 #include "EmulationWindow.h"
+
+#include <Windows.h>
+
+uint64_t g_frametime_begin;
 
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
 //        OF HARD-CODING IT
@@ -646,42 +614,6 @@ void render_ppu_gpu(SDL_Renderer* renderer, SDL_Texture* texture, PPU* ppu) {
     }
 }
 
-struct emulation_thread_struct {
-    Bus* bus;
-    SDL_atomic_t* run_emulation;
-    SDL_atomic_t* quit;
-    SDL_cond* signal_frame_ready;
-};
-
-int emulation_thread_func(void* data) {
-    struct emulation_thread_struct* emu = (struct emulation_thread_struct*)data;
-
-    while (SDL_AtomicGet(emu->quit) == false) {
-        uint64_t t0 = SDL_GetTicks64();
-        if (SDL_AtomicGet(emu->run_emulation) == true) {
-            SDL_LockMutex(emu->bus->save_state_lock);
-            while (!emu->bus->ppu->frame_complete)
-                Bus_Clock(emu->bus);
-            emu->bus->ppu->frame_complete = false;
-            SDL_UnlockMutex(emu->bus->save_state_lock);
-        }
-
-        // Signal that a new frame can be rendered
-        SDL_CondSignal(emu->signal_frame_ready);
-
-        uint64_t frametime = SDL_GetTicks64() - t0;
-        if (frametime < 16)
-            SDL_Delay((uint32_t)(16 - frametime));
-        else
-            printf("FRAME TOOK %ums TO RENDER\n", (uint32_t)frametime);
-    }
-
-    // Need to signal frame ready so main loop doesn't get stuck
-    SDL_CondSignal(emu->signal_frame_ready);
-    printf("Emulation Thread exited\n");
-    return 0;
-}
-
 void set_renderer_hints() {
     if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
         printf("Render Batching enabled\n");
@@ -715,548 +647,6 @@ void create_window_and_renderer(SDL_Window** window, SDL_Renderer** renderer) {
         }
     }
     if (!argb8888) return;
-}
-
-// single-threaded hw rendering
-void inspect_hw(const char* rom_path) {
-    // TODO: SWAP OUT CPU VISUALIZATION WITH OAM VISUALIZATION
-
-    // Create NES and initialize to powerup state
-    Bus* bus = Bus_CreateNES();
-    if (bus == NULL) return;
-
-    CPU* cpu = bus->cpu;
-    PPU* ppu = bus->ppu;
-    Cart* cart = bus->cart;
-
-    if (!Cart_LoadROM(cart, rom_path)) return;
-
-    Bus_PowerOn(bus);
-
-    // Initialize SDL components
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Event event;
-    SDL_Texture* pattern_texture;
-    SDL_Texture* cpu_texture;
-    SDL_Texture* ppu_texture;
-
-    SDL_Init(SDL_INIT_VIDEO);
-    //Mix_Init(MIX_INIT_MP3 | MIX_INIT_OGG);
-
-    // Play some placeholder music
-    //Mix_Music* music = Mix_LoadMUS("music/metal-mario-land.mp3");
-    //if (music == NULL)
-      //  printf("Can't play music\n");
-    //if (Mix_PlayMusic(music, -1) == -1)
-      //  printf("Can't play music\n");
-
-    // Create window with renderer
-    create_window_and_renderer(&window, &renderer);
-
-    // Create textures
-    const uint32_t format = SDL_PIXELFORMAT_ARGB8888;
-    ppu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PPU_RESOLUTION_X, PPU_RESOLUTION_Y);
-    cpu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, CPU_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y);
-    pattern_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PATTERN_RENDER_RESOLUTION_X, PATTERN_RENDER_RESOLUTION_Y);
-    if (ppu_texture == NULL || cpu_texture == NULL || pattern_texture == NULL) return;
-
-    // Blends alpha channels (ie if I give 0 I get transparency, not black)
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(cpu_texture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(pattern_texture, SDL_BLENDMODE_BLEND);
-
-    // Although this shouldn't affect anything, we do not want any background
-    // coloring for the PPU
-    SDL_SetTextureBlendMode(ppu_texture, SDL_BLENDMODE_NONE);
-
-    // Create display area for each texture
-    SDL_Rect ppu_rect = {0, 0, PPU_RESOLUTION_X*2*3/2, PPU_RESOLUTION_Y*2*3/2};
-    SDL_Rect cpu_rect = {PPU_RESOLUTION_X*2*3/2, 0, CPU_RENDER_RESOLUTION_X*3/2, CPU_RENDER_RESOLUTION_Y*3/2};
-    SDL_Rect pattern_rect = {PPU_RESOLUTION_X*2*3/2, CPU_RENDER_RESOLUTION_Y*3/2, PATTERN_RENDER_RESOLUTION_X*3/2, PATTERN_RENDER_RESOLUTION_Y*3/2};
-
-    // Give cpu texture and pattern texture transparent background
-    const size_t bg_size = sizeof(uint32_t) * cpu_rect.w * cpu_rect.h;
-    uint32_t* blue_bg = (uint32_t*)calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
-    if (blue_bg == NULL) return;
-    SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
-    SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
-    free(blue_bg);
-
-    // Load disassembler font
-    uint8_t* char_set = load_char_set();
-    if (char_set == NULL) return;
-
-    // Main loop
-    bool run_emulation = false;
-    bool quit = false;
-    uint8_t palette = 0;
-    uint64_t frame_counter = 0;
-    uint64_t frame60_t0 = SDL_GetTicks64();
-
-    while (!quit) {
-        uint64_t t0 = SDL_GetTicks64();
-
-        // Give a blue background
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0xff, 0xff);
-        SDL_RenderClear(renderer);
-
-        // For now we only support one player
-        while (SDL_PollEvent(&event)) {
-
-            switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                case SDLK_w:
-                    bus->controller1 |= BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 |= BUS_CONTROLLER_LEFT;
-                    break;
-                case SDLK_s:
-                    bus->controller1 |= BUS_CONTROLLER_DOWN;
-                    break;
-                case SDLK_d:
-                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 |= BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 |= BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 |= BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 |= BUS_CONTROLLER_START;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                case SDLK_c:
-                    // recall that the cpu clocks only once for every 3 bus clocks, so
-                    // that is why we must have the second while loop
-                    // additionally we also want to go to the next instr, not stay on the current one
-                    while (cpu->cycles_rem > 0)
-                        Bus_Clock(bus);
-                    while (cpu->cycles_rem == 0)
-                        Bus_Clock(bus);
-                    break;
-                case SDLK_r:
-                    Bus_Reset(bus);
-                    break;
-                case SDLK_f:
-                    // FIXME: may wanna do a do while
-                    while (!ppu->frame_complete)
-                        Bus_Clock(bus);
-                    ppu->frame_complete = false;
-                    break;
-                case SDLK_p:
-                    palette = (palette + 1) % 8;
-                    break;
-                case SDLK_SPACE:
-                    run_emulation = !run_emulation;
-                    break;
-
-                case SDLK_w:
-                    bus->controller1 &= ~BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 &= ~BUS_CONTROLLER_LEFT;
-                    break;
-                case SDLK_s:
-                    bus->controller1 &= ~BUS_CONTROLLER_DOWN;
-                    break;
-                case SDLK_d:
-                    bus->controller1 &= ~BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 &= ~BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 &= ~BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 &= ~BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 &= ~BUS_CONTROLLER_START;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        if (run_emulation) {
-            while (!ppu->frame_complete)
-                Bus_Clock(bus);
-            ppu->frame_complete = false;
-        }
-
-        render_ppu_gpu(renderer, ppu_texture, ppu);
-        render_cpu(cpu_texture, cpu, char_set);
-        //render_oam(cpu_texture, ppu, char_set);
-        render_pattern_memory(pattern_texture, ppu, palette);
-
-        SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
-        SDL_RenderCopy(renderer, ppu_texture, NULL, &ppu_rect);
-        SDL_RenderCopy(renderer, pattern_texture, NULL, &pattern_rect);
-
-        SDL_RenderPresent(renderer);
-
-        frame_counter++;
-        if (frame_counter % 60 == 0) {
-            uint64_t frame60_t1 = SDL_GetTicks64();
-            // should print 422 or 423 b/c gsync is forced in the driver 60/423 = 142fps
-            // in release mode i get 1-2ms per frame which gives us between 500 and 1000fps uncapped
-            // most of time spent comes from emulation, not from the rendering
-            // rendering went from about 3-4ms in software to 0-1ms in hw
-            printf("60 frames rendered in %dms\n", (int)(frame60_t1 - frame60_t0));
-            frame60_t0 = frame60_t1;
-        }
-
-        //printf("Frametime: %d\n", (int)(SDL_GetTicks64() - t0));
-        uint64_t frametime = SDL_GetTicks64() - t0;
-        if (frametime < 16) {
-            SDL_Delay((uint32_t)(16 - frametime));
-        }
-        else {
-            printf("FRAME TOOK %dms TO RENDER\n", (int)frametime);
-        }
-    }
-}
-
-// multi-threaded hw rendering
-void inspect_hw_mul(const char* rom_path) {
-    // NOTE: THE PALETTE MEMORY DOES NOT HAVE THE PROPER LOCKING MECHANISMS ON IT, BUT
-    // IT RARELY EVER CHANGES, SO I'M FINE WITH IT BEING WRONG FOR A FRAME OR TWO
-
-    /*
-    * We have 2 threads, one for rendering another for emulation
-    * The emulation thread completes 1 frame's worth of emulation, then waits until
-    * 16ms have elapsed so that we run our NES emulation at 60hz
-    * The rendering thread can theoretically go as fast as it wants, but there is no reason to do that since
-    * the NES will be incapable of outputting more than 60fps without speeding up the game
-    * So we have the rendering thread wait on a signal from the emulation thread that a new frame is ready
-    * to be rendered
-    * If for whatever reason the renderer was unable to finish rendering before the emulation finishes sleeping
-    * the emulation will still begin its next frame's worth of emulation
-    * This allows our emulation to run at the correct speed regardless of the speed of the renderer
-    * In short, we prefer that the renderer drops frames than the emulation running at an inconsistent speed
-    */
-
-    // Create the NES
-    Bus* bus = Bus_CreateNES();
-    if (bus == NULL) return;
-
-    CPU* cpu = bus->cpu;
-    PPU* ppu = bus->ppu;
-    Cart* cart = bus->cart;
-
-    if (!Cart_LoadROM(cart, rom_path)) return;
-
-    Bus_PowerOn(bus);
-
-    // Initialize SDL components
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_RendererInfo renderer_info;
-    SDL_Event event;
-    SDL_Texture* pattern_texture;
-    SDL_Texture* cpu_texture;
-    SDL_Texture* ppu_texture;
-
-    SDL_Init(SDL_INIT_VIDEO);
-
-    // Create window with renderer
-    window = SDL_CreateWindow("CNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
-    if (window == NULL) return;
-
-    if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
-        printf("Render Batching enabled\n");
-    else
-        printf("Render Batching disabled\n");
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL) return;
-
-    // Check that ARGB8888 is supported
-    if (SDL_GetRendererInfo(renderer, &renderer_info)) return;
-    printf("Video Backend: %s\n", renderer_info.name);
-
-    bool argb8888 = false;
-    for (uint32_t i = 0; i < renderer_info.num_texture_formats; i++) {
-        if (renderer_info.texture_formats[i] == SDL_PIXELFORMAT_ARGB8888) {
-            argb8888 = true;
-            break;
-        }
-    }
-    if (!argb8888) return;
-
-    // create textures
-    uint32_t format = SDL_PIXELFORMAT_ARGB8888;
-    ppu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PPU_RESOLUTION_X, PPU_RESOLUTION_Y);
-    cpu_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, CPU_RENDER_RESOLUTION_X, CPU_RENDER_RESOLUTION_Y);
-    pattern_texture = SDL_CreateTexture(renderer, format, SDL_TEXTUREACCESS_STREAMING, PATTERN_RENDER_RESOLUTION_X, PATTERN_RENDER_RESOLUTION_Y);
-    if (ppu_texture == NULL || cpu_texture == NULL || pattern_texture == NULL) return;
-
-    // Blends alpha channels (ie if I give 0 I get transparency, not black)
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(cpu_texture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(pattern_texture, SDL_BLENDMODE_BLEND);
-
-    // Although this shouldn't affect anything, we do not want any background
-    // coloring for the PPU
-    SDL_SetTextureBlendMode(ppu_texture, SDL_BLENDMODE_NONE);
-
-    // Create display area for each texture
-    SDL_Rect ppu_rect = { 0, 0, PPU_RESOLUTION_X * 2 * 3 / 2, PPU_RESOLUTION_Y * 2 * 3 / 2 };
-    SDL_Rect cpu_rect = { PPU_RESOLUTION_X * 2 * 3 / 2, 0, CPU_RENDER_RESOLUTION_X * 3 / 2, CPU_RENDER_RESOLUTION_Y * 3 / 2 };
-    SDL_Rect pattern_rect = { PPU_RESOLUTION_X * 2 * 3 / 2, CPU_RENDER_RESOLUTION_Y * 3 / 2, PATTERN_RENDER_RESOLUTION_X * 3 / 2, PATTERN_RENDER_RESOLUTION_Y * 3 / 2 };
-
-    // Give cpu texture and pattern texture transparent background
-    const size_t bg_size = sizeof(uint32_t) * cpu_rect.w * cpu_rect.h;
-    uint32_t* blue_bg = (uint32_t*)calloc(cpu_rect.w * cpu_rect.h, sizeof(uint32_t));
-    if (blue_bg == NULL) return;
-    SDL_UpdateTexture(cpu_texture, NULL, blue_bg, sizeof(uint32_t) * cpu_rect.w);
-    SDL_UpdateTexture(pattern_texture, NULL, blue_bg, sizeof(uint32_t) * pattern_rect.w);
-    free(blue_bg);
-
-    // Load disassembler font
-    uint8_t* char_set = load_char_set();
-    if (char_set == NULL) return;
-
-    // Start emulation thread
-    SDL_atomic_t quit, run_emulation;
-    SDL_atomic_t* quit_ptr = &quit;
-    SDL_atomic_t* run_emulation_ptr = &run_emulation;
-    SDL_AtomicSet(quit_ptr, false);
-    SDL_AtomicSet(run_emulation_ptr, false);
-    SDL_cond* signal_frame_ready = SDL_CreateCond();
-    struct emulation_thread_struct arg = { bus, run_emulation_ptr, quit_ptr, signal_frame_ready };
-    SDL_Thread* emulation_thread = SDL_CreateThread(emulation_thread_func, "Emulation Thread", (void*)&arg);
-    if (emulation_thread == NULL) return;
-
-    // Main loop
-    uint8_t palette = 0;
-    uint64_t frame_counter = 0;
-    uint64_t frame60_t0 = SDL_GetTicks64();
-    SDL_mutex* frame_ready_mutex = SDL_CreateMutex();
-
-    while (SDL_AtomicGet(quit_ptr) != true) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0xff, 0xff);
-        SDL_RenderClear(renderer);
-
-        uint64_t t0 = SDL_GetTicks64();
-
-        if (SDL_LockMutex(bus->controller_input_lock))
-            printf("inspect_hw_mul: Unable to lock controller\n");
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_QUIT:
-                printf("quit triggered\n");
-                SDL_AtomicSet(quit_ptr, true);
-                break;
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                case SDLK_w:
-                    bus->controller1 |= BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 |= BUS_CONTROLLER_LEFT;
-                    break;
-                case SDLK_s:
-                    bus->controller1 |= BUS_CONTROLLER_DOWN;
-                    break;
-                case SDLK_d:
-                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 |= BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 |= BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 |= BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 |= BUS_CONTROLLER_START;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                case SDLK_c:
-                    // recall that the cpu clocks only once for every 3 bus clocks, so
-                    // that is why we must have the second while loop
-                    // additionally we also want to go to the next instr, not stay on the current one
-                    while (cpu->cycles_rem > 0)
-                        Bus_Clock(bus);
-                    while (cpu->cycles_rem == 0)
-                        Bus_Clock(bus);
-                    break;
-                case SDLK_r:
-                    Bus_Reset(bus);
-                    break;
-                case SDLK_f:
-                    // FIXME: may wanna do a do while
-                    while (!ppu->frame_complete)
-                        Bus_Clock(bus);
-                    ppu->frame_complete = false;
-                    break;
-                case SDLK_p:
-                    palette = (palette + 1) % 8;
-                    break;
-                case SDLK_SPACE:
-                    SDL_AtomicSet(run_emulation_ptr, !SDL_AtomicGet(run_emulation_ptr));
-                    break;
-                case SDLK_w:
-                    bus->controller1 &= ~BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 &= ~BUS_CONTROLLER_LEFT;
-                    break;
-                case SDLK_s:
-                    bus->controller1 &= ~BUS_CONTROLLER_DOWN;
-                    break;
-                case SDLK_d:
-                    bus->controller1 &= ~BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 &= ~BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 &= ~BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 &= ~BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 &= ~BUS_CONTROLLER_START;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
-
-            default:
-                break;
-            }
-        }
-        if (SDL_UnlockMutex(bus->controller_input_lock))
-            printf("inspect_hw_mul: Unable to unlock controller\n");
-
-        // Wait for a frame to be done
-        // FIXME: THERE IS A MASSIVE DISCREPANCY IN FRAMETIMES, MOST LIKELY CAUSED
-        //        BY THE IMPRECISION OF SDL_DELAY OR THE SLEEP TIME OF CONDWAIT.
-        //        WE CAN PARTIALLY FIX THE PROBLEM BY MOVING THE CONDWAIT TO RIGHT
-        //        BEFORE RENDER PRESENT, BUT THEN WE HAVE THE ISSUE OF EITHER RENDERING THE
-        //        PREVIOUS OR CURRENT FRAME'S DATA DEPENDING ON WHETHER THE EMULATION HAS
-        //        WRITTEN THE NEW FRAME BEFORE WE ATTEMPT TO RENDER
-        //        THIS COULD LEAD TO SOME FRAMES NEVER GETTING DISPLAYED AND OTHERS
-        //        BEING DISPLAYED TWICE
-        //        IN THIS SENSE, THE SINGLE-THREADED APPROACH IS VASTLY SUPERIOR
-        //        IF WE ARE SO CONCERNED WITH ACCURACY HERE, IT IS PROBABLY
-        //        MORE PERFORMANT TO BE SINGLE THREADED
-        //        WE COULD HAVE A SIGNAL TO THE EMULATION THREAD THAT WE ARE
-        //        READY FOR IT TO RENDER, BUT THEN THAT MORE OR LESS COMPLETELY
-        //        NEGATES THE MULTITHREADING HERE
-        //        ANOTHER FIX IS TO RENDER AT THE NATIVE REFRESH RATE OF THE MONITOR
-        //        HELPING WITH SMOOTHNESS (BUT ADDING LATENCY), AND TO JUST DISPLAY
-        //        WHATEVER IS ON THE FRAME_BUFFER ON EACH REFRESH, COMPLETELY NEGATING THE NEED
-        //        FOR SIGNALING, BUT WASTING PERFORMANCE ON MONITORS HIGHER THAN 60HZ
-        //        THE CRUX OF THE ISSUE IS THAT THE NES HAS TO RUN AT 60HZ BASED ON AN
-        //        IMPRECISE DELAY, AND WHEN WE SIGNAL WE ARE READY TO RENDER EVERY 16MS, IT WILL
-        //        STILL TAKE TIME TO ACTUALLY GET THE FRAME OUT, SO WE WILL ALWAYS BE A LITTLE
-        //        BEHIND. ANY SOLUTION INVOLVING US WAITING FOR A FRAME TO BE READY
-        //        THAT IS NOT PERFECTLY IN SYNC WITH THE NES EMULATION (ONLY POSSIBLE WITH
-        //        VSYNC (MABYE??) OR BY DOING IN A SINGLE-THREAD) WILL HAVE THIS PROBLEM.
-        SDL_LockMutex(frame_ready_mutex);
-        // FIXME: THIS IS TECHNICALLY A BUG, ALTHOUGH I HAVE NEVER ENCOUNTERED IT
-        //        IF I DO NOT GET HERE BEFORE THE EMULATION SIGNALS, THE SIGNAL IS
-        //        LOST AND I HAVE TO WAIT FOR A WHOLE OTHER FRAME
-        //        THIS SHOULD BE REWRITTEN USING A SEMAPHORE
-        //        YOU MAY NEED A MUTEX TO PROTECT THE SEMAPHORE
-        //        YOU ALSO NEED THE THREAD FUNC TO WAIT UNTIL THE
-        //        SEMAPHORE HAS A VALUE OF 0 TO WRITE TO IT AGAIN
-        //        YOU SHOULD JUST SPIN UNTIL IT HAPPENS, SINCE IT SHOULD
-        //        NEVER HAPPEN IN THE FIRST PLACE
-        //        UNFORTUNATELY THERE IS NO SEMAPHORE WAKE ON CONDITION,
-        //        ONLY WAKE ON POSITIVE VALUE
-        //        YOU COULD USE A SECOND SEMAPHORE TO POSSIBLY SIGNAL TO THE OTHER ONE
-        //        THAT IT'S READY, BUT AT THAT POINT YOU MAY JUST WANNA USE AN ATOMIC
-        //        VARIABLE THAT ACTS AS A NEW_FRAME_READY BOOLEAN
-        //        I SAY THE BEST SOLUTION IS SPINNING SEMAPHORE, ALTHOUGH IT LIKELY
-        //        DOESN'T MATTER
-        //        I COULD ALSO JUST NOT SPIN, BECAUSE IF THE RENDERER IS REALLY STUCK
-        //        IT DOESN'T MATTER IF I HAVE 1 OR 10 FRAMES COMPLETED SINCE IT GOING AS FAST
-        //        AS IT CAN STILL ISN'T FAST ENOUGH TO GET OUT IN TIME
-        //        ACTUALLY IT IS IMPOSSIBLE TO GET A VALUE GREATER THAN 1 FOR THE SEMAPHORE
-        //        SINCE THE DOUBLE BUFFERING LOCKS THE PPU
-        //        ACTUALLY JUST TELL EMU THREAD NOT TO INCREMENT THE POST VALUE IF
-        //        IT IS 1
-        //SDL_CondWait(signal_frame_ready, frame_ready_mutex);
-        SDL_UnlockMutex(frame_ready_mutex);
-
-        render_ppu_gpu(renderer, ppu_texture, ppu);
-        render_cpu(cpu_texture, cpu, char_set);
-        render_pattern_memory(pattern_texture, ppu, palette);
-
-        SDL_RenderCopy(renderer, ppu_texture, NULL, &ppu_rect);
-        SDL_RenderCopy(renderer, cpu_texture, NULL, &cpu_rect);
-        SDL_RenderCopy(renderer, pattern_texture, NULL, &pattern_rect);
-
-        SDL_RenderPresent(renderer);
-
-        frame_counter++;
-        if (frame_counter % 60 == 0) {
-            uint64_t frame60_t1 = SDL_GetTicks64();
-            // should print 422 or 423 b/c gsync is forced in the driver 60/423 = 142fps
-            // in release mode i get 1-2ms per frame which gives us between 500 and 1000fps uncapped
-            // most of time spent comes from emulation, not from the rendering
-            // rendering went from about 3-4ms in software to 0-1ms in hw
-            //printf("60 frames rendered in %dms\n", (int)(frame60_t1 - frame60_t0));
-            frame60_t0 = frame60_t1;
-        }
-
-        //printf("Frametime: %d\n", (int)(SDL_GetTicks64() - t0));
-    }
-
-    // Cleanup
-    SDL_WaitThread(emulation_thread, NULL);
-    SDL_DestroyCond(signal_frame_ready);
-    SDL_DestroyMutex(frame_ready_mutex);
-
-    free(char_set);
-    Bus_DestroyNES(bus);
-
-    SDL_DestroyTexture(pattern_texture);
-    SDL_DestroyTexture(cpu_texture);
-    SDL_DestroyTexture(ppu_texture);
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
-    SDL_Quit();
 }
 
 /*
@@ -1382,30 +772,30 @@ struct audio_callback_struct {
 };
 
 void audio_callback(void* userdata, uint8_t* stream, int len) {
-    // Bus* bus = (Bus*)userdata;
-    // // Clock until there is a sample ready
-    // while (!Bus_Clock(bus));
-
-    // uint16_t* my_stream = (uint16_t*)stream;
-    // my_stream[0] = bus->audio_sample;
-
     Bus* bus = (Bus*)userdata;
     int16_t* my_stream = (int16_t*)stream;
 
+    // SDL_Log("%lld\n", GetCurrentThreadId());
+
     int count = 0;
+    SDL_LockMutex(bus->save_state_lock);
     while (count < len/sizeof(int16_t)) {
        while (!Bus_Clock(bus)) {
-            // if (bus->ppu->frame_complete) {
-            //     frame_count++;
-            //     printf("%d\n", frame_count);
-            //     bus->ppu->frame_complete = false;
-            // }
+            if (bus->ppu->frame_complete) {
+                // frame_count++;
+                // printf("%d\n", frame_count);
+                bus->ppu->frame_complete = false;
+                uint64_t t1 = SDL_GetTicks64();
+                // SDL_Log("Frametime: %d\n", (int)(t1 - g_frametime_begin));
+                g_frametime_begin = t1;
+            }
        }
 
        // multiply to make louder
         my_stream[count] = 3000.0 * bus->audio_sample;
         count++;
     }
+    SDL_UnlockMutex(bus->save_state_lock);
 
     // SYNC TO THE FRAME TO AVOID CHOPPY EMULATION
     // TAKE 735 SAMPLES IN A BUFFER FOR PUSHING APPROXIMATELY ONCE PER FRAME
@@ -1414,6 +804,7 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
 void emulate(void)
 {
     uint64_t initial_time = SDL_GetTicks64();
+    g_frametime_begin = SDL_GetTicks64();
     Bus *bus = Bus_CreateNES();
     if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
         return;
@@ -1423,7 +814,8 @@ void emulate(void)
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;
 
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    // TIMER MAY BE UNNEEDED
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
 
     SDL_AudioSpec audio_spec = {0};
     audio_spec.freq = 44100;
@@ -1462,6 +854,7 @@ void emulate(void)
                 quit = true;
                 break;
             case SDL_KEYDOWN:
+                SDL_LockMutex(bus->controller_input_lock);
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_w:
@@ -1492,8 +885,10 @@ void emulate(void)
                 default:
                     break;
                 }
+                SDL_UnlockMutex(bus->controller_input_lock);
                 break;
             case SDL_KEYUP:
+                SDL_LockMutex(bus->controller_input_lock);
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_c:
@@ -1549,19 +944,13 @@ void emulate(void)
                 default:
                     break;
                 }
+                SDL_UnlockMutex(bus->controller_input_lock);
                 break;
 
             default:
                 break;
             }
         }
-
-        // if (run_emulation) {
-        //     while (!bus->ppu->frame_complete)
-        //         Bus_Clock(bus);
-        //     bus->ppu->frame_complete = false;
-
-        // }
 
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,
@@ -1576,73 +965,6 @@ void emulate(void)
     }
 
     printf("Total time elapsed: %d\n", (int)(SDL_GetTicks64() - initial_time));
-    SDL_CloseAudioDevice(device);
-    SDL_Quit();
-}
-
-struct pulse_wave_gen {
-    double freq;
-    double duty_cycle;
-    double amplitude;
-    double pi;
-    double harmonics;
-    double time;
-};
-
-int16_t pulse_sample(struct pulse_wave_gen* wave) {
-    double a = 0;
-    double b = 0;
-    double p = wave->duty_cycle * 2.0 * wave->pi;
-
-    for (double n = 1; n < wave->harmonics; n++) {
-        double c = n * wave->freq * 2.0 * wave->pi * wave->time;
-        a += -sin(c) / n;
-        b += -sin(c - p * n) / n;
-    }
-
-    return (2.0 * wave->amplitude / wave->pi) * (a - b);
-
-    //return wave->amplitude * sin(2.0 * wave->pi * wave->freq * wave->time);
-}
-
-void audio_test_callback(void* userdata, uint8_t* stream, int len) {
-    int16_t* stream16 = (int16_t*)stream;
-    struct pulse_wave_gen* wave = (struct pulse_wave_gen*)userdata;
-    for (int i = 0; i < len/sizeof(uint16_t); i++) {
-        wave->time += 1.0/44100.0;
-        stream16[i] = pulse_sample(wave);
-    }
-}
-
-void audio_test() {
-    SDL_Init(SDL_INIT_AUDIO);
-
-    struct pulse_wave_gen pulse_wave_generator;
-    pulse_wave_generator.freq = 440.0;
-    pulse_wave_generator.duty_cycle = 0.5;
-    pulse_wave_generator.amplitude = 3000;
-    pulse_wave_generator.pi = 3.14159;
-    pulse_wave_generator.harmonics = 20;
-    pulse_wave_generator.time = 0.0;
-
-    SDL_AudioSpec audio_spec = {0};
-    audio_spec.freq = 44100;
-    audio_spec.channels = 1;
-    // SUBJECT TO CHANGE
-    audio_spec.format = AUDIO_S16SYS;
-    // FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
-    // AS 60 GOES INTO 44100 735 TIMES
-    audio_spec.samples = 512;
-    audio_spec.callback = &audio_test_callback;
-    audio_spec.userdata = &pulse_wave_generator;
-
-    SDL_AudioSpec obtained;
-    SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
-        0, &audio_spec, &obtained, 0);
-
-    SDL_PauseAudioDevice(device, 0);
-    SDL_Delay(4000);
-
     SDL_CloseAudioDevice(device);
     SDL_Quit();
 }
