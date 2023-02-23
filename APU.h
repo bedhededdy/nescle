@@ -61,6 +61,8 @@ typedef struct osctriangle {
 struct apu {
     Bus* bus;
 
+    // TODO: REWRITE ALL OF THESE POINTERS TO JUST HOLD THE ACTUAL STRUCTS
+    // SINCE NOBODY ELSE WILL TOUCH THEM
     APU_Pulse_Wave* pulse1;
     APU_Pulse_Wave* pulse2;
     APU_Triangle_Wave* triangle;

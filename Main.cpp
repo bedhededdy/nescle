@@ -13,6 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// NOTE: THE CURRENT ARCHITECTURAL DECISION FOR THIS CODE IS AS FOLLOWS
+//       1 THREAD WHICH PUSHES AUDIO AND CLOCKS THE EMULATION
+//       THE OTHER THREAD WILL HANDLE EVERYTHING ELSE
+//       SO THE DISASSEMBLER RUNS ON SAME THREAD AS RENDERING
+//       WE COULD MULTITHREAD EACH IMGUI VIEWPORT, BUT THIS WOULD
+//       MAKE IT MUCH MORE COMPLICATED TO PROGRAM
+//       SO FOR NOW WE JUST TRY THE 2 THREAD APPROACH
+//       WE MAY WANNA MOVE SAVING TO ANOTHER THREAD, BUT THAT ALSO MAKES
+//       SAVING MORE COMPLEX AS WE NOW HAVE TO DEAL WITH SCENARIOS
+//       LIKE THE DISASSEMBLER OR RENDERER TRYING TO ACCESS THE BUS
+//       OR THE FRAMEBUFFER WHILE WE ARE WRITING TO THEM
+//       RENDERING THE WRONG FRAME FOR A SEC IS NO BIG DEAL, BUT
+//       IMPROPER DISASSEMBLY COULD POTENTIALLY SEGFAULT
+//       I WOULD THINK LONG AND HARD BEFORE CHOOSING TO MULTITHREAD SAVING
 // TODO: REMOVE CERTAIN LOCKS IN THE CODE SUCH AS THE PC LOCK IN CPU
 //       CPU CLOCKS SO OFTEN THAT IT MAKES NO SENSE TO HAVE A
 //       SEPARATE LOCK FOR IT FROM THE GLOBAL STATE LOCK
@@ -947,6 +961,15 @@ void emulate(void)
                 SDL_UnlockMutex(bus->controller_input_lock);
                 break;
 
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_CLOSE:
+                    if (event.window.windowID == emuWin.GetWindowID())
+                        quit = true;
+                    break;
+                }
+                break;
+
             default:
                 break;
             }
@@ -962,6 +985,11 @@ void emulate(void)
         //     SDL_Delay(16 - frametime);
         // else
         //     SDL_Log("LONG FRAMETIME\n");
+
+        // NOTE: AUDIO THREAD DOES CALLBACK POLLING IN BETWEEN EVENT POLLING
+        //       THEREFORE RUNNING THE EVENT LOOP WITH NO DELAY CAN LEAD
+        //       TO THE AUDIO CALLBACK GETTING STARVED
+        SDL_Delay(16);
     }
 
     printf("Total time elapsed: %d\n", (int)(SDL_GetTicks64() - initial_time));
