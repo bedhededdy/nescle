@@ -14,6 +14,10 @@ private:
     GLuint main_texture;
     GLuint main_shader;
 
+    GLuint palette_fbo;
+    GLuint palette_texture;
+    GLuint dummy_tex;
+
     // Bus* bus;
 
     bool show_disassembler = false;
@@ -21,11 +25,14 @@ private:
     bool show_pattern = false;
 
     void set_gl_options();
+
     void render_disassembler();
     void render_oam();
-    void render_pattern();
-    void setup_main_frame();
+    void render_pattern(Bus* bus);
     void render_main_gui(Bus* bus);
+
+    void setup_main_frame();
+    void setup_palette_frame();
 
 public:
     EmulationWindow(int w, int h);

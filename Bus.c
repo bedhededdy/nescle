@@ -303,6 +303,9 @@ void Bus_Reset(Bus* bus) {
 }
 
 int Bus_SaveState(Bus* bus) {
+    // FIXME: YOU SHOULD SAVE THE CARTRIDGE BEFORE THE PPU OR ELSE YOU WILL
+    // READ THE WRONG TILES
+
     // The state of none of these things should change since we have the
     // savestate lock, which prevents clocking
 
@@ -332,6 +335,18 @@ int Bus_SaveState(Bus* bus) {
     // FIXME: CONVERT INTERNAL APU PTRS TO HOLD THE OBJECT ITSELF
     fwrite(bus->apu, sizeof(APU), 1, savestate);
 
+    // Save Cart state (which will also save the mapper state)
+    // ROM header will be rewritten to not be a reference so as to make this
+    // Less annoying
+    // Mapper will have to load funcitons and all other pointers at load time
+    fwrite(bus->cart, sizeof(Cart), 1, savestate);
+
+    // Perform a deep copy of the prg_rom and chr_rom
+    fwrite(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->mapper->prg_rom_banks * 0x4000, savestate);
+    size_t chr_rom_chunks = bus->cart->mapper->chr_rom_banks == 0 ? 1 : bus->cart->mapper->chr_rom_banks;
+    fwrite(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
+    fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
+
     // Save PPU state, we need to make a new mutex at load time, as
     // deep copying the mutex is a pain in the butt without diving into
     // its internals (which are not defined in a .h file)
@@ -341,13 +356,6 @@ int Bus_SaveState(Bus* bus) {
     // pixels, but then tries to release the lock after we have changed it to
     // the new lock, causing an error
     fwrite(bus->ppu, sizeof(PPU), 1, savestate);
-
-    // Save Cart state (which will also save the mapper state)
-    // ROM header will be rewritten to not be a reference so as to make this
-    // Less annoying
-    // Mapper will have to load funcitons and all other pointers at load time
-    fwrite(bus->cart, sizeof(Cart), 1, savestate);
-    fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
 
     // No deepcopies should be necessary if we load a save made during this
     // run, so we can test for a somewhat right load with the pointers
@@ -374,15 +382,19 @@ int Bus_LoadState(Bus* bus) {
     // APU
     fread(bus->apu, sizeof(APU), 1, savestate);
 
-    // PPU
-    // FIXME: BUG IN PPU IF YOU GO BACK TO PREVIOUS SCREEN IN CASTLEVANIA/DUCKTALES
-    // IT COULD POTENTIALLY ALSO BE A CARTRIDGE OR CPU BUG
-    // WE WILL HAVE MORE INSIGHT ONCE I GET DEBUG STUFF UP AND RUNNING
-    fread(bus->ppu, sizeof(PPU), 1, savestate);
-
     // Cart/Mapper
     fread(bus->cart, sizeof(Cart), 1, savestate);
+
+    // Load chr_rom and prg_rom
+    // TODO: THIS WORKS, BUT IT WOULDN'T IF BUS HADN'T ALREADY BEEN REINITIALIZED
+    // WITH THE CURRENT # OF PRG_BANKS
+    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->mapper->prg_rom_banks * 0x4000, savestate);
+    size_t chr_rom_chunks = bus->cart->mapper->chr_rom_banks == 0 ? 1 : bus->cart->mapper->chr_rom_banks;
+    fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
+
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
+
+    fread(bus->ppu, sizeof(PPU), 1, savestate);
 
     fclose(savestate);
 

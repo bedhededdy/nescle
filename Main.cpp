@@ -13,6 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: COULD DO THE AUDIO AS EMUDEV.DE DOES IT WITH QUEUING UP ABOUT 100
+//       SAMPLES AT A TIME. IT SEEMS TO WORK GOOD FOR THE GAMEBOY
+//       SO STUDYING HIS CODE MAY BE OF SOME USE
+// TODO: COULD BASICALLY SAY AHA I'M AT 144HZ WHICH MEANS FOR 1 FRAME OF
+//       144HZ I WOULD NEED TO CLOCK THIS MANY TIMES AND THEN JUST PUSH
+//       THAT MANY SAMPLES. HOWEVER THAT REQUIRES VSYNC AND THE USER TO BE
+//       GETTING THAT FRAMERATE, WHICH MAY BE UNREASONABLE FOR 240HZ
+//       DISPLAYS. THIS ALSO WILL INEVITABLY FORCE VSYNC LATENCY.
+//       WITHOUT VSYNC WE CAN TRY SDL TIMER TO SEE IF IT IS CLOSE ENOUGH
+// TODO: AN APPROACH FOR GETTING POSSIBLY THE BEST RESULTS WOULD BE SYNCING
+//       TO THE VIDEO VSYNC RATE AND CLOCKING ACCORDINGLY WITH THE AUDIO
+//       ANOTHER APPROACH IS TO USE SDL TIMER TO RUN 1 FRAME'S WORTH
+//       OF CLOCKS AND THEN QUEUE A FRAMES WORTH OF AUDIO WITH SDL_QUEUEAUDIO
+//       THERE IS ALSO THE RINGBUFFER APPROACH OF SYNCING TO VIDEO AND
+//       CONSTANTLY ADJUSTING THE DIFFERENCE BETWEEN THE PLAYBACK AND WRITE
+//       CURSOR
 // NOTE: THE CURRENT ARCHITECTURAL DECISION FOR THIS CODE IS AS FOLLOWS
 //       1 THREAD WHICH PUSHES AUDIO AND CLOCKS THE EMULATION
 //       THE OTHER THREAD WILL HANDLE EVERYTHING ELSE
@@ -38,8 +54,6 @@
 //       TO AVOID MAJOR REWRITES, WE COULD JUST TO A CHDIR TO SET THE WORKING
 //       DIRECTORY TO WHERE I WANT IT TO BE
 
-
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -58,10 +72,6 @@
 #include "PPU.h"
 
 #include "EmulationWindow.h"
-
-#include <Windows.h>
-
-uint64_t g_frametime_begin;
 
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
 //        OF HARD-CODING IT
@@ -799,9 +809,8 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
                 // frame_count++;
                 // printf("%d\n", frame_count);
                 bus->ppu->frame_complete = false;
-                uint64_t t1 = SDL_GetTicks64();
                 // SDL_Log("Frametime: %d\n", (int)(t1 - g_frametime_begin));
-                g_frametime_begin = t1;
+
             }
        }
 
@@ -818,7 +827,6 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
 void emulate(void)
 {
     uint64_t initial_time = SDL_GetTicks64();
-    g_frametime_begin = SDL_GetTicks64();
     Bus *bus = Bus_CreateNES();
     if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
         return;
@@ -838,6 +846,8 @@ void emulate(void)
     audio_spec.format = AUDIO_S16SYS;
     // FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
     // AS 60 GOES INTO 44100 735 TIMES
+    // MAY WANT TO INVESTIGATE A 256 BYTE BUFFER TO GET CLOSER
+    // TO PUSHING A FRAME WHEN WE SHOULD
     audio_spec.samples = 512;
     audio_spec.callback = &audio_callback;
     audio_spec.userdata = bus;
@@ -989,7 +999,12 @@ void emulate(void)
         // NOTE: AUDIO THREAD DOES CALLBACK POLLING IN BETWEEN EVENT POLLING
         //       THEREFORE RUNNING THE EVENT LOOP WITH NO DELAY CAN LEAD
         //       TO THE AUDIO CALLBACK GETTING STARVED
-        SDL_Delay(16);
+
+        // POLL APPROXIMATELY 120 TIMES A SECOND FOR EVENTS
+        // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
+        // WE COULD ALSO SYNC TO VSYNC, BUT I DON'T WISH TO FORCE THAT
+        // AS OF RIGHT NOW
+        SDL_Delay(8);
     }
 
     printf("Total time elapsed: %d\n", (int)(SDL_GetTicks64() - initial_time));

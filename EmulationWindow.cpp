@@ -82,6 +82,35 @@ void EmulationWindow::render_main_gui(Bus* bus) {
     }
 }
 
+void EmulationWindow::setup_palette_frame() {
+    glGenTextures(1, &dummy_tex);
+    glBindTexture(GL_TEXTURE_2D, dummy_tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 128, 0,
+        GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenFramebuffers(1, &palette_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, palette_fbo);
+    glGenTextures(1, &palette_texture);
+    glBindTexture(GL_TEXTURE_2D, palette_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 128, 0,
+        GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, palette_texture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        SDL_Log("framebuf err\n");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void EmulationWindow::set_gl_options() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE);
@@ -102,18 +131,47 @@ void EmulationWindow::render_oam() {
     ImGui::End();
 }
 
-void EmulationWindow::render_pattern() {
+void EmulationWindow::render_pattern(Bus* bus) {
+    // FIXME: THIS DOESN'T WORK, DO THE OPENGL TUT ON FRAMEBUFFER AND REALLY
+    // GRASP IT BEFORE YOU TRY THIS
+
+    // FIXME: BANK SWITCHING CAN PRODUCE EPILEPTIC REXSULTS
+    // IT MAY ACTUALLY BE WORKING PROPERLY TO GET CURRENT SELECTED BANK
+
+    glViewport(0, 0, 256, 128);
+    glBindFramebuffer(GL_FRAMEBUFFER, palette_fbo);
+    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glUseProgram(main_shader);
+    glBindVertexArray(main_vao);
+    glBindTexture(GL_TEXTURE_2D, dummy_tex);
+    // FIXME: THIS IS WRONG, WE SHOULD BE RENDERING THE TWO SELECTED BANKS
+    // OF CHAR ROM, NOT JUST THE FIRST TWO BANKS. THIS ALSO PLAYS INTO THE
+    // SAVESTATE, WHICH IS KEEPING THE PREVIOUS TILES LOADED ON A SAVESTATE
+    // RESUME, INSTEAD OF THE NEW TILES. PROBABLY A POINTER RELATED THING
+    // I BET IF I ACTUALLY LOAD THE CART BEFORE THE PPU THIS WOULD BE FIXED
+    PPU_GetPatternTable(bus->ppu, 0, 0);
+    PPU_GetPatternTable(bus->ppu, 1, 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
+       GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 128, 0, 128, 128,
+        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[1]);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     ImGui::Begin("Pattern Memory", &show_pattern);
-    ImGui::Text("This is the pattern mem");
+    ImGui::Image((ImTextureID)palette_texture, ImVec2(256 * 2, 128 * 2),
+        ImVec2(0, 1), ImVec2(1, 0));
     ImGui::End();
 }
 
 void EmulationWindow::setup_main_frame() {
     glGenTextures(1, &main_texture);
     glBindTexture(GL_TEXTURE_2D, main_texture);
-
-    // MAY NEED TO FIX TO SCALE THE TEXTURE???
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEX)
 
     // FIXME: MAY WANT GL_NEAREST_MIPMAP_LINEAR???
     // Setup nearest neighbor filtering on NES screen
@@ -227,6 +285,9 @@ EmulationWindow::EmulationWindow(int w, int h) {
     gl_context = SDL_GL_CreateContext(window);
     gladLoadGLLoader(SDL_GL_GetProcAddress);
 
+    // Enable vsync
+    // SDL_GL_SetSwapInterval(1);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -247,6 +308,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // io.FontGlobalScale = 1.0f;
 
     ImGui::StyleColorsLight();
+    // ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         style.WindowRounding = 0.0f;
@@ -258,9 +320,11 @@ EmulationWindow::EmulationWindow(int w, int h) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     setup_main_frame();
+    setup_palette_frame();
 }
 
 EmulationWindow::~EmulationWindow() {
+    // TODO: MISSING OPENGL CLEANUP
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
@@ -274,22 +338,23 @@ void EmulationWindow::Show(Bus* bus) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    glUseProgram(main_shader);
+
     render_main_gui(bus);
 
     if (show_disassembler)
         render_disassembler();
     if (show_pattern)
-        render_pattern();
+        render_pattern(bus);
     if (show_oam)
         render_oam();
 
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::Render();
+
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(main_shader);
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
 	SDL_LockMutex(bus->ppu->frame_buffer_lock);
@@ -310,6 +375,7 @@ void EmulationWindow::Show(Bus* bus) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
 
+    ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
