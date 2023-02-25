@@ -29,11 +29,12 @@ typedef struct apu APU;
 typedef struct cart_rom_header Cart_ROMHeader;
 typedef struct cpu_instr CPU_Instr;
 typedef struct ppu_oam PPU_OAM;
-typedef struct apu_pulse_wave APU_Pulse_Wave;
-typedef struct apu_triangle_wave APU_Triangle_Wave;
-typedef struct apu_noise_wave APU_Noise_Wave;
-typedef struct apu_sample_wave APU_Sample_Wave;
+typedef struct apu_pulse_channel APU_PulseChannel;
+typedef struct apu_triangle_channel APU_TriangleChannel;
+typedef struct apu_noise_channel APU_NoiseChannel;
+typedef struct apu_sample_channel APU_SampleChannel;
 typedef struct apu_sequencer APU_Sequencer;
+typedef struct apu_envelope APU_Envelope;
 
 typedef enum cart_mirror_mode Cart_MirrorMode;
 typedef enum cpu_addrmode CPU_AddrMode;

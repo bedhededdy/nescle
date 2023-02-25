@@ -1,3 +1,18 @@
+/*
+ * Copyright 2023 Edward C. Pinkston
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "EmulationWindow.h"
 
 // #include "<glad/glad.h>"
@@ -151,8 +166,8 @@ void EmulationWindow::render_pattern(Bus* bus) {
     // SAVESTATE, WHICH IS KEEPING THE PREVIOUS TILES LOADED ON A SAVESTATE
     // RESUME, INSTEAD OF THE NEW TILES. PROBABLY A POINTER RELATED THING
     // I BET IF I ACTUALLY LOAD THE CART BEFORE THE PPU THIS WOULD BE FIXED
-    PPU_GetPatternTable(bus->ppu, 0, 0);
-    PPU_GetPatternTable(bus->ppu, 1, 0);
+    PPU_GetPatternTable(bus->ppu, 0, palette);
+    PPU_GetPatternTable(bus->ppu, 1, palette);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 128, 0, 128, 128,
@@ -167,6 +182,10 @@ void EmulationWindow::render_pattern(Bus* bus) {
     ImGui::Image((ImTextureID)palette_texture, ImVec2(256 * 2, 128 * 2),
         ImVec2(0, 1), ImVec2(1, 0));
     ImGui::End();
+}
+
+void EmulationWindow::IncrementPalette() {
+    palette = (palette + 1) % 8;
 }
 
 void EmulationWindow::setup_main_frame() {

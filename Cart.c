@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 #include "Cart.h"
 
@@ -26,7 +26,6 @@ Cart* Cart_Create(void) {
     Cart* cart = malloc(sizeof(Cart));
     if (cart == NULL)
         return NULL;
-    cart->metadata = NULL;
     cart->mapper = NULL;
     cart->prg_rom = NULL;
     cart->chr_rom = NULL;
@@ -34,8 +33,6 @@ Cart* Cart_Create(void) {
 }
 
 void Cart_Destroy(Cart* cart) {
-    if (cart->metadata != NULL)
-        free(cart->metadata);
     if (cart->mapper != NULL)
         Mapper_Destroy(cart->mapper);
     if (cart->prg_rom != NULL)
@@ -60,19 +57,18 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     uint8_t buf[4096];
 
     // Load header data (16 bytes) into the buffer
-    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom) 
+    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom)
         < sizeof(Cart_ROMHeader)) {
         printf("Cart_LoadROM: header\n");
         return false;
     }
 
     // Copy data into header struct and allow the cart to reference it
-    Cart_ROMHeader* header = malloc(sizeof(Cart_ROMHeader));
-    memcpy(header, buf, sizeof(Cart_ROMHeader));    // THIS IS RISKY, BUT WORKS
+    memcpy(&cart->metadata, buf, sizeof(Cart_ROMHeader));    // THIS IS RISKY, BUT WORKS
 
-    cart->metadata = header;
+    Cart_ROMHeader* header = &cart->metadata;
 
-    // Load trainer data if it exists 
+    // Load trainer data if it exists
     // TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT
     if (header->mapper1 & 0x04) {
         if (fread(buf, sizeof(uint8_t), 512, rom) < 512) {
@@ -95,13 +91,13 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         break;
     }
 
-    // FIXME: THIS HAS COMPLETELY NON DETERMINISTIC VALUES, INDICATING A 
+    // FIXME: THIS HAS COMPLETELY NON DETERMINISTIC VALUES, INDICATING A
     // BUFFER OVERFLOW SOMEWHERE
     // THIS COULD ALSO SEEM TO EXPLAIN WHY MARIO RANDOMLY PAUSES
     // SOMEGTIMES WHERE MY ISSUE WAS NOT GOING FULLY RIGHT ON A MEMCPY
-    printf("PRG RAM size: %d\n", cart->metadata->prg_ram_size);
+    // printf("PRG RAM size: %d\n", cart->metadata->prg_ram_size);
     // Now that we know the program rom size, we can allocate memory for it
-    const size_t prg_rom_nbytes = sizeof(uint8_t) 
+    const size_t prg_rom_nbytes = sizeof(uint8_t)
         * CART_PRG_ROM_CHUNK_SIZE * header->prg_rom_size;
     cart->prg_rom = malloc(prg_rom_nbytes);
 
@@ -120,7 +116,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         memcpy(&cart->prg_rom[i * sizeof(buf)], buf, sizeof(buf));
     }
 
-    const size_t chr_rom_nbytes = sizeof(uint8_t) 
+    const size_t chr_rom_nbytes = sizeof(uint8_t)
         * CART_CHR_ROM_CHUNK_SIZE * header->chr_rom_size;
     if (chr_rom_nbytes > 0) {
         // Load char rom if exists
@@ -142,7 +138,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         }
     }
     else {
-        // If the file type is 1, we still give it 0x2000 bytes 
+        // If the file type is 1, we still give it 0x2000 bytes
         // but those bytes will be used as RAM instead of ROM
         cart->chr_rom = malloc(CART_CHR_ROM_CHUNK_SIZE * sizeof(uint8_t));
 
@@ -159,12 +155,12 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     printf("mapper id: %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    cart->mirror_mode = (header->mapper1 & 1) ? 
+    cart->mirror_mode = (header->mapper1 & 1) ?
         CART_MIRRORMODE_VERT : CART_MIRRORMODE_HORZ;
     printf("mirror mode: %d\n", cart->mirror_mode);
 
     // Initialize cart's mapper
-    cart->mapper = Mapper_Create(mapper_id, 
+    cart->mapper = Mapper_Create(mapper_id,
         header->prg_rom_size, header->chr_rom_size, cart);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
@@ -175,7 +171,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     cart->file_type = file_type;
     cart->rom_path = path;
 
-    
+
 
     // Don't forget to close the file and return true
     fclose(rom);

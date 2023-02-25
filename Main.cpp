@@ -610,7 +610,7 @@ uint8_t* load_char_set() {
         return NULL;
 
     size_t char_mem_bytes = sizeof(uint8_t)
-        * CART_CHR_ROM_CHUNK_SIZE * cart->metadata->chr_rom_size;
+        * CART_CHR_ROM_CHUNK_SIZE * cart->metadata.chr_rom_size;
     uint8_t* char_mem = (uint8_t*)malloc(char_mem_bytes);
 
     if (char_mem == NULL)
@@ -837,7 +837,7 @@ void emulate(void)
     PPU* ppu = bus->ppu;
 
     // TIMER MAY BE UNNEEDED
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
     SDL_AudioSpec audio_spec = {0};
     audio_spec.freq = 44100;
@@ -859,8 +859,10 @@ void emulate(void)
     EmulationWindow emuWin = EmulationWindow(256 * 3, 240 * 3);
 
     bool quit = false;
+
+    // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
+    // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
     bool run_emulation = false;
-    int palette = 0;
 
     SDL_PauseAudioDevice(device, 0);
 
@@ -934,7 +936,7 @@ void emulate(void)
                     ppu->frame_complete = false;
                     break;
                 case SDLK_p:
-                    palette = (palette + 1) % 8;
+                    emuWin.IncrementPalette();
                     break;
                 case SDLK_SPACE:
                     run_emulation = !run_emulation;
@@ -996,14 +998,10 @@ void emulate(void)
         // else
         //     SDL_Log("LONG FRAMETIME\n");
 
-        // NOTE: AUDIO THREAD DOES CALLBACK POLLING IN BETWEEN EVENT POLLING
-        //       THEREFORE RUNNING THE EVENT LOOP WITH NO DELAY CAN LEAD
-        //       TO THE AUDIO CALLBACK GETTING STARVED
-
         // POLL APPROXIMATELY 120 TIMES A SECOND FOR EVENTS
         // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
         // WE COULD ALSO SYNC TO VSYNC, BUT I DON'T WISH TO FORCE THAT
-        // AS OF RIGHT NOW
+        // AS OF RIGHT NOW FOR USERS THAT CHOOSE TO USE GSYNC OR FREESYNC
         SDL_Delay(8);
     }
 

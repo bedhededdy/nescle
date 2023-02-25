@@ -47,14 +47,16 @@ struct cart_rom_header {
 };
 
 struct cart {
-    // TODO: DON'T MAKE THIS A POINTER, IT IS UNNECESSARY AND INHIBITS THE
-    // SAVESTATE FUNCTION
-    Cart_ROMHeader* metadata;
+    Cart_ROMHeader metadata;
 
     const char* rom_path;
+    // TODO: I DON'T KNOW IF THIS IS THE BEST PLACE FOR THIS
     Cart_MirrorMode mirror_mode;
+    // Maybe reducable to a bool that just checks for NES 2.0 or not
     int file_type;
 
+    // TODO: MAYBE THIS SHOULD BE CHANGED TO A DIRECT HOLDING
+    // AS OPPOSED TO A POINTER
     Mapper* mapper;
 
     uint8_t* prg_rom;
