@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 #include "Mapper.h"
 
@@ -101,10 +101,10 @@ bool Mapper000_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 // https://www.nesdev.org/wiki/MMC1
 static void calculate_prg_ptrs(Mapper* mapper) {
     uint8_t select = (mapper->m1_ctrl & 0xc) >> 2;
-    
+
     if (select != 3)
         printf("selection: %d\n", select);
-    
+
     if (select < 2) {
         // 32kb
         mapper->m1_prg_bank1 = &mapper->cart->prg_rom[0x8000 * (mapper->m1_prg_select >> 1)];
@@ -224,7 +224,7 @@ bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
                 }
             }
             else if (addr < 0xc000) {
-                printf("b0\n");
+                // printf("b0\n");
                 mapper->m1_chr0_select = mapper->m1_load;
                 if ((mapper->m1_load & 0x1f) != mapper->m1_load)
                     printf("need and\n");
@@ -235,7 +235,7 @@ bool Mapper001_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
                     mapper->m1_chr_bank1 = mapper->m1_chr_bank0 + 0x1000;
             }
             else if (addr < 0xe000) {
-                printf("b1\n");
+                // printf("b1\n");
                 // only can change if we are in mode that allows
                 // separate banks
                 if ((mapper->m1_load & 0x1f) != mapper->m1_load)
@@ -274,7 +274,7 @@ uint8_t Mapper001_PPURead(Mapper* mapper, uint16_t addr) {
             return mapper->m1_chr_bank1[addr % 0x1000];
         }
     }
-    
+
 }
 
 bool Mapper001_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
@@ -318,7 +318,7 @@ uint8_t Mapper002_CPURead(Mapper* mapper, uint16_t addr){
         // FIXME: NORMAL GAMES ONLY CARE ABT BTM 4 BITS, BUT NES2.0 GAMES
         // CAN USE ALL 8 BITS
         uint8_t select = mapper->m2_bank_select & 0x0f;
-        
+
         // Since banks are only 16kb, we must mod our address by 0x4000.
         // This gives us a 14 bit address. So our select will use the
         // 15th to 18th bits
@@ -330,7 +330,7 @@ uint8_t Mapper002_CPURead(Mapper* mapper, uint16_t addr){
         addr %= 0x4000;
         return mapper->cart->prg_rom[last_bank_offset | addr];
     }
-     
+
 }
 bool Mapper002_CPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
     mapper->m2_bank_select = data;
@@ -389,7 +389,7 @@ uint8_t Mapper003_PPURead(Mapper* mapper, uint16_t addr) {
 }
 
 bool Mapper003_PPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    // TODO: Leave this alone for now, but I probably need to acct for 
+    // TODO: Leave this alone for now, but I probably need to acct for
     // RAM here
     printf("Mapper003: attempt to write chr_rom\n");
     return false;

@@ -68,8 +68,20 @@ struct apu_triangle_channel {
 
     // TYPES SUBJECT TO CHANGE
     double sample;
-    uint8_t length;
+    double prev_sample;
+
+    double time;
+
+    int index;
+
+    int length;
     uint8_t freq;
+
+    bool halt;
+    bool linear_counter_reload;
+    bool control_flag;
+    uint16_t linear_counter;
+    uint16_t linear_counter_reload_value;
 
     APU_Sequencer sequencer;
     APU_TriangleWave wave;
