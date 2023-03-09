@@ -13,14 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: CHANGE VSCODE TO USE ALT+ENTER FOR COPILOT INSTEAD OF CTRL+ENTER
-
-// FIXME: IT WOULD SEEM THAT THE LIKELY CAUSE OF THE POPPING IS THE SEQUENCER
-// NOT MAINTAINING ITS PREVIOUS VALUE AND INSTEAD BEING ZEROED WHEN WE DETERMINE
-// WE SHOULD NOT BE OUTPUTTING SAMPLES
-// NOT SURE HOW TO DO THIS WHEN WE ARE DOING IT WITH THE ASIN APPROACH
-// ONE IDEA IS A TIME COUNTER THAT STOPS SO THAT WE DON'T USE GLOBAL TIME
-// AND MAINTAIN OUR VALUE
 #include "APU.h"
 #include <stdlib.h>
 #include <math.h>
@@ -42,52 +34,6 @@ static const int duty_cycles[4][8] = {
 
 bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
     switch (addr) {
-    /*
-    case 0x4000:
-        switch ((data & 0xc0) >> 6) {
-            // set the different kinds of pulse waves
-            // eighth, quarter, half, and three quarter
-            case 0: apu->pulse1.sequencer.sequence = 1; apu->pulse1.wave.duty_cycle = 0.125;   break;
-            case 1: apu->pulse1.sequencer.sequence = 2;    apu->pulse1.wave.duty_cycle = 0.25;    break;
-            case 2: apu->pulse1.sequencer.sequence = 0xf;  apu->pulse1.wave.duty_cycle = 0.500; break;
-            case 3: apu->pulse1.sequencer.sequence = 0xfc; apu->pulse1.wave.duty_cycle = 0.75; break;
-        }
-        break;
-    case 0x4002:
-        apu->pulse1.sequencer.reload = (apu->pulse1.sequencer.reload & 0xff00) | data;
-        break;
-    case 0x4003:
-        apu->pulse1.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->pulse1.sequencer.reload & 0x00ff);
-        apu->pulse1.sequencer.timer = apu->pulse1.sequencer.reload;
-        break;
-
-    case 0x4004:
-        switch ((data & 0xc0) >> 6) {
-        case 0:
-            apu->pulse2.sequencer.sequence = 1;
-            apu->pulse2.wave.duty_cycle = 0.125;
-            break;
-        case 1:
-            apu->pulse2.sequencer.sequence = 2;
-            apu->pulse2.wave.duty_cycle = 0.25;
-            break;
-        case 2:
-            apu->pulse2.sequencer.sequence = 0xf;
-            apu->pulse2.wave.duty_cycle = 0.500;
-            break;
-        case 3:
-            apu->pulse2.sequencer.sequence = 0xfc;
-            apu->pulse2.wave.duty_cycle = 0.75;
-            break;
-        }
-        break;
-    case 0x4006:
-        apu->pulse2.sequencer.reload = (apu->pulse2.sequencer.reload & 0xff00) | data;
-        break;
-    case 0x4007:
-        apu->pulse2.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->pulse2.sequencer.reload & 0x00ff);
-        apu->pulse2.sequencer.timer = apu->pulse2.sequencer.reload;
-    */
     case 0x4000:
         apu->pulse1.duty_sequence = data >> 6;
 
@@ -155,22 +101,45 @@ uint8_t APU_Read(APU* apu, uint16_t addr) {
     return 0;
 }
 
-static void pulse1_clock(uint32_t* seq_ptr) {
-    // Rotate the bits right by 1
-    *seq_ptr = ((*seq_ptr & 1) << 7) | ((*seq_ptr & 0xfe) >> 1);
+static void clock_pulse(APU_PulseChannel* pulse) {
+    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7) {
+        pulse->sequencer.timer--;
+
+        if (pulse->sequencer.timer == 0xffff) {
+            pulse->sequencer.timer = pulse->sequencer.reload;
+            pulse->duty_index = (pulse->duty_index + 1) % 8;
+
+            pulse->sample = duty_cycles[pulse->duty_sequence][pulse->duty_index];
+            pulse->sample *= 1.0/15.0 * pulse->envelope.output;
+            pulse->prev_sample = pulse->sample;
+        }
+    } else {
+        pulse->sample = pulse->prev_sample;
+    }
 }
 
-void APU_SequencerClock2(APU *apu, bool enable, void (*func)(uint32_t *))
-{
-    if (enable)
-    {
-        apu->pulse2.sequencer.timer--;
-        if (apu->pulse2.sequencer.timer == 0xffff)
-        {
-            apu->pulse2.sequencer.timer = apu->pulse2.sequencer.reload + 1;
-            func(&apu->pulse2.sequencer.sequence);
-            apu->pulse2.sequencer.output = apu->pulse2.sequencer.sequence & 1;
+static void clock_triangle(APU_TriangleChannel* triangle) {
+    if (triangle->linear_counter > 0
+        && triangle->length > 0) {
+        // Clock the sequencer
+        if (triangle->enable && triangle->sequencer.reload > 1) {
+            triangle->sequencer.timer--;
+            if (triangle->sequencer.timer == 0xffff) {
+                triangle->sequencer.timer = triangle->sequencer.reload;
+                triangle->index = (triangle->index + 1) % 32;
+                triangle->sequencer.output = amp_table[triangle->index];
+            }
+
+            triangle->sample = 1.0 / 15.0 * triangle->sequencer.output;
+            triangle->prev_sample = triangle->sample;
         }
+
+        else {
+            triangle->sample = triangle->prev_sample;
+        }
+    }
+    else {
+        triangle->sample = triangle->prev_sample;
     }
 }
 
@@ -179,7 +148,6 @@ void APU_Clock(APU* apu) {
     bool half_frame = false;
 
     apu->global_time += (0.3333333333333 / 1789773);
-    // apu->global_time += 1.0/44100;
 
     // APU although clocking each time with the PPU, runs at half the CPU
     // clock, which is 1/3 of the PPU clock
@@ -199,7 +167,7 @@ void APU_Clock(APU* apu) {
             apu->frame_clock_count = 0;
         }
 
-        // TODO: IMPLEMENT 2-Step Sequence mode
+        // TODO: IMPLEMENT 5-Step Sequence mode
         if (quarter_frame) {
             // FIXME: THIS MAY BE AFFECTED BY THE HALT AND OUR HALT MAY
             // ALSO BE REVERSED
@@ -258,7 +226,6 @@ void APU_Clock(APU* apu) {
 
             // Clock triangle length counter
             if (!apu->triangle.enable) {
-                // printf("trigger\n");
                 apu->triangle.length = 0;
             }
             else if (apu->triangle.length > 0
@@ -277,44 +244,6 @@ void APU_Clock(APU* apu) {
 
         // update sequencers
 
-        // bad sound, good performance
-        // APU_SequencerClock(apu, apu->pulse1->enable, &pulse1_clock);
-        // apu->pulse1->sample = (double)apu->sequencer->output;
-        // APU_SequencerClock2(apu, apu->pulse2->enable, &pulse1_clock);
-        // apu->pulse2->sample = (double)apu->sequencer2->output;
-
-        // TODO: SPEED THIS UP AS MUCH AS POSSIBLE, CONSIDER REDUCING
-        // NUMBER OF HARMONICS
-        // ALSO CONSIDER JUST DOING THE FLAT SQUARE WAVE WITH MAYBE LIKE A
-        // SMOOTHING EFFECT AT THE EDGE
-        // apu->pulse1.wave.harmonics = 20;
-        // apu->pulse2.wave.harmonics = 20;
-        // apu->pulse1.wave.amplitude = 0.25;
-        // apu->pulse2.wave.amplitude = 0.25;
-
-        // apu->pulse1.wave.freq = 1789773.0 / (16.0 * (double)(apu->pulse1.sequencer.reload + 1));
-        // apu->pulse1.sample = oscpulse_sample(&apu->pulse1.wave, apu->global_time);
-        // apu->pulse2.wave.freq = 1789773.0 / (16.0 * (double)(apu->pulse2.sequencer.reload + 1));
-        // apu->pulse2.sample = oscpulse_sample(&apu->pulse2.wave, apu->global_time);
-
-        // apu->pulse1.sample = sin(2.0 * 3.14159 * apu->pulse1.wave.freq * apu->global_time);
-        // apu->pulse2.sample = sin(2.0 * 3.14159 * apu->pulse2.wave.freq * apu->global_time);
-
-        // if (apu->pulse1.sample >= 0)
-        //     apu->pulse1.sample = 1.0;
-        // else
-        //     apu->pulse1.sample = 0.0;
-
-        // if (apu->pulse2.sample >= 0)
-        //     apu->pulse2.sample = 1.0;
-        // else
-        //     apu->pulse2.sample = 0.0;
-
-        // TRIANGLE WAVE IS AN OCTAVE LOWER SO DIVIDE THE OUTPUT
-        // BY 2
-        // apu->triangle.wave.freq = 1789773.0 / (16.0 * (double)(apu->triangle.sequencer.reload + 1)) / 2;
-        // apu->triangle.sample = osctriangle_sample(&apu->triangle.wave, apu->global_time);
-
         // Pulse Wave 1 clock
         // Checking the reload just stops high freqs
         // FIXME: MAYBE THIS IS UNDESIRABLE
@@ -322,7 +251,6 @@ void APU_Clock(APU* apu) {
         // THIS JUST SOUNDS BAD, THE WAY TO GO IS TO EITHER LINEARLY
         // INTERPOLATE BETWEEN THIS AND THE LAST SAMPLE
         // OR TO JUST GO FULL ON WITH THE SINE WAVE APPROXIMATION
-        apu->pulse1.time += 1.0 / 1789773.0;
         // FIXME: IT SEEMS THE PATH TO FIXING THIS IS A DELTA BETWEEN THE CURRENT
         // AND PREVIOUS SAMPLES
 
@@ -341,105 +269,16 @@ void APU_Clock(APU* apu) {
         // COULD ALSO HAVE A FILTER THAT PREVENTS MASSIVE JUMPS OUT OF
         // NOWHERE AND EITHER SMOOTHS THEM OR PREVENTS THEM ENTIRELY
         // FREQUENCY SWEEPS MAY ELIMINATE THE ISSUE ALSO, BUT I DOUBT IT
-        if (apu->pulse1.enable && apu->pulse1.length > 0 && apu->pulse1.sequencer.reload > 7) {
-        //  if(1) {
-            apu->pulse1.sequencer.timer--;
-            if (apu->pulse1.sequencer.timer == 0xffff) {
-                apu->pulse1.sequencer.timer = apu->pulse1.sequencer.reload;
-                apu->pulse1.duty_index = (apu->pulse1.duty_index + 1) % 8;
-                apu->pulse1.sample = duty_cycles[apu->pulse1.duty_sequence][apu->pulse1.duty_index];
-                apu->pulse1.sample *= 1.0/15.0 * apu->pulse1.envelope.output;
-                // if (apu->pulse1.envelope.output > 0) {
-                //     double freq = 1789773.0 / (16.0 * (double)(apu->pulse1.sequencer.reload + 1));
-                //     apu->pulse1.sample = sin(2.0 * 3.14159 * freq * apu->global_time);
-                //     if (apu->pulse1.sample > 0)
-                //         apu->pulse1.sample = 1.0;
-                //     else
-                //         apu->pulse1.sample = 0.0;
-                // } else {
-                //     apu->pulse1.sample = 0;
-                // }
-                apu->pulse1.prev_sample = apu->pulse1.sample;
-            }
-        } else {
-            apu->pulse1.sample = apu->pulse1.prev_sample;
-        }
+        clock_pulse(&apu->pulse1);
+        clock_pulse(&apu->pulse2);
 
-        // Should output samples no matter what
-        //apu->pulse1.sequencer.timer--;
-        //if (apu->pulse1.sequencer.timer == 0xffff) {
-        //    apu->pulse1.sequencer.timer = apu->pulse1.sequencer.reload;
-        //    apu->pulse1.duty_index = (apu->pulse1.duty_index + 1) % 8;
-        //}
-
-        //if (duty_cycles[apu->pulse1.duty_sequence][apu->pulse1.duty_index] == 1) {
-        //    apu->pulse1.sample = 1.0/15.0 * apu->pulse1.envelope.output;
-        //    apu->pulse1.prev_sample = apu->pulse1.sample;
-        //}
-        //else
-        //    apu->pulse1.sample = 0;
-
-        //if (!(apu->pulse1.enable && apu->pulse1.length > 0 && apu->pulse1.sequencer.reload > 7)) {
-        //    apu->pulse1.sample = apu->pulse1.prev_sample;
-        //}
-        // Mute super high frequencies to save the children's ears until I fix
-        // the emulation
-        // FIXME: CHANGE THIS TO HOLD THE PREVIOUS SAMPLE
-        // if (apu->pulse1.wave.freq > 8000 || apu->pulse1.length == 0)
-        //     apu->pulse1.sample = apu->pulse1.prev_sample;
-        if (apu->pulse2.wave.freq > 8000)
-            apu->pulse2.sample = 0;
-        // if (apu->triangle.wave.freq > 8000)
-        //     apu->triangle.sample = 0;
+        // FIXME: IT MAY BE THE CASE THAT THE PULSE WAVES SHOULD BE CLOCKED NO
+        // MATTER WHAT
     }
 
     // The triangle wave clocks at the rate of the CPU
     if (apu->clock_count % 3 == 0) {
-        // FIXME: LINEAR COUNTER IS NEVER HITTING 0
-        if (apu->triangle.linear_counter > 0
-            && apu->triangle.length > 0) {
-            // apu->triangle.wave.freq = 1789773.0 / (32.0 * (double)(apu->triangle.sequencer.reload + 1));
-            // if (apu->triangle.sequencer.reload > 2 /*&& apu->triangle.sequencer.reload < 0x7fe*/) {
-            //     // FIXME: SO THIS WILL GET RID OF POPS ON DECAY ALWAYS AND GET RID OF ATTACKS ON
-            //     // THE SAME FREQUENCY; HOWEVER, WHEN THE FREQUENCY CHANGES IT IS TOO ABRUPT AND WILL
-            //     // POP ON THE ATTACK
-            //     // WE INSTANTLY GO FROM HOLDING A CONSTANT VALUE AND THEN WE IMMEDIATELY CHANGE
-            //     // THE VALUE WITHOUT WORKING OUR WAY TO IT SO FOR 440 TO 880 WE WOULD HOLD THE 440
-            //     // VALUE AFTER SHUTTING THE NOTE, BUT THEN WHEN 880 IS THE FREQ WE WOULD HAVE A SHARP
-            //     // SPIKE TO A NEW VALUE
-            //     // THIS WOULD NOT BE AN ISSUE IF WE WERE ACTUALLY USING THE SEQUENCER SINCE THE SEQUENCER
-            //     // WOULD STILL BE HOLDING THE PREVIOUS AMPLITUDE BUT WOULD NOT INSTANTLY CHANGE THE FREQUENCY
-            //     // AS ITS FREQUENCY IS CHANGED BY THE SPEED AT WHICH THE AMPLITUDE IS CHANGED AND NOT
-            //     // BY AN ARBITRARY VALUE
-
-            //         apu->triangle.time += 1.0 / 1789773.0;
-            //         apu->triangle.sample = 2.0 / 3.14159 * asin(sin(2.0 * 3.14159 * apu->triangle.wave.freq * apu->triangle.time));
-            //         // this clocks in tandem with the cpu
-            //         apu->triangle.prev_sample = apu->triangle.sample;
-
-            // Clock the sequencer
-            if (apu->triangle.enable && apu->triangle.sequencer.reload > 1) {
-                apu->triangle.sequencer.timer--;
-                if (apu->triangle.sequencer.timer == 0xffff) {
-                    apu->triangle.sequencer.timer = apu->triangle.sequencer.reload;
-                    apu->triangle.index = (apu->triangle.index + 1) % 32;
-                    apu->triangle.sequencer.output = amp_table[apu->triangle.index];
-                }
-
-                apu->triangle.sample = 1.0 / 15.0 * apu->triangle.sequencer.output;
-                apu->triangle.prev_sample = apu->triangle.sample;
-            }
-
-
-            else {
-                apu->triangle.sample = apu->triangle.prev_sample;
-                // apu->triangle.sample = 2.0 / 3.14159 * asin(sin(2.0 * 3.14159 * apu->triangle.wave.freq * apu->triangle.time));
-            }
-        }
-        else {
-            apu->triangle.sample = apu->triangle.prev_sample;
-            // apu->triangle.sample = 2.0 / 3.14159 * asin(sin(2.0 * 3.14159 * apu->triangle.wave.freq * apu->triangle.time));
-        }
+        clock_triangle(&apu->triangle);
     }
 
     apu->clock_count++;
@@ -453,17 +292,6 @@ void APU_Reset(APU* apu) {
     memset(apu, 0, sizeof(APU));
 }
 
-void APU_SequencerClock(APU* apu, bool enable, void (*func)(uint32_t*)) {
-    if (enable) {
-        apu->pulse1.sequencer.timer--;
-        if (apu->pulse1.sequencer.timer == 0xffff) {
-            apu->pulse1.sequencer.timer = apu->pulse1.sequencer.reload + 1;
-            func(&apu->pulse1.sequencer.sequence);
-            apu->pulse1.sequencer.output = apu->pulse1.sequencer.sequence & 1;
-        }
-    }
-}
-
 APU* APU_Create(void) {
     APU* apu = malloc(sizeof(APU));
     return apu;
@@ -474,10 +302,17 @@ void APU_Destroy(APU* apu) {
 }
 
 double APU_GetOutputSample(APU* apu) {
-    // return apu->pulse1.sample + apu->pulse2.sample + apu->triangle.sample;
-    // return apu->triangle.sample;
-    // return apu->pulse1.sample + apu->triangle.sample;
-    return apu->pulse1.sample;
+    // TODO: SEE APU MIXER ARTICLE ON NESDEV
 
-    // return apu->triangle.sample;
+    // For now, we will just trivially mix the channels
+    // We have 4 channels, meaning each one is potentially allowed to
+    // take up 1/4 of the output sample
+    double p1 = apu->pulse1.sample * apu->pulse1.volume;
+    // double p2 = apu->pulse2.sample * apu->pulse2.volume;
+    double p2 = 0.0;
+    double tri = apu->triangle.sample * apu->triangle.volume;
+    // double noise = apu->noise.sample * apu->noise.volume;
+    double noise = 0.0;
+
+    return 0.25 * (p1 + p2 + tri + noise) * apu->master_volume;
 }

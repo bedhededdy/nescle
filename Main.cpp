@@ -799,7 +799,11 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
     Bus* bus = (Bus*)userdata;
     int16_t* my_stream = (int16_t*)stream;
 
-    // SDL_Log("%lld\n", GetCurrentThreadId());
+    // Force master volume to 50% and each channel's volume to 100%
+    bus->apu->pulse1.volume = 1.0;
+    bus->apu->pulse2.volume = 1.0;
+    bus->apu->triangle.volume = 1.0;
+    bus->apu->master_volume = 0.5;
 
     int count = 0;
     SDL_LockMutex(bus->save_state_lock);
@@ -814,8 +818,9 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
             }
        }
 
-       // multiply to make louder
-        my_stream[count] = 3000.0 * bus->audio_sample;
+        // Since each volume is given as a percentage, we must multiply
+        // by 32767 to get the maximum value for a 16-bit sample
+        my_stream[count] = 32767 * bus->audio_sample;
         count++;
     }
     SDL_UnlockMutex(bus->save_state_lock);

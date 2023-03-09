@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// FIXME: THE 8-BIT FREQUENCY VALUES GO COMPLETELY UNUSED, GET
-// RID OF THEM IF POSSIBLE
 #pragma once
 
 #ifdef __cplusplus
@@ -28,28 +26,11 @@ extern "C" {
 
 #define APU_SAMPLING_RATE 44100
 
-struct apu_sequencer
-{
-    uint32_t sequence;
+struct apu_sequencer {
     uint16_t timer;
     uint16_t reload;
     uint8_t output;
 };
-
-typedef struct apu_pulse_wave
-{
-    double freq;
-    double duty_cycle;
-    double amplitude;
-    double harmonics;
-} APU_PulseWave;
-
-typedef struct apu_triangle_wave
-{
-    double freq;
-    double amplitude;
-    double harmonics;
-} APU_TriangleWave;
 
 struct apu_envelope {
     bool start;
@@ -64,46 +45,41 @@ struct apu_envelope {
 struct apu_pulse_channel {
     bool enable;
 
-    // TYPES SUBJECT TO CHANGE
     double sample;
-    uint8_t length;
-    uint8_t freq;
+    double prev_sample;
 
-    double time;
+    bool halt;
+    uint8_t length;
+
+    double volume;
+
     int duty_sequence;
     int duty_index;
 
-    bool halt;
-
-    double prev_sample;
-
     APU_Sequencer sequencer;
-    APU_PulseWave wave;
     APU_Envelope envelope;
 };
 
 struct apu_triangle_channel {
     bool enable;
 
-    // TYPES SUBJECT TO CHANGE
     double sample;
     double prev_sample;
 
-    double time;
-
     int index;
-
     int length;
     uint8_t freq;
+
+    double volume;
 
     bool halt;
     bool linear_counter_reload;
     bool control_flag;
+
     uint16_t linear_counter;
     uint16_t linear_counter_reload_value;
 
     APU_Sequencer sequencer;
-    APU_TriangleWave wave;
 };
 
 struct apu_noise_channel {
@@ -138,6 +114,7 @@ struct apu {
     uint64_t clock_count;
     uint64_t frame_clock_count;
 
+    double master_volume;
     double global_time;
 };
 
@@ -153,7 +130,6 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
 void APU_Clock(APU* apu);
 void APU_Reset(APU* apu);
 
-void APU_SequencerClock(APU* apu, bool enable, void (*func)(uint32_t*));
 double APU_GetOutputSample(APU* apu);
 
 #ifdef __cplusplus
