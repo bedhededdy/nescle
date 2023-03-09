@@ -51,6 +51,16 @@ typedef struct apu_triangle_wave
     double harmonics;
 } APU_TriangleWave;
 
+struct apu_envelope {
+    bool start;
+    bool disable;
+    uint16_t divider_count;
+    bool constant_volume;
+    uint16_t volume;
+    uint16_t output;
+    uint16_t decay_count;
+};
+
 struct apu_pulse_channel {
     bool enable;
 
@@ -59,8 +69,17 @@ struct apu_pulse_channel {
     uint8_t length;
     uint8_t freq;
 
+    double time;
+    int duty_sequence;
+    int duty_index;
+
+    bool halt;
+
+    double prev_sample;
+
     APU_Sequencer sequencer;
     APU_PulseWave wave;
+    APU_Envelope envelope;
 };
 
 struct apu_triangle_channel {
@@ -95,14 +114,6 @@ struct apu_sample_channel {
     int bar;
 };
 
-struct apu_envelope {
-    bool start;
-    bool disable;
-    uint16_t divider_count;
-    uint16_t volume;
-    uint16_t output;
-    uint16_t decay_count;
-};
 
 struct apu_sweeper {
     bool enabled;
