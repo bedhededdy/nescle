@@ -27,12 +27,12 @@ extern "C" {
 #define CART_CHR_ROM_CHUNK_SIZE 0x2000
 #define CART_PRG_ROM_CHUNK_SIZE 0x4000
 
-enum cart_mirror_mode {
+typedef enum cart_mirror_mode {
     CART_MIRRORMODE_HORZ,   // Horizontal
     CART_MIRRORMODE_VERT,   // Vertical
     CART_MIRRORMODE_OSLO,   // One-Screen lo
     CART_MIRRORMODE_OSHI    // One-Screen hi
-};
+} Cart_MirrorMode;
 
 // ROM file header in iNES (.nes) format
 struct cart_rom_header {

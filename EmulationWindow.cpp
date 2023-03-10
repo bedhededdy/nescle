@@ -179,7 +179,7 @@ void EmulationWindow::render_pattern(Bus* bus) {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     ImGui::Begin("Pattern Memory", &show_pattern);
-    ImGui::Image((ImTextureID)palette_texture, ImVec2(256 * 2, 128 * 2),
+    ImGui::Image((ImTextureID)(intptr_t)palette_texture, ImVec2(256 * 2, 128 * 2),
         ImVec2(0, 1), ImVec2(1, 0));
     ImGui::End();
 }

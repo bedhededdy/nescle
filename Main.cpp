@@ -853,6 +853,8 @@ void emulate(void)
     // AS 60 GOES INTO 44100 735 TIMES
     // MAY WANT TO INVESTIGATE A 256 BYTE BUFFER TO GET CLOSER
     // TO PUSHING A FRAME WHEN WE SHOULD
+    // TODO: IN MY TESTING 256 ACTUALLY YIELDS BETTER PERFORMANCE, ESPECIALLY
+    // IN SUPER MARIO BROS. WHERE SCREEN SCROLLING IS VERY FAST
     audio_spec.samples = 512;
     audio_spec.callback = &audio_callback;
     audio_spec.userdata = bus;
@@ -1067,7 +1069,7 @@ int main(int argc, char** argv) {
 
 
     // CHANGE TO NULL FOR NON-DEBUGGING PURPOSES
-    char* rom_path = "";
+    const char* rom_path = "";
     int w = PPU_RESOLUTION_X;
     int h = PPU_RESOLUTION_Y;
     for (int i = 1; i < argc; i++) {

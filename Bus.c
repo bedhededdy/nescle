@@ -345,6 +345,9 @@ int Bus_SaveState(Bus* bus) {
     fwrite(bus->ppu, sizeof(PPU), 1, savestate);
 
     fclose(savestate);
+
+    // FIXME: RETURN WHETHER WE WERE SUCCESSFUL OR NOT
+    return 0;
 }
 
 int Bus_LoadState(Bus* bus) {
@@ -486,8 +489,8 @@ int Bus_LoadState(Bus* bus) {
     // SDL_UnlockMutex(ppu->frame_buffer_lock);
     // free(new_ppu);
 
-
-
+    // FIXME: RETURN IF WE SUCCEEDED OR NOT
+    return 0;
 
 }
 

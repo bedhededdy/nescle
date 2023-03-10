@@ -168,6 +168,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Fill in some fields
     cart->file_type = file_type;
+
+    // FIXME: DEAL WITH THE CONSTNESS ISSUE HERE
     cart->rom_path = path;
 
     // Don't forget to close the file and return true

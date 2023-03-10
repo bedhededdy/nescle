@@ -39,9 +39,9 @@ typedef struct apu_sample_channel APU_SampleChannel;
 typedef struct apu_sequencer APU_Sequencer;
 typedef struct apu_envelope APU_Envelope;
 
-typedef enum cart_mirror_mode Cart_MirrorMode;
-typedef enum cpu_addrmode CPU_AddrMode;
-typedef enum cpu_op_type CPU_OpType;
+//typedef enum cart_mirror_mode Cart_MirrorMode;
+//typedef enum cpu_addrmode CPU_AddrMode;
+//typedef enum cpu_op_type CPU_OpType;
 
 #ifdef __cplusplus
 }

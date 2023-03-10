@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
 #ifdef __cplusplus
@@ -23,9 +23,9 @@ extern "C" {
 #include <SDL_mutex.h>
 #include "MyTypes.h"
 
-/* 
+/*
  * Flags for the status register (bit 6 is unused, but should always be 1)
- * BRK isn't technically a flag, but it lives in the status register 
+ * BRK isn't technically a flag, but it lives in the status register
  * and behaves just like a flag, so I include it here
  */
 #define CPU_STATUS_CARRY    (1 << 0)    // 1 for arithmetic carry/1 for result >= 0
@@ -39,10 +39,10 @@ extern "C" {
 #define CPU_SP_BASE_ADDR    (0x100)     // All stack pushes/pops occur from this offset
 
 // Returns if the operand is a negative 8-bit integer
-#define CPU_IS_NEG(x)       ((x) & (1 << 7))    
+#define CPU_IS_NEG(x)       ((x) & (1 << 7))
 
 /* CPU Addressing Modes */
-enum cpu_addrmode {
+typedef enum cpu_addrmode {
     CPU_ADDRMODE_ACC,  // Accumulator
     CPU_ADDRMODE_IMM,  // Immediate
     CPU_ADDRMODE_ABS,  // Absolute
@@ -58,10 +58,10 @@ enum cpu_addrmode {
     CPU_ADDRMODE_IND,  // Absolute indirect
 
     CPU_ADDRMODE_INV   // Invalid
-};
+} CPU_AddrMode;
 
 /* CPU Operations */
-enum cpu_op_type {
+typedef enum cpu_op_type {
     CPU_OP_ADC, CPU_OP_AND, CPU_OP_ASL,
     CPU_OP_BCC, CPU_OP_BCS, CPU_OP_BEQ, CPU_OP_BIT, CPU_OP_BMI, CPU_OP_BNE, CPU_OP_BPL, CPU_OP_BRK, CPU_OP_BVC, CPU_OP_BVS,
     CPU_OP_CLC, CPU_OP_CLD, CPU_OP_CLI, CPU_OP_CLV, CPU_OP_CMP, CPU_OP_CPX, CPU_OP_CPY,
@@ -78,7 +78,7 @@ enum cpu_op_type {
     CPU_OP_TAX, CPU_OP_TAY, CPU_OP_TSX, CPU_OP_TXA, CPU_OP_TXS, CPU_OP_TYA,
 
     CPU_OP_INV     // Invalid operation
-};
+} CPU_OpType;
 
 /* 6502 CPU Instruction */
 struct cpu_instr {
