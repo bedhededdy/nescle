@@ -207,3 +207,34 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 
     return res;
 }
+
+size_t Mapper_GetSize(Mapper* mapper) {
+    size_t res;
+
+    switch (mapper->id) {
+    case 0:
+        res = sizeof(Mapper000);
+        break;
+    case 1:
+        res = sizeof(Mapper001);
+        break;
+    case 2:
+        res = sizeof(Mapper002);
+        break;
+    case 3:
+        res = sizeof(Mapper003);
+        break;
+    case 7:
+        res = sizeof(Mapper007);
+        break;
+    case 66:
+        res = sizeof(Mapper066);
+        break;
+
+    default:
+        res = 0;
+        break;
+    }
+
+    return res;
+}

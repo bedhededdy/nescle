@@ -349,6 +349,9 @@ int Bus_SaveState(Bus* bus) {
     fwrite(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
     fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
 
+    // Save Appropriate size based on the mapper
+    fwrite(bus->cart->mapper->mapper_class, Mapper_GetSize(bus->cart->mapper), 1, savestate);
+
     // Save PPU state, we need to make a new mutex at load time, as
     // deep copying the mutex is a pain in the butt without diving into
     // its internals (which are not defined in a .h file)
@@ -394,8 +397,12 @@ int Bus_LoadState(Bus* bus) {
     size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
     fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
 
-    // FIXME: SAVESTATES WON'T WORK SINCE I DIDN'T DEEP SAVE THE MAPPER OBJECT
+    // FIXME: THIS WILL ONLY WORK IF YOU ARE PLAYING ON THE SAME MAPPER TYPE
+    // OTHERWISE YOU WILL NEED TO REALLOCATE THE SPACE FOR THE SUBCLASS
+    // FIXME: YOU WOULD ALSO NEED TO GET THE SIZE FROM THE MAPPER_ID AND
+    // NOT THE MAPPER ITSELF
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
+    fread(bus->cart->mapper->mapper_class, Mapper_GetSize(bus->cart->mapper), 1, savestate);
 
     fread(bus->ppu, sizeof(PPU), 1, savestate);
 
