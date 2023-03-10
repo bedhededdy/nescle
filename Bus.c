@@ -128,7 +128,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
         Mapper* mapper = bus->cart->mapper;
-        return mapper->map_cpu_read(mapper, addr);
+        return Mapper_MapCPURead(mapper, addr);
     }
 
     // Return 0 on failed read
@@ -185,7 +185,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
         Mapper* mapper = bus->cart->mapper;
-        return mapper->map_cpu_write(mapper, addr, data);
+        return Mapper_MapCPUWrite(mapper, addr, data);
     }
 
     // Return false on failed read
@@ -303,6 +303,8 @@ void Bus_Reset(Bus* bus) {
 }
 
 int Bus_SaveState(Bus* bus) {
+    // FIXME: THIS WILL BE BUSTED BECAUSE OF NO DEEP SAVE ON THE MAPPER
+
     // FIXME: YOU SHOULD SAVE THE CARTRIDGE BEFORE THE PPU OR ELSE YOU WILL
     // READ THE WRONG TILES
 
@@ -342,8 +344,8 @@ int Bus_SaveState(Bus* bus) {
     fwrite(bus->cart, sizeof(Cart), 1, savestate);
 
     // Perform a deep copy of the prg_rom and chr_rom
-    fwrite(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->mapper->prg_rom_banks * 0x4000, savestate);
-    size_t chr_rom_chunks = bus->cart->mapper->chr_rom_banks == 0 ? 1 : bus->cart->mapper->chr_rom_banks;
+    fwrite(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
+    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
     fwrite(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
     fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
 
@@ -388,10 +390,11 @@ int Bus_LoadState(Bus* bus) {
     // Load chr_rom and prg_rom
     // TODO: THIS WORKS, BUT IT WOULDN'T IF BUS HADN'T ALREADY BEEN REINITIALIZED
     // WITH THE CURRENT # OF PRG_BANKS
-    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->mapper->prg_rom_banks * 0x4000, savestate);
-    size_t chr_rom_chunks = bus->cart->mapper->chr_rom_banks == 0 ? 1 : bus->cart->mapper->chr_rom_banks;
+    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
+    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
     fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
 
+    // FIXME: SAVESTATES WON'T WORK SINCE I DIDN'T DEEP SAVE THE MAPPER OBJECT
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
 
     fread(bus->ppu, sizeof(PPU), 1, savestate);

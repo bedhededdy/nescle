@@ -79,7 +79,11 @@ add_library(glad STATIC ${GLAD_SRC})
 find_package(OpenGL REQUIRED)
 
 # Add nescle as executable
-set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp Main.cpp Mapper.c PPU.c APU.c)
+set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
+        mappers/Mapper000.cpp mappers/Mapper001.cpp mappers/Mapper002.cpp mappers/Mapper003.cpp
+        mappers/Mapper007.cpp mappers/Mapper066.cpp)
+# FIXME: MAPPERS SHOULD NOT BE AN INCLUDE DIR, BUT I NEED IT FOR NOW FOR
+# COMPILATION OF MAPPERS
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 add_executable(nescle ${SRC})
 

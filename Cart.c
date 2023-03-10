@@ -160,8 +160,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     printf("mirror mode: %d\n", cart->mirror_mode);
 
     // Initialize cart's mapper
-    cart->mapper = Mapper_Create(mapper_id,
-        header->prg_rom_size, header->chr_rom_size, cart);
+    cart->mapper = Mapper_Create(mapper_id, cart);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
         return false;
@@ -170,8 +169,6 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Fill in some fields
     cart->file_type = file_type;
     cart->rom_path = path;
-
-
 
     // Don't forget to close the file and return true
     fclose(rom);
