@@ -20,10 +20,10 @@
 #include <string.h>
 
 static const int amp_table[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
-    1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+                                  1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 static const int length_table[32] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10,
-    14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
+                                     14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
 
 static const int duty_cycles[4][8] = {
     {0, 0, 0, 0, 0, 0, 0, 1},
@@ -32,8 +32,10 @@ static const int duty_cycles[4][8] = {
     {1, 1, 1, 1, 1, 1, 0, 0}
 };
 
-bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
-    switch (addr) {
+bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
+{
+    switch (addr)
+    {
     case 0x4000:
         apu->pulse1.duty_sequence = data >> 6;
 
@@ -60,6 +62,25 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
         apu->pulse1.envelope.start = true;
         break;
 
+    case 0x4004:
+        apu->pulse2.duty_sequence = data >> 6;
+        apu->pulse2.halt = data & 0x20;
+        apu->pulse2.envelope.constant_volume = data & 0x10;
+        apu->pulse2.envelope.volume = data & 0xf;
+        break;
+    case 0x4005:
+        break;
+    case 0x4006:
+        apu->pulse2.sequencer.reload = (apu->pulse2.sequencer.reload & 0xff00) | data;
+        break;
+    case 0x4007:
+        apu->pulse2.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->pulse2.sequencer.reload & 0x00ff);
+        apu->pulse2.sequencer.timer = apu->pulse2.sequencer.reload;
+        apu->pulse2.duty_index = 0;
+        apu->pulse2.length = length_table[data >> 3];
+        apu->pulse2.envelope.start = true;
+        break;
+
     case 0x4008:
         apu->triangle.linear_counter_reload_value = data & 0x7f;
         apu->triangle.control_flag = data & 0x80;
@@ -73,8 +94,7 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
     case 0x400b:
         // FIXME: ANDING OUT THE TOP BIT MIGHT NOT BE RIGHT
         // AND SHOULD MAYBE BE IN THE 0X4008 CASE
-        apu->triangle.sequencer.reload = (uint16_t)((data & 7)) << 8
-            | (apu->triangle.sequencer.reload & 0x00ff);
+        apu->triangle.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->triangle.sequencer.reload & 0x00ff);
         apu->triangle.sequencer.timer = apu->triangle.sequencer.reload;
         apu->triangle.linear_counter_reload = true;
         apu->triangle.length = length_table[data >> 3];
@@ -97,34 +117,43 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data) {
     return true;
 }
 
-uint8_t APU_Read(APU* apu, uint16_t addr) {
+uint8_t APU_Read(APU *apu, uint16_t addr)
+{
     return 0;
 }
 
-static void clock_pulse(APU_PulseChannel* pulse) {
-    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7) {
+static void clock_pulse(APU_PulseChannel *pulse)
+{
+    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7)
+    {
         pulse->sequencer.timer--;
 
-        if (pulse->sequencer.timer == 0xffff) {
+        if (pulse->sequencer.timer == 0xffff)
+        {
             pulse->sequencer.timer = pulse->sequencer.reload;
             pulse->duty_index = (pulse->duty_index + 1) % 8;
 
             pulse->sample = duty_cycles[pulse->duty_sequence][pulse->duty_index];
-            pulse->sample *= 1.0/15.0 * pulse->envelope.output;
+            pulse->sample *= 1.0 / 15.0 * pulse->envelope.output;
             pulse->prev_sample = pulse->sample;
         }
-    } else {
+    }
+    else
+    {
         pulse->sample = pulse->prev_sample;
     }
 }
 
-static void clock_triangle(APU_TriangleChannel* triangle) {
-    if (triangle->linear_counter > 0
-        && triangle->length > 0) {
+static void clock_triangle(APU_TriangleChannel *triangle)
+{
+    if (triangle->linear_counter > 0 && triangle->length > 0)
+    {
         // Clock the sequencer
-        if (triangle->enable && triangle->sequencer.reload > 1) {
+        if (triangle->enable && triangle->sequencer.reload > 1)
+        {
             triangle->sequencer.timer--;
-            if (triangle->sequencer.timer == 0xffff) {
+            if (triangle->sequencer.timer == 0xffff)
+            {
                 triangle->sequencer.timer = triangle->sequencer.reload;
                 triangle->index = (triangle->index + 1) % 32;
                 triangle->sequencer.output = amp_table[triangle->index];
@@ -134,16 +163,61 @@ static void clock_triangle(APU_TriangleChannel* triangle) {
             triangle->prev_sample = triangle->sample;
         }
 
-        else {
+        else
+        {
             triangle->sample = triangle->prev_sample;
         }
     }
-    else {
+    else
+    {
         triangle->sample = triangle->prev_sample;
     }
 }
 
-void APU_Clock(APU* apu) {
+// static void clock_length_counter(APU_LengthCounter* length_counter) {
+//     if (length_counter->enable && length_counter->length > 0) {
+//         length_counter->length--;
+//     }
+// }
+
+static void clock_envelope(APU_PulseChannel *pulse)
+{
+    if (!pulse->envelope.start)
+    {
+        if (pulse->envelope.divider_count == 0)
+        {
+            pulse->envelope.divider_count = pulse->envelope.volume;
+
+            if (pulse->envelope.decay_count == 0)
+            {
+                if (pulse->halt)
+                    pulse->envelope.decay_count = 15;
+            }
+            else
+            {
+                pulse->envelope.decay_count--;
+            }
+        }
+        else
+        {
+            pulse->envelope.divider_count--;
+        }
+    }
+    else
+    {
+        pulse->envelope.start = false;
+        pulse->envelope.decay_count = 15;
+        pulse->envelope.divider_count = pulse->envelope.volume;
+    }
+
+    if (pulse->envelope.constant_volume)
+        pulse->envelope.output = pulse->envelope.volume;
+    else
+        pulse->envelope.output = pulse->envelope.decay_count;
+}
+
+void APU_Clock(APU *apu)
+{
     bool quarter_frame = false;
     bool half_frame = false;
 
@@ -151,7 +225,8 @@ void APU_Clock(APU* apu) {
 
     // APU although clocking each time with the PPU, runs at half the CPU
     // clock, which is 1/3 of the PPU clock
-    if (apu->clock_count % 6 == 0) {
+    if (apu->clock_count % 6 == 0)
+    {
         apu->frame_clock_count++;
 
         // 4-Step Sequence mode
@@ -161,14 +236,16 @@ void APU_Clock(APU* apu) {
             quarter_frame = half_frame = true;
         if (apu->frame_clock_count == 11186)
             quarter_frame = true;
-        if (apu->frame_clock_count == 14916) {
+        if (apu->frame_clock_count == 14916)
+        {
             quarter_frame = true;
             half_frame = true;
             apu->frame_clock_count = 0;
         }
 
         // TODO: IMPLEMENT 5-Step Sequence mode
-        if (quarter_frame) {
+        if (quarter_frame)
+        {
             // FIXME: THIS MAY BE AFFECTED BY THE HALT AND OUR HALT MAY
             // ALSO BE REVERSED
             // "beats" adjust the volume envelope
@@ -188,34 +265,12 @@ void APU_Clock(APU* apu) {
                 apu->triangle.linear_counter_reload = false;
             }
 
-            // Clock pulse 1 envelope
-            if (!apu->pulse1.envelope.start) {
-                if (apu->pulse1.envelope.divider_count == 0) {
-                    apu->pulse1.envelope.divider_count = apu->pulse1.envelope.volume;
-
-                    if (apu->pulse1.envelope.decay_count == 0) {
-                        // FIXME: MAY BE NOT HALT
-                        if (apu->pulse1.halt)
-                            apu->pulse1.envelope.decay_count = 15;
-                    } else {
-                        apu->pulse1.envelope.decay_count--;
-                    }
-                } else {
-                    apu->pulse1.envelope.divider_count--;
-                }
-            } else {
-                apu->pulse1.envelope.start = false;
-                apu->pulse1.envelope.decay_count = 15;
-                apu->pulse1.envelope.divider_count = apu->pulse1.envelope.volume;
-            }
-
-            if (apu->pulse1.envelope.constant_volume)
-                apu->pulse1.envelope.output = apu->pulse1.envelope.volume;
-            else
-                apu->pulse1.envelope.output = apu->pulse1.envelope.decay_count;
+            clock_envelope(&apu->pulse1);
+            clock_envelope(&apu->pulse2);
         }
 
-        if (half_frame) {
+        if (half_frame)
+        {
             // adjust note length and frequency sweepers
             // TODO: PUT TRIANGLE LINEAR LENGTH AND LENGTH COUNTER
             // HERE
@@ -225,20 +280,31 @@ void APU_Clock(APU* apu) {
             // RESET BEHAVIOR OF CERTAIN REGISTERS ON WRITE
 
             // Clock triangle length counter
-            if (!apu->triangle.enable) {
+            if (!apu->triangle.enable)
+            {
                 apu->triangle.length = 0;
             }
-            else if (apu->triangle.length > 0
-                && !apu->triangle.halt) {
-                    apu->triangle.length--;
-                }
+            else if (apu->triangle.length > 0 && !apu->triangle.halt)
+            {
+                apu->triangle.length--;
+            }
 
-            if (!apu->pulse1.enable) {
+            if (!apu->pulse1.enable)
+            {
                 apu->pulse1.length = 0;
             }
-            else if (apu->pulse1.length > 0
-                && !apu->pulse1.halt) {
-                    apu->pulse1.length--;
+            else if (apu->pulse1.length > 0 && !apu->pulse1.halt)
+            {
+                apu->pulse1.length--;
+            }
+
+            if (!apu->pulse2.enable)
+            {
+                apu->pulse2.length = 0;
+            }
+            else if (apu->pulse2.length > 0 && !apu->pulse2.halt)
+            {
+                apu->pulse2.length--;
             }
         }
 
@@ -277,39 +343,47 @@ void APU_Clock(APU* apu) {
     }
 
     // The triangle wave clocks at the rate of the CPU
-    if (apu->clock_count % 3 == 0) {
+    if (apu->clock_count % 3 == 0)
+    {
         clock_triangle(&apu->triangle);
     }
 
     apu->clock_count++;
 }
 
-void APU_PowerOn(APU* apu) {
+void APU_PowerOn(APU *apu)
+{
     memset(apu, 0, sizeof(APU));
 }
 
-void APU_Reset(APU* apu) {
+void APU_Reset(APU *apu)
+{
     memset(apu, 0, sizeof(APU));
 }
 
-APU* APU_Create(void) {
-    APU* apu = malloc(sizeof(APU));
+APU *APU_Create(void)
+{
+    APU *apu = malloc(sizeof(APU));
     return apu;
 }
 
-void APU_Destroy(APU* apu) {
+void APU_Destroy(APU *apu)
+{
     free(apu);
 }
 
-double APU_GetOutputSample(APU* apu) {
+double APU_GetOutputSample(APU *apu)
+{
     // TODO: SEE APU MIXER ARTICLE ON NESDEV
 
     // For now, we will just trivially mix the channels
     // We have 4 channels, meaning each one is potentially allowed to
     // take up 1/4 of the output sample
     double p1 = apu->pulse1.sample * apu->pulse1.volume;
-    // double p2 = apu->pulse2.sample * apu->pulse2.volume;
-    double p2 = 0.0;
+    // double p1 = 0;
+    // double p2 = 0;
+    double p2 = apu->pulse2.sample * apu->pulse2.volume;
+    // double tri = 0.0;
     double tri = apu->triangle.sample * apu->triangle.volume;
     // double noise = apu->noise.sample * apu->noise.volume;
     double noise = 0.0;
