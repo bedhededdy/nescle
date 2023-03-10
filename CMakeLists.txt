@@ -2,6 +2,10 @@
 # TO AVOID NEEDING A SEPARATE INSTALL
 # SCRIPT
 
+# TODO: IT MAY BE A BETTER IDEA TO KEEP OUR OWN COPIES OF THE DEPENDENCIES
+# INSTEAD OF DOWNLOADING THEM AND THEN WE CAN JUST ADD CMAKE.TXT TO THE SUBDIRS
+# AND ADD THEM AS SUBDIRECTORIES
+
 #
 # Copyright 2023 Edward C. Pinkston
 #
@@ -18,15 +22,16 @@
 # limitations under the License.
 #
 
-# Require version 3.15 for generator expressions
+# Require version 3.15 for generator expressions (is likely to increase)
+# upon improvements to the build process
 cmake_minimum_required(VERSION 3.15)
 
-# Force appropriate language standards
+# Force C/C++ verison to ISO Standard C11+ and C++11+
 set(CMAKE_CXX_VERSION 11)
 set(CMAKE_CXX_VERSION_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_C_VERSION 99)
+set(CMAKE_C_VERSION 11)
 set(CMAKE_C_VERSION_REQUIRED true)
 set(CMAKE_C_EXTENSIONS OFF)
 
@@ -58,10 +63,7 @@ ENDFUNCTION(PREPEND)
 PREPEND(IMGUI_SRC ${IMGUI_DIR} ${IMGUI_SRC})
 PREPEND(IMGUI_BACKENDS ${IMGUI_BACKENDS_DIR} ${IMGUI_BACKENDS})
 
-# FIXME: NOT PROPERLY GETTING THE INCLUDE DIRS FOR BACKEND FOR WHATEVER
-#        REASON
 add_library(imgui STATIC ${IMGUI_SRC} ${IMGUI_BACKENDS})
-#add_library(imgui STATIC ${IMGUI_SRC})
 
 # Locate SDL libraries
 set(SDL2_DIR ${PROJECT_SOURCE_DIR}/SDL2/cmake)
@@ -79,11 +81,18 @@ add_library(glad STATIC ${GLAD_SRC})
 find_package(OpenGL REQUIRED)
 
 # Add nescle as executable
-set(SRC Bus.c Cart.c CPU.c EmulationWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
-        mappers/Mapper000.cpp mappers/Mapper001.cpp mappers/Mapper002.cpp mappers/Mapper003.cpp
-        mappers/Mapper007.cpp mappers/Mapper066.cpp)
-# FIXME: MAPPERS SHOULD NOT BE AN INCLUDE DIR, BUT I NEED IT FOR NOW FOR
-# COMPILATION OF MAPPERS
+set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
+set(NESCLE_SRC Bus.c Cart.c CPU.c
+      EmulationWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c)
+set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
+        Mapper007.cpp Mapper066.cpp)
+
+PREPEND(NESCLE_SRC ${NESCLE_SRC_DIR} ${NESCLE_SRC})
+PREPEND(MAPPER_SRC ${MAPPER_SRC_DIR} ${MAPPER_SRC})
+
+set(SRC ${NESCLE_SRC} ${MAPPER_SRC})
+
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 add_executable(nescle ${SRC})
 

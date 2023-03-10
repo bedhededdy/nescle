@@ -11,13 +11,13 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. 
+# limitations under the License.
 #
 
 # Download ImGui from GitHub as a zip archive
-Invoke-WebRequest -Uri 'https://github.com/ocornut/imgui/archive/refs/heads/master.zip' -OutFile ./imgui.zip
+Invoke-WebRequest -Uri 'https://github.com/ocornut/imgui/archive/refs/heads/docking.zip' -OutFile ./imgui.zip
 Expand-Archive ./imgui.zip .
-Rename-Item ./imgui-master ./imgui
+Rename-Item ./imgui-docking ./imgui
 Remove-Item ./imgui.zip
 
 # Download tinyfiledialogs from SourceForge as a zip archive
@@ -32,3 +32,5 @@ Invoke-WebRequest 'https://github.com/libsdl-org/SDL/releases/download/release-2
 Expand-Archive ./SDL2-devel.zip .
 Rename-Item "./SDL2-2.26.2" ./SDL2
 Remove-Item ./SDL2-devel.zip
+
+# TODO: FIGURE OUT HOW TO GET GLAD TO DOWNLOAD HERE
