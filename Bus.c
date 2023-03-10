@@ -303,18 +303,9 @@ void Bus_Reset(Bus* bus) {
 }
 
 int Bus_SaveState(Bus* bus) {
-    // FIXME: THIS WILL BE BUSTED BECAUSE OF NO DEEP SAVE ON THE MAPPER
-
-    // FIXME: YOU SHOULD SAVE THE CARTRIDGE BEFORE THE PPU OR ELSE YOU WILL
-    // READ THE WRONG TILES
-
+    // FIXME: WE SHOULD STILL ACQUIRE THE LOCK HERE FOR SAFETY
     // The state of none of these things should change since we have the
     // savestate lock, which prevents clocking
-
-    // FIXME: THIS IS BUSTED AS FOR EACH POINTER IN EACH STRUCT
-    // YOU WOULD NEED TO SAVE ITS DATA AS WELL
-    // THIS MAY BE MOTIVATION TO CONVERT SOME OF THE POINTERS THAT ARE NOT
-    // SHARED TO SIMPLY HOLD THE ACTUAL OBJECT
 
     // TODO: CHECK FOR NO STATE MUTATIONS DURING SAVING
     //       THERE SHOULD BE NONE
@@ -326,87 +317,113 @@ int Bus_SaveState(Bus* bus) {
     fwrite(bus, sizeof(Bus), 1, savestate);
 
     // Save CPU state along with the opcode of the instruction
-    // so we can load it later, as the mem addr of the
-    // instruction ptr will be diff between runs
     fwrite(bus->cpu, sizeof(CPU), 1, savestate);
     fwrite(&bus->cpu->instr->opcode, sizeof(uint8_t), 1, savestate);
 
     // Save APU state
-    // No deep copying necessary, as APU will only hold ptr to bus, which
-    // will have to be dynamically rewritten at load time
-    // FIXME: CONVERT INTERNAL APU PTRS TO HOLD THE OBJECT ITSELF
     fwrite(bus->apu, sizeof(APU), 1, savestate);
 
-    // Save Cart state (which will also save the mapper state)
-    // ROM header will be rewritten to not be a reference so as to make this
-    // Less annoying
-    // Mapper will have to load funcitons and all other pointers at load time
+    // Save Cart state (deepcopying rom_path, prg_rom, and chr_rom)
     fwrite(bus->cart, sizeof(Cart), 1, savestate);
+    int rom_path_len = strlen(bus->cart->rom_path) + 1;
+    fwrite(&rom_path_len, sizeof(int), 1, savestate);
 
-    // Perform a deep copy of the prg_rom and chr_rom
-    fwrite(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
-    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
-    fwrite(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
+    fwrite(bus->cart->rom_path, sizeof(char) * rom_path_len, 1, savestate);
+    fwrite(bus->cart->prg_rom, sizeof(uint8_t),
+        bus->cart->metadata.prg_rom_size * 0x4000, savestate);
+    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1
+        : bus->cart->metadata.chr_rom_size;
+    fwrite(bus->cart->chr_rom, sizeof(uint8_t),
+        chr_rom_chunks * 0x2000, savestate);
+
+    // Save Mapper state (deepcopying mapper_class)
     fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
+    fwrite(bus->cart->mapper->mapper_class,
+        Mapper_GetSize(bus->cart->mapper->id), 1, savestate);
 
-    // Save Appropriate size based on the mapper
-    fwrite(bus->cart->mapper->mapper_class, Mapper_GetSize(bus->cart->mapper), 1, savestate);
-
-    // Save PPU state, we need to make a new mutex at load time, as
-    // deep copying the mutex is a pain in the butt without diving into
-    // its internals (which are not defined in a .h file)
-    // Also need to have bus ref and oam_ptr be set at load time
-    // At load time we will need to acquire the current PPU frame_buffer_lock
-    // to avoid a scenario where the window gets the frame_buffer_lock to render
-    // pixels, but then tries to release the lock after we have changed it to
-    // the new lock, causing an error
+    // Save the PPU state
     fwrite(bus->ppu, sizeof(PPU), 1, savestate);
-
-    // No deepcopies should be necessary if we load a save made during this
-    // run, so we can test for a somewhat right load with the pointers
 
     fclose(savestate);
 }
 
 int Bus_LoadState(Bus* bus) {
-    // Trivial loading that should only work when run during the same
-    // instance of our emulation (wont' work if close and reopen)
-    // because we are reading pointers
-    // This is a good test of our abilities though
-
+    // FIXME: I SHOULD HAVE TO ACQUIRE ALL THE LOCKS IN ORDER
+    // TO DO THIS AS EVEN THOUGH WE DON'T CLOCK, IF WE RUN THE DISASSEMBLER
+    // OR THE PALETTE VIEWER, THERE COULD BE A LOCK HOLDING SCENARIO
     FILE* savestate = fopen("../saves/savestate.bin", "rb");
 
-    // At the end, we will have to memcpy a new bus to the old bus
+    // Bus
+    SDL_mutex* controller_lock_addr = bus->controller_input_lock;
+    SDL_mutex* save_state_lock_addr = bus->save_state_lock;
+    CPU* cpu_addr = bus->cpu;
+    PPU* ppu_addr = bus->ppu;
+    Cart* cart_addr = bus->cart;
+    APU* apu_addr = bus->apu;
+
     fread(bus, sizeof(Bus), 1, savestate);
 
+    bus->controller_input_lock = controller_lock_addr;
+    bus->save_state_lock = save_state_lock_addr;
+    bus->cpu = cpu_addr;
+    bus->ppu = ppu_addr;
+    bus->cart = cart_addr;
+    bus->apu = apu_addr;
+
     // CPU
+    SDL_mutex* pc_lock_addr = bus->cpu->pc_lock;
     fread(bus->cpu, sizeof(CPU), 1, savestate);
     uint8_t opcode;
     fread(&opcode, sizeof(uint8_t), 1, savestate);
+    bus->cpu->instr = CPU_Decode(opcode);
+    bus->cpu->pc_lock = pc_lock_addr;
+    bus->cpu->bus = bus;
 
     // APU
     fread(bus->apu, sizeof(APU), 1, savestate);
+    bus->apu->bus = bus;
 
-    // Cart/Mapper
+    // Cart
+    Mapper* mapper_addr = bus->cart->mapper;
+    uint8_t* prg_rom_addr = bus->cart->prg_rom;
+    uint8_t* chr_rom_addr = bus->cart->chr_rom;
     fread(bus->cart, sizeof(Cart), 1, savestate);
+    int rom_path_len;
+    fread(&rom_path_len, sizeof(int), 1, savestate);
+    // FIXME: MEMORY LEAK
+    bus->cart->rom_path = malloc(sizeof(char) * rom_path_len);
+    fread(bus->cart->rom_path, sizeof(char) * rom_path_len, 1, savestate);
 
     // Load chr_rom and prg_rom
-    // TODO: THIS WORKS, BUT IT WOULDN'T IF BUS HADN'T ALREADY BEEN REINITIALIZED
-    // WITH THE CURRENT # OF PRG_BANKS
-    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
+    bus->cart->prg_rom = prg_rom_addr;
+    bus->cart->chr_rom = chr_rom_addr;
+    bus->cart->prg_rom = realloc(bus->cart->prg_rom,
+        sizeof(uint8_t) * bus->cart->metadata.prg_rom_size * 0x4000);
     size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
+    bus->cart->chr_rom = realloc(bus->cart->chr_rom,
+        sizeof(uint8_t) * chr_rom_chunks * 0x2000);
+
+    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
+
     fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
+    bus->cart->mapper = mapper_addr;
 
-    // FIXME: THIS WILL ONLY WORK IF YOU ARE PLAYING ON THE SAME MAPPER TYPE
-    // OTHERWISE YOU WILL NEED TO REALLOCATE THE SPACE FOR THE SUBCLASS
-    // FIXME: YOU WOULD ALSO NEED TO GET THE SIZE FROM THE MAPPER_ID AND
-    // NOT THE MAPPER ITSELF
+    void* mapper_class_addr = bus->cart->mapper->mapper_class;
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
-    fread(bus->cart->mapper->mapper_class, Mapper_GetSize(bus->cart->mapper), 1, savestate);
+    size_t mapper_class_size = Mapper_GetSize(bus->cart->mapper->id);
+    bus->cart->mapper->mapper_class = mapper_class_addr;
+    bus->cart->mapper->mapper_class = realloc(bus->cart->mapper->mapper_class, mapper_class_size);
+    fread(bus->cart->mapper->mapper_class, mapper_class_size, 1, savestate);
+    Mapper_AssignCartridge(bus->cart->mapper, bus->cart);
 
+    SDL_mutex* frame_buffer_lock_addr = bus->ppu->frame_buffer_lock;
     fread(bus->ppu, sizeof(PPU), 1, savestate);
+    bus->ppu->frame_buffer_lock = frame_buffer_lock_addr;
+    bus->ppu->bus = bus;
+    bus->ppu->oam_ptr = (uint8_t*)bus->ppu->oam;
 
     fclose(savestate);
+
 
 
     // MASSIVE SIMPLIFICATION

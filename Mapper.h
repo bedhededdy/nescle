@@ -34,7 +34,8 @@ bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr);
 bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
-size_t Mapper_GetSize(Mapper* mapper);
+size_t Mapper_GetSize(uint8_t id);
+void Mapper_AssignCartridge(Mapper* mapper, Cart* cart);
 
 #ifdef __cplusplus
 }

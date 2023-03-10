@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -35,7 +36,7 @@ enum cart_mirror_mode {
 
 // ROM file header in iNES (.nes) format
 struct cart_rom_header {
-    char name[4];           // Should always say NES followed by DOS EOF
+    uint8_t name[4];           // Should always say NES followed by DOS EOF
     uint8_t prg_rom_size;   // One chunk = 16kb
     uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
     uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
@@ -43,13 +44,13 @@ struct cart_rom_header {
     uint8_t prg_ram_size;   // Apparently rarely used
     uint8_t tv_system1;     // Apparently rarely used
     uint8_t tv_system2;     // Apparently rarely used
-    char padding[5];        // Unused padding
+    uint8_t padding[5];        // Unused padding
 };
 
 struct cart {
     Cart_ROMHeader metadata;
 
-    const char* rom_path;
+    char* rom_path;
     // TODO: I DON'T KNOW IF THIS IS THE BEST PLACE FOR THIS
     Cart_MirrorMode mirror_mode;
     // Maybe reducable to a bool that just checks for NES 2.0 or not

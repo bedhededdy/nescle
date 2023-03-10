@@ -208,10 +208,10 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
     return res;
 }
 
-size_t Mapper_GetSize(Mapper* mapper) {
+size_t Mapper_GetSize(uint8_t id) {
     size_t res;
 
-    switch (mapper->id) {
+    switch (id) {
     case 0:
         res = sizeof(Mapper000);
         break;
@@ -237,4 +237,30 @@ size_t Mapper_GetSize(Mapper* mapper) {
     }
 
     return res;
+}
+
+void Mapper_AssignCartridge(Mapper* mapper, Cart* cart) {
+    switch (mapper->id) {
+    case 0:
+        ((Mapper000*)mapper->mapper_class)->SetCart(cart);
+        break;
+    case 1:
+        ((Mapper001*)mapper->mapper_class)->SetCart(cart);
+        break;
+    case 2:
+        ((Mapper002*)mapper->mapper_class)->SetCart(cart);
+        break;
+    case 3:
+        ((Mapper003*)mapper->mapper_class)->SetCart(cart);
+        break;
+    case 7:
+        ((Mapper007*)mapper->mapper_class)->SetCart(cart);
+        break;
+    case 66:
+        ((Mapper066*)mapper->mapper_class)->SetCart(cart);
+        break;
+
+    default:
+        break;
+    }
 }
