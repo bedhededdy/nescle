@@ -19,10 +19,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 #define APU_SAMPLING_RATE 44100
 

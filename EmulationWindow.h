@@ -16,7 +16,7 @@
 #include <SDL.h>
 #include <imgui.h>
 #include <glad/glad.h>
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 class EmulationWindow {
 private:

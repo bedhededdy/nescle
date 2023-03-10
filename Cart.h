@@ -19,10 +19,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 #define CART_CHR_ROM_CHUNK_SIZE 0x2000
 #define CART_PRG_ROM_CHUNK_SIZE 0x4000

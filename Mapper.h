@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 struct mapper {
     uint8_t id;

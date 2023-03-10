@@ -19,9 +19,8 @@ extern "C" {
 #endif
 #pragma once
 
-#include <stdint.h>
 #include <SDL_mutex.h>
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 /*
  * Flags for the status register (bit 6 is unused, but should always be 1)

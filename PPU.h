@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2023 Edward C. Pinkston
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,19 +11,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma once
-
-#include <stdbool.h>
-#include <stdint.h>
 
 #include <SDL_mutex.h>
 
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 #define PPU_NAMETBL_SIZE    (1024 * 1)
 #define PPU_PATTERNTBL_SIZE (1024 * 4)
@@ -67,7 +65,7 @@ extern "C" {
 
 #define PPU_STATUS_VBLANK               (1 << 7)
 #define PPU_STATUS_SPR_HIT              (1 << 6)
-#define PPU_STATUS_SPR_OVERFLOW         (1 << 5)    
+#define PPU_STATUS_SPR_OVERFLOW         (1 << 5)
 
 // Some fields of the loopy registers use multiple bits, so we use these
 // bitmasks to access them
@@ -185,7 +183,7 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr);
 bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data);
 uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr);
 bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data);
-// Reads the ppu register without changing the state 
+// Reads the ppu register without changing the state
 // (when reading from the ppu registers, some of them actually change state)
 uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr);
 

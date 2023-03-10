@@ -18,12 +18,9 @@ extern "C" {
 #endif
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
 #include <SDL_mutex.h>
 
-#include "MyTypes.h"
+#include "NESCLETypes.h"
 
 /* UNCOMMENT IF YOU HAVE NOT IMPLEMENTED THE MAPPER */
 //#define BUS_NO_MAPPER
