@@ -26,29 +26,27 @@
  Requirements:
  * CMake 3.15+
  * A C/C++ compiler that supports C11+ and C++11+
+ * A build system
  * A graphics card that supports OpenGL 3.3+
 
  This software makes use of the following third-party libraries:
  * SDL2 under the terms and conditions of the [zlib license](https://www.libsdl.org/license.php)
- * ImGUI under the terms and conditions of the [MIT license](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
- * tinyfiledialogs under the terms and conditions of the zlib license
+ * Dear ImGui under the terms and conditions of the [MIT license](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
+ * Native File Dialog Extended under the terms and conditions of the [zlib license](https://github.com/btzy/nativefiledialog-extended/blob/master/LICENSE)
 
 ## Installation
-### Windows
-1. Run [install.ps1](install.ps1) from a PowerShell prompt
-2. Create a directory in which you would like to store your build of nescle
-3. cd into that directory and run `cmake --build .`
-4. You must install the OpenGL Loader (glad) yourself, as there is no
-static link to download it. There are many tutorials for how to do this.
-Just build a 3.3 Core profile loader, and extract the archive to the
-root directory.
-4. Run NESCLE with `./nescle`
-
-### Linux
-1. Run [install.sh](install.sh) from your terminal
-2. Create a directory in which you would like to store your build of nescle
-3. cd into that directory and run `cmake --build .`
-4. Run NESCLE with `./nescle`
+Installing NESCLE is extremely easy. The only tricky part is that
+you will need to manually install glad. Everything else will be
+handled for you by CMake. But if you follow the following steps,
+everything should be A-Okay
+1. Go to the following [link](https://glad.dav1d.de/)
+2. Under the gl dropdown, select Version 3.3
+3. Under the Profile dropdown, select Core
+4. Click generate
+5. Download and extract the zip file to the root directory of the project and make sure the directory you extract to is named "glad"
+6. Create a build directory and cd into it
+7. Run `cmake --build ..`
+8. To run NESCLE, just type ./nescle
 
  ## Acknowledgements
  I would like to provide a massive thank you to javidx9 (aka the One Lone Coder) for his excellent YouTube series
