@@ -837,12 +837,13 @@ void emulate(void)
 {
     uint64_t initial_time = SDL_GetTicks64();
     Bus *bus = Bus_CreateNES();
-    if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
-        return;
+    // if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
+        // return;
+    // FIXME: COMMENTING OUT THIS MAY HAVE UNINTENDED SIDE EFFECTS
     Bus_PowerOn(bus);
     Bus_SetSampleFrequency(bus, 44100);
     // FIXME: RUN_EMULATION SHOULD BE AN ATOMIC VARIABLE
-    bus->run_emulation = true;
+    bus->run_emulation = false;
 
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;

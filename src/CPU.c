@@ -21,6 +21,7 @@
 
 #include "Bus.h"
 #include "PPU.h"
+#include "Cart.h"
 
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
 //#define DISASSEMBLY_LOG
@@ -884,7 +885,8 @@ void CPU_NMI(CPU* cpu) {
 // https://www.nesdev.org/wiki/CPU_power_up_state
 void CPU_Reset(CPU* cpu) {
     // Set internal state to hard-coded reset values
-    cpu->pc = Bus_Read16(cpu->bus, 0xfffc);
+    if (cpu->bus->cart->mapper != NULL)
+        cpu->pc = Bus_Read16(cpu->bus, 0xfffc);
 
     /*
      * Technically the SP just decrements by 3 for no reason, but that could
