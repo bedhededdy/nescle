@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: YOU MAY BE ABLE TO FIX SOME OF THIS BOILERPLATE CODE BY USING
+//       TEMPLATES.
 #include "Mapper.h"
 
 #include <stdlib.h>
