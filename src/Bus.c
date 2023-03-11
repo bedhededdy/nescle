@@ -67,6 +67,7 @@ Bus* Bus_CreateNES(void) {
     apu->bus = bus;
 
     bus->audio_sample = 0.0;
+    bus->run_emulation = false;
 
     return bus;
 }
@@ -300,6 +301,7 @@ void Bus_Reset(Bus* bus) {
     bus->dma_data = 0;
     bus->dma_transfer = false;
     bus->dma_dummy = true;
+    // bus->run_emulation = false;
 }
 
 int Bus_SaveState(Bus* bus) {

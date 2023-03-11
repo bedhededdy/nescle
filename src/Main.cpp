@@ -808,19 +808,23 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
     int count = 0;
     SDL_LockMutex(bus->save_state_lock);
     while (count < len/sizeof(int16_t)) {
-       while (!Bus_Clock(bus)) {
-            if (bus->ppu->frame_complete) {
-                // frame_count++;
-                // printf("%d\n", frame_count);
-                bus->ppu->frame_complete = false;
-                // SDL_Log("Frametime: %d\n", (int)(t1 - g_frametime_begin));
+        if (bus->run_emulation) {
+            while (!Bus_Clock(bus)) {
+                    if (bus->ppu->frame_complete) {
+                        // frame_count++;
+                        // printf("%d\n", frame_count);
+                        bus->ppu->frame_complete = false;
+                        // SDL_Log("Frametime: %d\n", (int)(t1 - g_frametime_begin));
 
+                    }
             }
-       }
 
-        // Since each volume is given as a percentage, we must multiply
-        // by 32767 to get the maximum value for a 16-bit sample
-        my_stream[count] = 32767 * bus->audio_sample;
+            // Since each volume is given as a percentage, we must multiply
+            // by 32767 to get the maximum value for a 16-bit sample
+            my_stream[count] = 32767 * bus->audio_sample;
+        } else {
+            my_stream[count] = 0;
+        }
         count++;
     }
     SDL_UnlockMutex(bus->save_state_lock);
@@ -837,6 +841,8 @@ void emulate(void)
         return;
     Bus_PowerOn(bus);
     Bus_SetSampleFrequency(bus, 44100);
+    // FIXME: RUN_EMULATION SHOULD BE AN ATOMIC VARIABLE
+    bus->run_emulation = true;
 
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;
@@ -946,7 +952,8 @@ void emulate(void)
                     emuWin.IncrementPalette();
                     break;
                 case SDLK_SPACE:
-                    run_emulation = !run_emulation;
+                    // FIXME: THIS SHOULD HAVE A LOCK ON IT/BE ATOMIC
+                    bus->run_emulation = !bus->run_emulation;
                     break;
 
                 case SDLK_w:

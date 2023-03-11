@@ -33,6 +33,7 @@ Cart* Cart_Create(void) {
 }
 
 void Cart_Destroy(Cart* cart) {
+    // FIXME: NULL CHECKS ARE UNNECESSARY
     if (cart->mapper != NULL)
         Mapper_Destroy(cart->mapper);
     if (cart->prg_rom != NULL)
@@ -43,7 +44,28 @@ void Cart_Destroy(Cart* cart) {
 }
 
 
+// FIXME: THIS LEAKS MEMORY ON EACH ROM LOAD AS WE NEVER FREE THE PREVIOUS
+// CHAR ROM OR PRG ROM
 bool Cart_LoadROM(Cart* cart, const char* path) {
+    // Check for null path or path.equals("")
+    if (path == NULL || path[0] == '\0') {
+        printf("Cart_LoadROM: invalid path\n");
+        return false;
+    }
+
+    // FIXME: THERE IS A BIG PROBLEM HERE THAT THIS WILL CRASH IF NOT GIVEN
+    // A ROM AND I DON'T KNOW WHY
+    // PROBABLY NEED TO SET SOME THINGS TO PREVENT READING FORM BAD ADDR???
+
+    // Check that file is a .nes file
+
+    // FIXME: THIS CAN SEGFAULT (MAYBE???)
+    const char* ext = strrchr(path, '.');
+    if (strcmp(ext, ".nes") != 0) {
+        printf("Cart_LoadROM: invalid file type\n");
+        return false;
+    }
+
     // Open ROM file in read-binary mode
     FILE* rom = fopen(path, "rb");
 

@@ -31,6 +31,7 @@
 #include "Bus.h"
 
 void EmulationWindow::render_main_gui(Bus* bus) {
+    bool show_popup = false;
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("File"))
@@ -40,9 +41,13 @@ void EmulationWindow::render_main_gui(Bus* bus) {
                 char *rom = tinyfd_openFileDialog("Select ROM", NULL,
                                                   0, NULL, NULL, 0);
                 SDL_LockMutex(bus->save_state_lock);
-                if (!Cart_LoadROM(bus->cart, rom))
-                    return;
-                Bus_Reset(bus);
+                if (!Cart_LoadROM(bus->cart, rom)) {
+                    bus->run_emulation = false;
+                    show_popup = true;
+                } else {
+                    bus->run_emulation = true;
+                    Bus_Reset(bus);
+                }
                 SDL_UnlockMutex(bus->save_state_lock);
             }
             if (ImGui::MenuItem("Save state", "Ctrl+S")) {
@@ -94,6 +99,24 @@ void EmulationWindow::render_main_gui(Bus* bus) {
     {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                      "EmulationWindow::Show(): unable to create MainMenuBar");
+    }
+
+    if (show_popup) {
+        SDL_Log("showing popup\n");
+        ImGui::OpenPopup("Error");
+    }
+    // FIXME: THIS DOESN'T SHOW UP
+    // MAYBE HAVE TO JUST SET A FLAG AND THEN SHOW IT OUTSIDE OF THE MENU CREATION
+    if (ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Unable to load ROM");
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    } else {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                     "EmulationWindow::Show(): Unable to create Error popup");
     }
 }
 
