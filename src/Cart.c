@@ -22,6 +22,8 @@
 #include "PPU.h"
 #include "Mapper.h"
 
+#include <nfd.h>
+
 Cart* Cart_Create(void) {
     Cart* cart = malloc(sizeof(Cart));
     if (cart == NULL)
@@ -29,6 +31,7 @@ Cart* Cart_Create(void) {
     cart->mapper = NULL;
     cart->prg_rom = NULL;
     cart->chr_rom = NULL;
+    cart->rom_path = NULL;
     return cart;
 }
 
@@ -42,10 +45,19 @@ void Cart_Destroy(Cart* cart) {
 
 // FIXME: THIS LEAKS MEMORY ON EACH ROM LOAD AS WE NEVER FREE THE PREVIOUS
 // CHAR ROM OR PRG ROM
+// SOLUTION: USE REALLOC AND ENSURE THAT THE POINTERS ARE SET TO NULL
+// FIXME: THERE ARE VARIOUS PATHS THAT DO NOT FREE THE PATH, BUT IT IS
+// REASONALBE TO ASSUME THAT THE USER WON'T GIVE ME 1000 BAD ROMS IN A ROW
+// SO I WILL NOT FIX THIS FOR NOW
 bool Cart_LoadROM(Cart* cart, const char* path) {
     // Check for null path or path.equals("")
     if (path == NULL || path[0] == '\0') {
         printf("Cart_LoadROM: invalid path\n");
+
+        // Free path if it exists
+        if (cart->rom_path != NULL)
+            NFD_FreePath(cart->rom_path);
+
         return false;
     }
 
@@ -182,6 +194,11 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     cart->file_type = file_type;
 
     // FIXME: DEAL WITH THE CONSTNESS ISSUE HERE
+
+    // FIXME: THIS HAS HAS NOT BEEN TESTED AT ALL
+    // Free previous path if it exists
+    if (cart->rom_path != NULL)
+        NFD_FreePath(cart->rom_path);
     cart->rom_path = path;
 
     // Don't forget to close the file and return true

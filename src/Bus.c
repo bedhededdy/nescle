@@ -290,6 +290,8 @@ void Bus_PowerOn(Bus* bus) {
     bus->audio_time = 0.0;
 }
 
+// FIXME: SHOULD PROBABLY HAVE A MAPPER RESET AS WELL AND MAYBE FOR THE
+// CART TOO?
 void Bus_Reset(Bus* bus) {
     // Contents of RAM do not clear on reset
     PPU_Reset(bus->ppu);

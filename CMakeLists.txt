@@ -1,10 +1,10 @@
-# TODO: USE FETCH CONTENT IN HERE
-# TO AVOID NEEDING A SEPARATE INSTALL
-# SCRIPT
-
-# TODO: IT MAY BE A BETTER IDEA TO KEEP OUR OWN COPIES OF THE DEPENDENCIES
-# INSTEAD OF DOWNLOADING THEM AND THEN WE CAN JUST ADD CMAKE.TXT TO THE SUBDIRS
-# AND ADD THEM AS SUBDIRECTORIES
+# TODO: TO BUILD GLEW WITH CMAKE, YOU WOULD HAVE TO MANUALLY
+# RUN THE INSTALL COMMAND ON GLEW BEFORE RUNNING CMAKE ON
+# THIS PROJECT. THIS IS BECAUSE GLEW DOES NOT SUPPORT
+# USING FIND_PACKAGE FROM ITS BUILD TREE (IT WILL LOOK
+# FOR AN INCLUDE DIRECTORY THAT DOESN'T EXIST). SINCE
+# GLEW WOULD ALSO REQUIRE MANUAL INTERVENTION FROM THE USER
+# I TOLERATE FORCING THE USER TO INSTALL GLAD THEMSELVES
 
 #
 # Copyright 2023 Edward C. Pinkston
@@ -35,10 +35,6 @@ set(CMAKE_C_VERSION 11)
 set(CMAKE_C_VERSION_REQUIRED true)
 set(CMAKE_C_EXTENSIONS OFF)
 
-project(nescle)
-
-# Set compiler flags
-
 # Fetch nativefiledialog
 include(FetchContent)
 FetchContent_Declare(nativefiledialog
@@ -46,6 +42,10 @@ FetchContent_Declare(nativefiledialog
   GIT_TAG        master
 )
 FetchContent_MakeAvailable(nativefiledialog)
+
+# Set compiler flags
+
+project(nescle)
 
 # Download imgui as a zip (if it isn't here)
 if (NOT EXISTS ${PROJECT_SOURCE_DIR}/imgui)
@@ -139,7 +139,7 @@ find_package(OpenGL REQUIRED)
 # Add nescle as executable
 set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
-set(NESCLE_SRC Bus.c Cart.c CPU.c
+set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.cpp
       EmulationWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper007.cpp Mapper066.cpp)
@@ -156,10 +156,11 @@ add_executable(nescle ${SRC})
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
                                  PUBLIC ${IMGUI_INC})
 target_include_directories(glad PUBLIC ${GLAD_INC})
+
 target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
 
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
 target_link_libraries(glad PRIVATE opengl32)
 target_link_libraries(nescle PRIVATE glad nfd
-   PUBLIC imgui ${SDL2_LIBRARIES} opengl32 )
+   PUBLIC imgui ${SDL2_LIBRARIES} opengl32)

@@ -73,6 +73,8 @@
 
 #include "EmulationWindow.h"
 
+#include "Emulator.h"
+
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
 //        OF HARD-CODING IT
 #define INSPECT_RENDER_RESOLUTION_X ((256 + 134) * 2)
@@ -125,33 +127,6 @@ void render_tile_with_provided_color(SDL_Texture* texture,
 
     // FIXME: SLOW, SHOULD USE SDL_LockTexture
     SDL_UpdateTexture(texture, &area, pixels, 8*sizeof(uint32_t));
-}
-
-// Tests the functionality of the CPU with nestest with working mapper000
-void test_cpu_with_mapper() {
-    Bus* bus = Bus_CreateNES();
-    CPU* cpu = bus->cpu;
-    PPU* ppu = bus->ppu;
-    Cart* cart = bus->cart;
-
-    if (bus == NULL)
-        return;
-
-    // load rom into the cartridge
-    if (!Cart_LoadROM(cart, "roms/nestest.nes"))
-        return;
-
-    Bus_PowerOn(bus);
-
-    cpu->pc = 0xc000;
-    cpu->addr_eff = 0xc000;
-    cpu->instr = CPU_Decode(0x4c);
-
-    for (int ct = 0; ct < 8991; ) {
-        if (cpu->cycles_rem == 0)
-            ct++;
-        CPU_Clock(cpu);
-    }
 }
 
 int char_to_tile(char ch) {
@@ -226,61 +201,6 @@ int render_text(SDL_Texture* texture, const uint8_t* chr_mem, const char* text,
     // Return where we left off so it is easy to make consecutive renders
     // on the same line, if necessary
     return pos_x;
-}
-
-void render_sprpatterntbl(SDL_Texture* texture, PPU* ppu, uint8_t palette) {
-    PPU_GetPatternTable(ppu, 0, palette);
-    PPU_GetPatternTable(ppu, 1, palette);
-
-    // Render the first half
-    SDL_Rect rect1 = {2, 10, 128, 128};
-    SDL_UpdateTexture(texture, &rect1, ppu->sprpatterntbl[0], sizeof(uint32_t) * PPU_TILE_X * PPU_TILE_NBYTES);
-
-    // Render the second half
-    SDL_Rect rect2 = {132, 10, 128, 128};
-    SDL_UpdateTexture(texture, &rect2, ppu->sprpatterntbl[1], sizeof(uint32_t) * PPU_TILE_X * PPU_TILE_NBYTES);
-}
-
-void render_pattern_memory(SDL_Texture* texture, PPU* ppu, uint8_t palette) {
-    // render the palettes (8 palettes each with 4 colors)
-
-    // TODO: REWRITE ME, BUT THIS IS A PITA TO DO WITH TEXTURES
-    //       COULD TRY PASSING THE RENDERER AND USING RENDERDRAWRECT
-    //       BUT THAT COULD HAVE TERRIBLE PERFORMANCE LIKE RENDER DRAW POINT DID
-    /*
-    SDL_Rect rect;
-    rect.x = 2;
-    rect.y = 2;
-    rect.w = 6;
-    rect.h = 6;
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 4; j++) {
-            uint32_t px = PPU_GetColorFromPalette(ppu, i, j);
-            SDL_FillRect(surface, &rect, px);
-            rect.x += 6;
-        }
-
-        if (i == palette) {
-            // white highlight
-            SDL_Rect top = {rect.x - 26, 0, 28, 2};
-            SDL_Rect bottom = {rect.x - 26, 8, 28, 2};
-            SDL_Rect left = {rect.x - 26, 0, 2, 8};
-            SDL_Rect right = { rect.x, 0, 2, 8 };
-
-            uint32_t color = 0xffffffff;
-
-            SDL_FillRect(surface, &top, color);
-            SDL_FillRect(surface, &bottom, color);
-            SDL_FillRect(surface, &left, color);
-            SDL_FillRect(surface, &right, color);
-        }
-
-        rect.x += 6;
-    }
-    */
-
-    // render the pattern memory
-    render_sprpatterntbl(texture, ppu, palette);
 }
 
 void render_oam(SDL_Texture* texture, PPU* ppu, const uint8_t* char_set) {
@@ -622,175 +542,6 @@ uint8_t* load_char_set() {
     return char_mem;
 }
 
-void render_ppu_gpu(SDL_Renderer* renderer, SDL_Texture* texture, PPU* ppu) {
-    if (SDL_LockMutex(ppu->frame_buffer_lock)) {
-        printf("render_ppu_gpu: unable to acquire mutex\n");
-        return;
-    }
-
-    // FIXME: INVESTIGATE DOING THIS AS A TEXTURE LOCK/UNLOCK
-    SDL_UpdateTexture(texture, NULL, ppu->frame_buffer,
-        PPU_RESOLUTION_X * sizeof(uint32_t));
-
-    if (SDL_UnlockMutex(ppu->frame_buffer_lock)) {
-        printf("render_ppu_gpu: unable to unlock mutex\n");
-        return;
-    }
-}
-
-void set_renderer_hints() {
-    if (SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1") == SDL_TRUE)
-        printf("Render Batching enabled\n");
-    else
-        printf("Render Batching disabled\n");
-    if (SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0") != SDL_TRUE)
-        printf("Scale Quality not nearest neighbor\n");
-}
-
-void create_window_and_renderer(SDL_Window** window, SDL_Renderer** renderer) {
-    // Create window with renderer
-    *window = SDL_CreateWindow("Nescle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        INSPECT_OUTPUT_RESOLUTION_X, INSPECT_OUTPUT_RESOLUTION_Y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
-    if (*window == NULL) return;
-
-    set_renderer_hints();
-    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED
-        | SDL_RENDERER_PRESENTVSYNC);
-    if (*renderer == NULL) return;
-
-    // Check that ARGB8888 is supported
-    SDL_RendererInfo renderer_info;
-    if (SDL_GetRendererInfo(*renderer, &renderer_info)) return;
-    printf("Video Backend: %s\n", renderer_info.name);
-
-    bool argb8888 = false;
-    for (uint32_t i = 0; i < renderer_info.num_texture_formats; i++) {
-        if (renderer_info.texture_formats[i] == SDL_PIXELFORMAT_ARGB8888) {
-            argb8888 = true;
-            break;
-        }
-    }
-    if (!argb8888) return;
-}
-
-/*
-#pragma region tests
-// You need the volatiles here, eventually you may need to modify your code
-// for the multithreaded verison by making some things volatile
-int thread_test_fn(void* data) {
-    volatile bool* b = data;
-    *b = false;
-    while (*b == false);
-    *b = false;
-}
-
-void thread_test() {
-    volatile bool b = true;
-    SDL_Thread* thread = SDL_CreateThread(thread_test_fn, "Test", &b);
-
-    while (b == true);
-    b = true;
-    while (b == true);
-
-
-
-    printf("success\n");
-}
-
-int atomic_thread_test_fn(void* data) {
-    SDL_atomic_t* b = data;
-    SDL_AtomicSet(b, 0);
-    while (SDL_AtomicGet(b) == 0);
-    SDL_AtomicSet(b, 1);
-}
-
-void atomic_thread_test() {
-    SDL_atomic_t quit;
-    SDL_AtomicSet(&quit, 1);
-
-    SDL_Thread* thread = SDL_CreateThread(atomic_thread_test_fn, "Test", &quit);
-
-    while (SDL_AtomicGet(&quit) == 1) {
-        printf("spinlock\n");
-    }
-    SDL_AtomicSet(&quit, 0);
-    while (SDL_AtomicGet(&quit) == 1);
-
-    printf("success\n");
-}
-
-struct mutex_thread_test_struct {
-    SDL_mutex* mutex;
-    bool ping;
-};
-
-int mutex_thread_test_fn(void* data) {
-    struct mutex_thread_test_struct* arg = data;
-
-    SDL_LockMutex(arg->mutex);
-    arg->ping = false;
-    SDL_UnlockMutex(arg->mutex);
-
-    SDL_LockMutex(arg->mutex);
-    while (arg->ping == false) {
-        printf("spinlock3\n");
-        SDL_UnlockMutex(arg->mutex);
-        SDL_LockMutex(arg->mutex);
-    }
-    SDL_UnlockMutex(arg->mutex);
-
-    SDL_LockMutex(arg->mutex);
-    arg->ping = true;
-    SDL_UnlockMutex(arg->mutex);
-}
-
-void mutex_thread_test() {
-    SDL_mutex* mutex = SDL_CreateMutex();
-    bool ping = true;
-
-    struct mutex_thread_test_struct arg = { mutex, ping };
-    SDL_Thread* thread = SDL_CreateThread(mutex_thread_test_fn, "Test", &arg);
-
-    // Theoretically this code could get stuck forever
-    // if I always manage to reaquire before the
-    // other thread gets a chance
-    // This is really why we should use signals
-    // to signal that we can check a shared variable
-
-    // For performance in real world scenarios, you
-    // should probably spinlock here
-    // spinlock is in the SDL_atomic header
-    // but it is possible that SDL_mutex is a hybrid lock
-    // that is, it will spin shortly before sleeping
-    SDL_LockMutex(arg.mutex);
-    while (arg.ping == true) {
-        printf("spinlock1\n");
-        SDL_UnlockMutex(arg.mutex);
-
-        SDL_LockMutex(arg.mutex);
-        //printf("spinlock\n");
-    }
-    SDL_UnlockMutex(arg.mutex);
-    SDL_LockMutex(arg.mutex);
-    arg.ping = false;
-    SDL_UnlockMutex(arg.mutex);
-    SDL_LockMutex(arg.mutex);
-    while (arg.ping == true) {
-        printf("spinlock2\n");
-        SDL_UnlockMutex(arg.mutex);
-
-        SDL_LockMutex(arg.mutex);
-    }
-    SDL_UnlockMutex(arg.mutex);
-
-    printf("success\n");
-
-    SDL_WaitThread(thread, NULL);
-    SDL_DestroyMutex(mutex);
-}
-#pragma endregion tests
-*/
-
 struct audio_callback_struct {
 
 };
@@ -1041,7 +792,7 @@ int main(int argc, char** argv) {
 
     //          MAYBE ALSO A SPR OVRFLOW BUG
 
-    // We randomly get stukc in this code
+    // We randomly get stukc in this code in Mario
     /*
     Sprite0Clr:    lda PPU_STATUS            ;wait for sprite 0 flag to clear, which will
                and #%01000000            ;not happen until vblank has ended
@@ -1052,55 +803,10 @@ int main(int argc, char** argv) {
                jsr MoveSpritesOffscreen
                jsr SpriteShuffler*/
 
-/*
     // somehow addres 0x0776 is becoming one without us pressing pause
 
     // MAYBE DISASSEMBLER AND SPR0 DON'T PLAY NICE, BECAUSE I CAN ALWAYS ENABLE SPR0
     // AND WHEN I DO I DON'T SEEM TO HAVE THE BUG
-
-    /* cmdline flags */
-    // -w   width of the window     (default to 256)
-    // -h   height of the window    (default to 240)
-    // -r   path to ROM             required argument
-
-    // getopt is not supported by msvc, as it is in the unistd header
-    // so we have to manually parse the args
-    // later this will hopefully be gui and i won't have to worry about this
-    // i assume that the user uses the program correctly
-
-    // maxpath defined in windows header which i don't wanna use
-    // its value is 260, so i define it here
-    //char working_directory[260];
-    //if (_getcwd(working_directory, 260) == NULL)
-    //    return 1;
-    //puts(working_directory);
-
-
-    // CHANGE TO NULL FOR NON-DEBUGGING PURPOSES
-    const char* rom_path = "";
-    int w = PPU_RESOLUTION_X;
-    int h = PPU_RESOLUTION_Y;
-    for (int i = 1; i < argc; i++) {
-        // can't do switch for non-integral type
-        // don't feel like writing a hashing function, so just use an if-else
-        if (strcmp(argv[i], "-w") == 0) {
-            w = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-h") == 0) {
-            h = atoi(argv[++i]);
-        }
-        else if (strcmp(argv[i], "-r") == 0) {
-            rom_path = argv[++i];
-        }
-        else {
-            printf("Unrecognized flag: %s\n", argv[i]);
-        }
-    }
-
-    if (rom_path == NULL) {
-        printf("Fatal error: ROM path not supplied\n");
-        return 1;
-    }
 
     // breaks unless run from a certain directory
     // elegant solution: assume a linux like structure
@@ -1113,18 +819,12 @@ int main(int argc, char** argv) {
     //               if I have a resource the binary needs
     //               I need to know where I am installed
     //               (for instance nestest for loading the font)
-    // FIXME: HOW TF DOES THIS WRITE TO CHR_RAM WITHOUT ME DETECTING IT
 
     // FAILS LEFT CLIP SPR0 HIT TEST IWTH CODE 4
     // FAILS RIGHT EDGE WITH CODE 2
     // FAILS TIMING WITH CODE 3
     // FAILS EDGE TIMING WITH CODE 3
-    // char const* filter_patterns[] = { "*.nes" };
-    // char const* rom = tinyfd_openFileDialog("Select ROM",
-    //     "", 1, filter_patterns, NULL, 0);
 
-    // audio_test();
     emulate();
-
     return 0;
 }

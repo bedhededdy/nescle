@@ -38,9 +38,7 @@ void EmulationWindow::render_main_gui(Bus* bus) {
         {
             if (ImGui::MenuItem("Open ROM", "Ctrl+O"))
             {
-                // FIXME: LEAKING MEMORY, SHOULD CALL NFD_FREEPATH
-                // WHEN DONE WITH ROM
-                // ALSO NEED TO CAST ROM SAFELY TO CONST CHAR*
+                // FIXME: ALSO NEED TO CAST ROM SAFELY TO CONST CHAR*
                 nfdchar_t *rom;
                 nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
                 nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);

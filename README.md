@@ -26,7 +26,7 @@
  Requirements:
  * CMake 3.15+
  * A C/C++ compiler that supports C11+ and C++11+
- * A build system
+ * A C/C++ build system that supports C11+ and C++11+
  * A graphics card that supports OpenGL 3.3+
 
  This software makes use of the following third-party libraries:
@@ -35,17 +35,17 @@
  * Native File Dialog Extended under the terms and conditions of the [zlib license](https://github.com/btzy/nativefiledialog-extended/blob/master/LICENSE)
 
 ## Installation
-Installing NESCLE is extremely easy. The only tricky part is that
+Installing NESCLE is simple. The only tricky part is that
 you will need to manually install glad. Everything else will be
 handled for you by CMake. But if you follow the following steps,
 everything should be A-Okay
-1. Go to the following [link](https://glad.dav1d.de/)
-2. Under the gl dropdown, select Version 3.3
-3. Under the Profile dropdown, select Core
-4. Click generate
-5. Download and extract the zip file to the root directory of the project and make sure the directory you extract to is named "glad"
-6. Create a build directory and cd into it
-7. Run `cmake --build ..`
+1. Go to the following [link](https://glad.dav1d.de/#language=c&specification=gl&api=gl%3D3.3&api=gles1%3Dnone&api=gles2%3Dnone&api=glsc2%3Dnone&profile=core&loader=on)
+2. Scroll to the bottom and click generate
+3. Download and extract the zip file to the root directory of the project and make sure the directory you extract to is named "glad"
+4. Create a build directory and cd into it
+5. Run `cmake ..`
+6. Run `cmake --build .`
+7. Copy SDL2.dll to the build directory from SDL2/lib/x64/SDL2.dll
 8. To run NESCLE, just type ./nescle
 
  ## Acknowledgements
