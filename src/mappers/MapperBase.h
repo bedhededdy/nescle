@@ -2,13 +2,14 @@
 
 #include "../Cart.h"
 
-class MapperBase
-{
+class MapperBase {
 protected:
     uint8_t id;
     Cart *cart;
 
 public:
+    virtual ~MapperBase() = default;
+
     void SetCart(Cart *cart) { this->cart = cart; }
 
     virtual uint8_t MapCPURead(uint16_t addr) = 0;

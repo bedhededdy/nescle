@@ -22,7 +22,7 @@
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
 
-#include <tinyfiledialogs.h>
+#include <nfd.h>
 
 #include <SDL.h>
 
@@ -38,8 +38,21 @@ void EmulationWindow::render_main_gui(Bus* bus) {
         {
             if (ImGui::MenuItem("Open ROM", "Ctrl+O"))
             {
-                char *rom = tinyfd_openFileDialog("Select ROM", NULL,
-                                                  0, NULL, NULL, 0);
+                // FIXME: LEAKING MEMORY, SHOULD CALL NFD_FREEPATH
+                // WHEN DONE WITH ROM
+                // ALSO NEED TO CAST ROM SAFELY TO CONST CHAR*
+                nfdchar_t *rom;
+                nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
+                nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
+
+                if (result == NFD_OKAY) {
+                } else if (result == NFD_CANCEL) {
+                    rom = NULL;
+                } else {
+                    rom = NULL;
+                    SDL_Log("Error opening file: %s\n", NFD_GetError());
+                }
+
                 SDL_LockMutex(bus->save_state_lock);
                 if (!Cart_LoadROM(bus->cart, rom)) {
                     bus->run_emulation = false;
@@ -318,6 +331,8 @@ EmulationWindow::EmulationWindow(int w, int h) {
     //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
     // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
+    NFD_Init();
+
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL |
@@ -366,6 +381,8 @@ EmulationWindow::EmulationWindow(int w, int h) {
 }
 
 EmulationWindow::~EmulationWindow() {
+    NFD_Quit();
+
     // TODO: MISSING OPENGL CLEANUP
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();

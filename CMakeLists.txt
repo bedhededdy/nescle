@@ -39,9 +39,39 @@ project(nescle)
 
 # Set compiler flags
 
-# Build tinyfiledialogs as a library
-set(TINY_DIR ${PROJECT_SOURCE_DIR}/tinyfiledialogs)
-add_library(tinyfiledialogs STATIC ${TINY_DIR}/tinyfiledialogs.c)
+# Fetch nativefiledialog
+include(FetchContent)
+FetchContent_Declare(nativefiledialog
+  GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(nativefiledialog)
+
+# Download imgui as a zip (if it isn't here)
+if (NOT EXISTS ${PROJECT_SOURCE_DIR}/imgui)
+   file(DOWNLOAD
+      "https://github.com/ocornut/imgui/archive/refs/heads/docking.zip"
+      ${PROJECT_SOURCE_DIR}/imgui.zip
+      STATUS download_status)
+
+   if (NOT download_status)
+      message(FATAL_ERROR "Failed to download imgui")
+   endif()
+
+   # Unzip imgui
+   if (WIN32)
+      message(STATUS "Unzipping imgui on Windows")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/imgui.zip
+                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+      execute_process(COMMAND ${CMAKE_COMMAND} -E rename imgui-docking imgui
+                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+      # Remove imgui.zip
+      file(REMOVE ${PROJECT_SOURCE_DIR}/imgui.zip)
+   else()
+      message(STATUS "Unzipping imgui on Linux")
+      #execute_process(COMMAND unzip ${PROJECT_SOURCE_DIR}/imgui.zip -d ${PROJECT_SOURCE_DIR}/imgui)
+   endif()
+endif()
 
 # Build ImGui as a library
 set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/imgui)
@@ -64,6 +94,32 @@ PREPEND(IMGUI_SRC ${IMGUI_DIR} ${IMGUI_SRC})
 PREPEND(IMGUI_BACKENDS ${IMGUI_BACKENDS_DIR} ${IMGUI_BACKENDS})
 
 add_library(imgui STATIC ${IMGUI_SRC} ${IMGUI_BACKENDS})
+
+# Download SDL2 libraries (don't build from source)
+if (NOT EXISTS ${PROJECT_SOURCE_DIR}/SDL2)
+   file(DOWNLOAD
+      "https://www.libsdl.org/release/SDL2-devel-2.26.4-VC.zip"
+      ${PROJECT_SOURCE_DIR}/SDL2.zip
+      STATUS download_status)
+
+   if (NOT download_status)
+      message(FATAL_ERROR "Failed to download SDL2")
+   endif()
+
+   # Unzip SDL2
+   if (WIN32)
+      message(STATUS "Unzipping SDL2 on Windows")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/SDL2.zip
+                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+      execute_process(COMMAND ${CMAKE_COMMAND} -E rename SDL2-2.26.4 SDL2
+                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+      # Remove SDL2.zip
+      file(REMOVE ${PROJECT_SOURCE_DIR}/SDL2.zip)
+   else()
+      message(STATUS "Unzipping SDL2 on Linux")
+      #execute_process(COMMAND unzip ${PROJECT_SOURCE_DIR}/SDL2.zip -d ${PROJECT_SOURCE_DIR}/SDL2)
+   endif()
+endif()
 
 # Locate SDL libraries
 set(SDL2_DIR ${PROJECT_SOURCE_DIR}/SDL2/cmake)
@@ -105,5 +161,5 @@ target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
 target_link_libraries(glad PRIVATE opengl32)
-target_link_libraries(nescle PRIVATE tinyfiledialogs glad
-   PUBLIC imgui ${SDL2_LIBRARIES} opengl32)
+target_link_libraries(nescle PRIVATE glad nfd
+   PUBLIC imgui ${SDL2_LIBRARIES} opengl32 )

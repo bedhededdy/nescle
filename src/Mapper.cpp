@@ -59,155 +59,24 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
 }
 
 void Mapper_Destroy(Mapper* mapper) {
-    switch (mapper->id) {
-    case 0:
-        delete (Mapper000*)mapper->mapper_class;
-        break;
-    case 1:
-        delete (Mapper001*)mapper->mapper_class;
-        break;
-    case 2:
-        delete (Mapper002*)mapper->mapper_class;
-        break;
-    case 3:
-        delete (Mapper003*)mapper->mapper_class;
-        break;
-    case 7:
-        delete (Mapper007*)mapper->mapper_class;
-        break;
-    case 66:
-        delete (Mapper066*)mapper->mapper_class;
-        break;
-
-    default:
-        break;
-    }
-
+    delete (MapperBase*)mapper->mapper_class;
     free(mapper);
 }
 
 uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {
-    uint8_t res;
-
-    switch (mapper->id) {
-    case 0:
-        res = ((Mapper000*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-    case 1:
-        res = ((Mapper001*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-    case 2:
-        res = ((Mapper002*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-    case 3:
-        res = ((Mapper003*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-    case 7:
-        res = ((Mapper007*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-    case 66:
-        res = ((Mapper066*)mapper->mapper_class)->MapCPURead(addr);
-        break;
-
-    default:
-        res = 0;
-        break;
-    }
-
-    return res;
+    return ((MapperBase*)mapper->mapper_class)->MapCPURead(addr);
 }
 
 bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    bool res;
-
-    switch (mapper->id) {
-    case 0:
-        res = ((Mapper000*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-    case 1:
-        res = ((Mapper001*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-    case 2:
-        res = ((Mapper002*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-    case 3:
-        res = ((Mapper003*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-    case 7:
-        res = ((Mapper007*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-    case 66:
-        res = ((Mapper066*)mapper->mapper_class)->MapCPUWrite(addr, data);
-        break;
-
-    default:
-        res = false;
-        break;
-    }
-
-    return res;
+    return ((MapperBase*)mapper->mapper_class)->MapCPUWrite(addr, data);
 }
 
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr) {
-    uint8_t res;
-
-    switch (mapper->id) {
-    case 0:
-        res = ((Mapper000*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-    case 1:
-        res = ((Mapper001*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-    case 2:
-        res = ((Mapper002*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-    case 3:
-        res = ((Mapper003*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-    case 7:
-        res = ((Mapper007*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-    case 66:
-        res = ((Mapper066*)mapper->mapper_class)->MapPPURead(addr);
-        break;
-
-    default:
-        res = 0;
-        break;
-    }
-
-    return res;
+    return ((MapperBase*)mapper->mapper_class)->MapPPURead(addr);
 }
 
 bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    bool res;
-
-    switch (mapper->id) {
-    case 0:
-        res = ((Mapper000*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-    case 1:
-        res = ((Mapper001*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-    case 2:
-        res = ((Mapper002*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-    case 3:
-        res = ((Mapper003*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-    case 7:
-        res = ((Mapper007*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-    case 66:
-        res = ((Mapper066*)mapper->mapper_class)->MapPPUWrite(addr, data);
-        break;
-
-    default:
-        res = false;
-        break;
-    }
-
-    return res;
+    return ((MapperBase*)mapper->mapper_class)->MapPPUWrite(addr, data);
 }
 
 size_t Mapper_GetSize(uint8_t id) {
@@ -242,27 +111,5 @@ size_t Mapper_GetSize(uint8_t id) {
 }
 
 void Mapper_AssignCartridge(Mapper* mapper, Cart* cart) {
-    switch (mapper->id) {
-    case 0:
-        ((Mapper000*)mapper->mapper_class)->SetCart(cart);
-        break;
-    case 1:
-        ((Mapper001*)mapper->mapper_class)->SetCart(cart);
-        break;
-    case 2:
-        ((Mapper002*)mapper->mapper_class)->SetCart(cart);
-        break;
-    case 3:
-        ((Mapper003*)mapper->mapper_class)->SetCart(cart);
-        break;
-    case 7:
-        ((Mapper007*)mapper->mapper_class)->SetCart(cart);
-        break;
-    case 66:
-        ((Mapper066*)mapper->mapper_class)->SetCart(cart);
-        break;
-
-    default:
-        break;
-    }
+    ((MapperBase*)mapper->mapper_class)->SetCart(cart);
 }
