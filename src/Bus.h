@@ -78,8 +78,6 @@ struct bus {
     double time_per_clock;
     double audio_time;
 
-    bool run_emulation;
-
     // How many system ticks have elapsed (PPU clocks at the same rate as the Bus)
     uint64_t clocks_count;
 };

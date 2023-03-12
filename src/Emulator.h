@@ -1,20 +1,29 @@
 #pragma once
 
-#include <SDL_atomic.h>
-#include "Bus.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-class Emulator {
-private:
-    Bus* bus;
+#include <SDL_audio.h>
+#include <SDL_mutex.h>
 
-    SDL_atomic_t quit;
-    SDL_atomic_t run_emulation;
+#include "NESCLETypes.h"
 
-public:
-    Emulator();
-    ~Emulator();
+struct emulator {
+    Bus* nes;
+    SDL_mutex* nes_state_lock;
 
-    void Loop();
+    SDL_AudioSpec audio_settings;
+    SDL_AudioDeviceID audio_device;
 
-
+    // FIXME: MAYBE THESE SHOULD BE ATOMICS
+    bool quit;
+    bool run_emulation;
 };
+
+Emulator* Emulator_Create(void);
+void Emulator_Destroy(Emulator* emu);
+
+#ifdef __cplusplus
+}
+#endif

@@ -67,7 +67,6 @@ Bus* Bus_CreateNES(void) {
     apu->bus = bus;
 
     bus->audio_sample = 0.0;
-    bus->run_emulation = false;
 
     return bus;
 }

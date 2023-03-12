@@ -28,9 +28,13 @@
 
 #include "PPU.h"
 #include "Cart.h"
+#include "Emulator.h"
 #include "Bus.h"
 
-void EmulationWindow::render_main_gui(Bus* bus) {
+// FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
+void EmulationWindow::render_main_gui(Emulator* emu) {
+    Bus* bus = emu->nes;
+
     bool show_popup = false;
     if (ImGui::BeginMainMenuBar())
     {
@@ -53,10 +57,10 @@ void EmulationWindow::render_main_gui(Bus* bus) {
 
                 SDL_LockMutex(bus->save_state_lock);
                 if (!Cart_LoadROM(bus->cart, rom)) {
-                    bus->run_emulation = false;
+                    emu->run_emulation = false;
                     show_popup = true;
                 } else {
-                    bus->run_emulation = true;
+                    emu->run_emulation = true;
                     Bus_Reset(bus);
                 }
                 SDL_UnlockMutex(bus->save_state_lock);
@@ -390,14 +394,16 @@ EmulationWindow::~EmulationWindow() {
     SDL_DestroyWindow(window);
 }
 
-void EmulationWindow::Show(Bus* bus) {
+void EmulationWindow::Show(Emulator* emu) {
+    Bus* bus = emu->nes;
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
     glUseProgram(main_shader);
 
-    render_main_gui(bus);
+    render_main_gui(emu);
 
     if (show_disassembler)
         render_disassembler();

@@ -546,6 +546,7 @@ struct audio_callback_struct {
 
 };
 
+/*
 void audio_callback(void* userdata, uint8_t* stream, int len) {
     Bus* bus = (Bus*)userdata;
     int16_t* my_stream = (int16_t*)stream;
@@ -584,54 +585,62 @@ void audio_callback(void* userdata, uint8_t* stream, int len) {
     // TAKE 735 SAMPLES IN A BUFFER FOR PUSHING APPROXIMATELY ONCE PER FRAME
 }
 
+*/
+
 void emulate(void)
 {
     uint64_t initial_time = SDL_GetTicks64();
-    Bus *bus = Bus_CreateNES();
-    // if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
-        // return;
-    // FIXME: COMMENTING OUT THIS MAY HAVE UNINTENDED SIDE EFFECTS
-    Bus_PowerOn(bus);
-    Bus_SetSampleFrequency(bus, 44100);
-    // FIXME: RUN_EMULATION SHOULD BE AN ATOMIC VARIABLE
-    bus->run_emulation = false;
+    //Bus *bus = Bus_CreateNES();
+    //// if (!Cart_LoadROM(bus->cart, "../roms/ducktales.nes"))
+    //    // return;
+    //// FIXME: COMMENTING OUT THIS MAY HAVE UNINTENDED SIDE EFFECTS
+    //Bus_PowerOn(bus);
+    //Bus_SetSampleFrequency(bus, 44100);
+    //// FIXME: RUN_EMULATION SHOULD BE AN ATOMIC VARIABLE
+    //bus->run_emulation = false;
 
+
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    Emulator* emulator = Emulator_Create();
+
+    Bus* bus = emulator->nes;
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;
 
-    // TIMER MAY BE UNNEEDED
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    Bus_PowerOn(bus);
+    Bus_SetSampleFrequency(bus, 44100);
 
-    SDL_AudioSpec audio_spec = {0};
-    audio_spec.freq = 44100;
-    audio_spec.channels = 1;
-    // SUBJECT TO CHANGE
-    audio_spec.format = AUDIO_S16SYS;
-    // FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
-    // AS 60 GOES INTO 44100 735 TIMES
-    // MAY WANT TO INVESTIGATE A 256 BYTE BUFFER TO GET CLOSER
-    // TO PUSHING A FRAME WHEN WE SHOULD
-    // TODO: IN MY TESTING 256 ACTUALLY YIELDS BETTER PERFORMANCE, ESPECIALLY
-    // IN SUPER MARIO BROS. WHERE SCREEN SCROLLING IS VERY FAST
-    audio_spec.samples = 512;
-    audio_spec.callback = &audio_callback;
-    audio_spec.userdata = bus;
+    //SDL_AudioSpec audio_spec = {0};
+    //audio_spec.freq = 44100;
+    //audio_spec.channels = 1;
+    //// SUBJECT TO CHANGE
+    //audio_spec.format = AUDIO_S16SYS;
+    //// FIXME: MUST BE 512 OR ELSE WE WILL START DROPPING FRAMES
+    //// AS 60 GOES INTO 44100 735 TIMES
+    //// MAY WANT TO INVESTIGATE A 256 BYTE BUFFER TO GET CLOSER
+    //// TO PUSHING A FRAME WHEN WE SHOULD
+    //// TODO: IN MY TESTING 256 ACTUALLY YIELDS BETTER PERFORMANCE, ESPECIALLY
+    //// IN SUPER MARIO BROS. WHERE SCREEN SCROLLING IS VERY FAST
+    //audio_spec.samples = 512;
+    //audio_spec.callback = &audio_callback;
+    //audio_spec.userdata = bus;
 
-    SDL_AudioSpec obtained;
-    SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
-        0, &audio_spec, &obtained, 0);
+    //SDL_AudioSpec obtained;
+    //SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL,
+    //    0, &audio_spec, &obtained, 0);
 
     EmulationWindow emuWin = EmulationWindow(256 * 3, 240 * 3);
 
-    bool quit = false;
+    // bool quit = false;
 
     // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
     // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
-    bool run_emulation = false;
+    // bool run_emulation = false;
 
-    SDL_PauseAudioDevice(device, 0);
+    // SDL_PauseAudioDevice(device, 0);
 
-    while (!quit)
+    // FIXME: PROBABLY SHOUDL CHANGE THIS TO AN ATOMIC VARIABLE
+    while (!emulator->quit)
     {
         uint64_t t0 = SDL_GetTicks64();
 
@@ -642,7 +651,7 @@ void emulate(void)
             switch (event.type)
             {
             case SDL_QUIT:
-                quit = true;
+                emulator->quit = true;
                 break;
             case SDL_KEYDOWN:
                 SDL_LockMutex(bus->controller_input_lock);
@@ -705,7 +714,7 @@ void emulate(void)
                     break;
                 case SDLK_SPACE:
                     // FIXME: THIS SHOULD HAVE A LOCK ON IT/BE ATOMIC
-                    bus->run_emulation = !bus->run_emulation;
+                    emulator->run_emulation = !emulator->run_emulation;
                     break;
 
                 case SDLK_w:
@@ -743,7 +752,7 @@ void emulate(void)
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_CLOSE:
                     if (event.window.windowID == emuWin.GetWindowID())
-                        quit = true;
+                        emulator->quit = true;
                     break;
                 }
                 break;
@@ -756,7 +765,7 @@ void emulate(void)
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,
         // but we will not show the updates visually
-        emuWin.Show(bus);
+        emuWin.Show(emulator);
 
         // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
         // if (frametime < 16)
@@ -772,7 +781,7 @@ void emulate(void)
     }
 
     printf("Total time elapsed: %d\n", (int)(SDL_GetTicks64() - initial_time));
-    SDL_CloseAudioDevice(device);
+    // SDL_CloseAudioDevice(device);
     SDL_Quit();
 }
 

@@ -50,7 +50,7 @@ private:
     void render_disassembler();
     void render_oam();
     void render_pattern(Bus* bus);
-    void render_main_gui(Bus* bus);
+    void render_main_gui(Emulator* emu);
 
     void setup_main_frame();
     void setup_palette_frame();
@@ -59,7 +59,7 @@ public:
     EmulationWindow(int w, int h);
     ~EmulationWindow();
 
-    void Show(Bus* bus);
+    void Show(Emulator* emu);
     void IncrementPalette();
     uint32_t GetWindowID();
 };
