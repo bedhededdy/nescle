@@ -104,7 +104,6 @@ struct ppu {
     // it expects the pixels as linear arrays
     uint32_t screen[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
     uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
-    SDL_mutex* frame_buffer_lock;
 
     uint8_t nametbl[2][PPU_NAMETBL_SIZE];   // nes supported 2, 1kb nametables
     // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS

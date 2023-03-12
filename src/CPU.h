@@ -91,7 +91,6 @@ struct cpu_instr {
 /* Emulated 6502 CPU */
 struct cpu {
     Bus* bus;
-    SDL_mutex* pc_lock;
 
     // Registers
     uint8_t a;      // Accumulator

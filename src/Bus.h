@@ -64,9 +64,6 @@ struct bus {
     bool dma_transfer;
     bool dma_dummy;
 
-    SDL_mutex* controller_input_lock;
-    SDL_mutex* save_state_lock;
-
     CPU* cpu;
     PPU* ppu;
     Cart* cart;

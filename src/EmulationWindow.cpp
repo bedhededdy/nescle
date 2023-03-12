@@ -55,7 +55,6 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                     SDL_Log("Error opening file: %s\n", NFD_GetError());
                 }
 
-                SDL_LockMutex(bus->save_state_lock);
                 if (!Cart_LoadROM(bus->cart, rom)) {
                     emu->run_emulation = false;
                     show_popup = true;
@@ -63,17 +62,12 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                     emu->run_emulation = true;
                     Bus_Reset(bus);
                 }
-                SDL_UnlockMutex(bus->save_state_lock);
             }
             if (ImGui::MenuItem("Save state", "Ctrl+S")) {
-                SDL_LockMutex(bus->save_state_lock);
                 Bus_SaveState(bus);
-                SDL_UnlockMutex(bus->save_state_lock);
             }
             if (ImGui::MenuItem("Load state", "Ctrl+L")) {
-                SDL_LockMutex(bus->save_state_lock);
                 Bus_LoadState(bus);
-                SDL_UnlockMutex(bus->save_state_lock);
             }
             ImGui::EndMenu();
         }
@@ -420,7 +414,6 @@ void EmulationWindow::Show(Emulator* emu) {
 
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
-	SDL_LockMutex(bus->ppu->frame_buffer_lock);
     // Since x86 is big endian, we can get away with this, but this should
     // be changed. Unfortunately, there is no way to do this but to
     // check the endianness of the machine and change the lookup table
@@ -430,7 +423,6 @@ void EmulationWindow::Show(Emulator* emu) {
     // flipping the bytes on a little endian machine
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
         GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->frame_buffer);
-	SDL_UnlockMutex(bus->ppu->frame_buffer_lock);
 
     glBindVertexArray(main_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

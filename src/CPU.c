@@ -784,14 +784,10 @@ CPU* CPU_Create(void) {
     CPU* cpu = malloc(sizeof(CPU));
     if (cpu == NULL)
         return NULL;
-    cpu->pc_lock = SDL_CreateMutex();
-    if (cpu->pc_lock == NULL)
-        return NULL;
     return cpu;
 }
 
 void CPU_Destroy(CPU* cpu) {
-    SDL_DestroyMutex(cpu->pc_lock);
     free(cpu);
 }
 
@@ -807,8 +803,6 @@ void CPU_Clock(CPU* cpu) {
     // TODO: ATTEMPT TO AVOID LOCKING ON EVERY INSTRUCTION
     if (cpu->cycles_rem == 0) {
         // Don't let disassembler run while in middle of instruction
-        if (SDL_LockMutex(cpu->pc_lock))
-            printf("CPU_Clock: failed to acquire mutex\n");
         // Fetch
         uint8_t op = Bus_Read(cpu->bus, cpu->pc++);
 
@@ -823,8 +817,6 @@ void CPU_Clock(CPU* cpu) {
         // Execute
         CPU_SetAddrMode(cpu);
         CPU_Execute(cpu);
-        if (SDL_UnlockMutex(cpu->pc_lock))
-            printf("CPU_Clock: failed to unlock mutex\n");
     }
 
     // Countdown
@@ -1255,8 +1247,6 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     // but probably better to just release lock later
     // Since there is low contention for locks, this
     // probably performs better as well
-    if (SDL_LockMutex(cpu->pc_lock))
-        printf("CPU_GenerateOpStartingAddrs: failed to acquire mutex\n");
     uint16_t pc = cpu->pc;
 
     // Fill with first 27 instructions
@@ -1287,8 +1277,6 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
             ret[ret_len - 1] = addr;
         }
     }
-    if (SDL_UnlockMutex(cpu->pc_lock))
-        printf("CPU_GenerateOpStartingAddrs: failed to unlock mutex\n");
 
     for (int i = 0; i < ret_len/2; i++)
         for (int j = 1; j < 27; j++)

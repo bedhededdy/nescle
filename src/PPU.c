@@ -321,16 +321,10 @@ PPU* PPU_Create(void) {
     PPU* ppu = malloc(sizeof(PPU));
     if (ppu == NULL)
         return NULL;
-    ppu->frame_buffer_lock = SDL_CreateMutex();
-    if (ppu->frame_buffer_lock == NULL) {
-        printf("PPU_Create: unable to create mutex\n");
-        return NULL;
-    }
     return ppu;
 }
 
 void PPU_Destroy(PPU* ppu) {
-    SDL_DestroyMutex(ppu->frame_buffer_lock);
     free(ppu);
 }
 
@@ -713,14 +707,10 @@ break;
             // so we copy the current screen to the frame buffer here
 
             // Don't want to write to buffer if renderer is still rendering
-            if (SDL_LockMutex(ppu->frame_buffer_lock))
-                printf("PPU_Clock: could not acquire mutex\n");
 
             // Copy the new frame to the frame_buffer
             memcpy(ppu->frame_buffer, ppu->screen, sizeof(ppu->screen));
 
-            if (SDL_UnlockMutex(ppu->frame_buffer_lock))
-                printf("PPU_Clock: could not release mutex\n");
         }
     }
     else {

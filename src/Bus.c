@@ -31,17 +31,10 @@ Bus* Bus_Create(void) {
     if (bus == NULL)
         return NULL;
 
-    bus->controller_input_lock = SDL_CreateMutex();
-    bus->save_state_lock = SDL_CreateMutex();
-    if (bus->controller_input_lock == NULL || bus->save_state_lock == NULL)
-        return NULL;
-
     return bus;
 }
 
 void Bus_Destroy(Bus* bus) {
-    SDL_DestroyMutex(bus->controller_input_lock);
-    SDL_DestroyMutex(bus->save_state_lock);
     free(bus);
 }
 
@@ -172,14 +165,10 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
 
         // We need to make sure that we are not currently polling user
         // input when we copy current controller state to the shift register
-        if (SDL_LockMutex(bus->controller_input_lock))
-            printf("Bus_Write: Unable to acquire controller lock\n");
         if (addr == 0x4016)
             bus->controller1_shifter = bus->controller1;
         else
             bus->controller2_shifter = bus->controller2;
-        if (SDL_UnlockMutex(bus->controller_input_lock))
-            printf("Bus_Write: Unable to release controller lock\n");
         return true;
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
@@ -360,8 +349,6 @@ int Bus_LoadState(Bus* bus) {
     FILE* savestate = fopen("../saves/savestate.bin", "rb");
 
     // Bus
-    SDL_mutex* controller_lock_addr = bus->controller_input_lock;
-    SDL_mutex* save_state_lock_addr = bus->save_state_lock;
     CPU* cpu_addr = bus->cpu;
     PPU* ppu_addr = bus->ppu;
     Cart* cart_addr = bus->cart;
@@ -369,20 +356,16 @@ int Bus_LoadState(Bus* bus) {
 
     fread(bus, sizeof(Bus), 1, savestate);
 
-    bus->controller_input_lock = controller_lock_addr;
-    bus->save_state_lock = save_state_lock_addr;
     bus->cpu = cpu_addr;
     bus->ppu = ppu_addr;
     bus->cart = cart_addr;
     bus->apu = apu_addr;
 
     // CPU
-    SDL_mutex* pc_lock_addr = bus->cpu->pc_lock;
     fread(bus->cpu, sizeof(CPU), 1, savestate);
     uint8_t opcode;
     fread(&opcode, sizeof(uint8_t), 1, savestate);
     bus->cpu->instr = CPU_Decode(opcode);
-    bus->cpu->pc_lock = pc_lock_addr;
     bus->cpu->bus = bus;
 
     // APU
@@ -422,9 +405,7 @@ int Bus_LoadState(Bus* bus) {
     fread(bus->cart->mapper->mapper_class, mapper_class_size, 1, savestate);
     Mapper_AssignCartridge(bus->cart->mapper, bus->cart);
 
-    SDL_mutex* frame_buffer_lock_addr = bus->ppu->frame_buffer_lock;
     fread(bus->ppu, sizeof(PPU), 1, savestate);
-    bus->ppu->frame_buffer_lock = frame_buffer_lock_addr;
     bus->ppu->bus = bus;
     bus->ppu->oam_ptr = (uint8_t*)bus->ppu->oam;
 

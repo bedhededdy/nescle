@@ -640,13 +640,22 @@ void emulate(void)
     // SDL_PauseAudioDevice(device, 0);
 
     // FIXME: PROBABLY SHOUDL CHANGE THIS TO AN ATOMIC VARIABLE
+
+
+
+    // FIXME: YOU NEED TO ACQUIRE THE GLOBAL STATE LOCK HERE
+    // YOU CAN OPTIMIZE LATER BY DOING THIS IN THE EMULATION WINDOW
+    // AND THUS YOU CAN RELEASE THE LOCK BEFORE THE DRAW CALLS
+
     while (!emulator->quit)
     {
         uint64_t t0 = SDL_GetTicks64();
 
         SDL_Event event;
+        SDL_LockMutex(emulator->nes_state_lock);
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
+
 
             switch (event.type)
             {
@@ -654,7 +663,6 @@ void emulate(void)
                 emulator->quit = true;
                 break;
             case SDL_KEYDOWN:
-                SDL_LockMutex(bus->controller_input_lock);
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_w:
@@ -685,10 +693,8 @@ void emulate(void)
                 default:
                     break;
                 }
-                SDL_UnlockMutex(bus->controller_input_lock);
                 break;
             case SDL_KEYUP:
-                SDL_LockMutex(bus->controller_input_lock);
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_c:
@@ -745,7 +751,6 @@ void emulate(void)
                 default:
                     break;
                 }
-                SDL_UnlockMutex(bus->controller_input_lock);
                 break;
 
             case SDL_WINDOWEVENT:
@@ -766,6 +771,7 @@ void emulate(void)
         // we still emulate since the emulation is on the audio thread,
         // but we will not show the updates visually
         emuWin.Show(emulator);
+        SDL_UnlockMutex(emulator->nes_state_lock);
 
         // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
         // if (frametime < 16)
