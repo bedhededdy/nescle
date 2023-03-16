@@ -19,73 +19,12 @@
 extern "C" {
 #endif
 
-#include <SDL_mutex.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
+#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
-
-#define PPU_NAMETBL_SIZE    (1024 * 1)
-#define PPU_PATTERNTBL_SIZE (1024 * 4)
-#define PPU_PALETTE_SIZE    (32)
-
-#define PPU_OAM_SIZE        (64)
-
-#define PPU_TILE_NBYTES     (16)
-#define PPU_TILE_X          (8)
-#define PPU_TILE_Y          (8)
-
-#define PPU_SPR_PER_LINE    (8)
-
-#define PPU_NAMETBL_X       (32)
-#define PPU_NAMETBL_Y       (32)
-
-#define PPU_RESOLUTION_X    (256)
-#define PPU_RESOLUTION_Y    (240)
-
-#define PPU_CHR_ROM_OFFSET  (0X0000)    // Pattern memory (sprites)
-#define PPU_NAMETBL_OFFSET  (0X2000)    // Nametbl memory (vram)
-#define PPU_PALETTE_OFFSET  (0X3F00)    // Palette memory (colors)
-
-#define PPU_CTRL_NMI                    (1 << 7)
-#define PPU_CTRL_MASTER_SLAVE           (1 << 6)
-#define PPU_CTRL_SPR_HEIGHT             (1 << 5)
-#define PPU_CTRL_BG_TILE_SELECT         (1 << 4)
-#define PPU_CTRL_SPR_TILE_SELECT        (1 << 3)
-#define PPU_CTRL_INCREMENT_MODE         (1 << 2)
-#define PPU_CTRL_NAMETBL_SELECT_Y       (1 << 1)
-#define PPU_CTRL_NAMETBL_SELECT_X       (1 << 0)
-
-#define PPU_MASK_COLOR_EMPHASIS_BLUE    (1 << 7)
-#define PPU_MASK_COLOR_EMPHASIS_GREEN   (1 << 6)
-#define PPU_MASK_COLOR_EMPHASIS_RED     (1 << 5)
-#define PPU_MASK_SPR_ENABLE             (1 << 4)
-#define PPU_MASK_BG_ENABLE              (1 << 3)
-#define PPU_MASK_SPR_LEFT_COLUMN_ENABLE (1 << 2)
-#define PPU_MASK_BG_LEFT_COLUMN_ENABLE  (1 << 1)
-#define PPU_MASK_GREYSCALE              (1 << 0)
-
-#define PPU_STATUS_VBLANK               (1 << 7)
-#define PPU_STATUS_SPR_HIT              (1 << 6)
-#define PPU_STATUS_SPR_OVERFLOW         (1 << 5)
-
-// Some fields of the loopy registers use multiple bits, so we use these
-// bitmasks to access them
-#define PPU_LOOPY_COARSE_X              (0x1f)
-#define PPU_LOOPY_COARSE_Y              (0x1f << 5)
-#define PPU_LOOPY_NAMETBL_X             (1 << 10)
-#define PPU_LOOPY_NAMETBL_Y             (1 << 11)
-#define PPU_LOOPY_FINE_Y                (0x7000)
-
-// Wrapper for PPU double buffer
-//struct ppu_double_buffer {
-//    uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
-//    SDL_mutex* frame_buffer_lock;
-//}
-
-// Wrapper for PPU triple buffer
-//struct ppu_triple_buffer {
-//    uint32_t frame_buffer[2][PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
-//    int buffer_to_write;
-//}
 
 // Sprite (OAM) information container
 struct ppu_oam {
@@ -189,6 +128,9 @@ uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr);
 /* Public Helper Functions */
 uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel);
 void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette);
+
+bool PPU_SaveState(PPU* ppu, FILE* file);
+bool PPU_LoadState(PPU* ppu, FILE* file);
 
 #ifdef __cplusplus
 }

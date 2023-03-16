@@ -20,3 +20,9 @@ uint8_t Mapper001::MapPPURead(uint16_t addr) {
 bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
+
+void Mapper001::SaveToDisk(FILE* file) {
+}
+
+void Mapper001::LoadFromDisk(FILE* file) {
+}

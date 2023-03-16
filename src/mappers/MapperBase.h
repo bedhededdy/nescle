@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdio.h>
 #include "../Cart.h"
 
 class MapperBase {
@@ -16,4 +17,7 @@ public:
     virtual bool MapCPUWrite(uint16_t addr, uint8_t data) = 0;
     virtual uint8_t MapPPURead(uint16_t addr) = 0;
     virtual bool MapPPUWrite(uint16_t addr, uint8_t data) = 0;
+
+    virtual void SaveToDisk(FILE* file) = 0;
+    virtual void LoadFromDisk(FILE* file) = 0;
 };

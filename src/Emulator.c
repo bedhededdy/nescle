@@ -51,6 +51,7 @@ Emulator* Emulator_Create(void) {
     desired_spec.freq = 44100;
     desired_spec.format = AUDIO_S16SYS;
     desired_spec.channels = 1;
+    // TODO: LET THE USER CHOOSE THIS
     desired_spec.samples = 512;
     desired_spec.callback = &audio_callback;
     desired_spec.userdata = emu;
@@ -74,6 +75,7 @@ Emulator* Emulator_Create(void) {
 
 void Emulator_Destroy(Emulator* emu) {
     SDL_DestroyMutex(emu->nes_state_lock);
+    SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
     free(emu);
 }

@@ -19,10 +19,13 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-#define CART_CHR_ROM_CHUNK_SIZE 0x2000
-#define CART_PRG_ROM_CHUNK_SIZE 0x4000
 
 typedef enum cart_mirror_mode {
     CART_MIRRORMODE_HORZ,   // Horizontal
@@ -65,6 +68,9 @@ Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
 
 bool Cart_LoadROM(Cart* cart, const char* path);
+
+bool Cart_SaveState(Cart* cart, FILE* file);
+bool Cart_LoadState(Cart* cart, FILE* file);
 
 #ifdef __cplusplus
 }

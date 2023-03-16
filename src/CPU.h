@@ -14,31 +14,18 @@
  * limitations under the License.
  */
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma once
 
-#include <SDL_mutex.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
-
-/*
- * Flags for the status register (bit 6 is unused, but should always be 1)
- * BRK isn't technically a flag, but it lives in the status register
- * and behaves just like a flag, so I include it here
- */
-#define CPU_STATUS_CARRY    (1 << 0)    // 1 for arithmetic carry/1 for result >= 0
-#define CPU_STATUS_ZERO     (1 << 1)    // 1 for zero result
-#define CPU_STATUS_IRQ      (1 << 2)    // 1 for interrupts disabled
-#define CPU_STATUS_DECIMAL  (1 << 3)    // 1 for enabled
-#define CPU_STATUS_BRK      (1 << 4)    // 1 for break command issued
-#define CPU_STATUS_OVERFLOW (1 << 6)    // 1 for integer overflow
-#define CPU_STATUS_NEGATIVE (1 << 7)    // 1 for negative result
-
-#define CPU_SP_BASE_ADDR    (0x100)     // All stack pushes/pops occur from this offset
-
-// Returns if the operand is a negative 8-bit integer
-#define CPU_IS_NEG(x)       ((x) & (1 << 7))
 
 /* CPU Addressing Modes */
 typedef enum cpu_addrmode {
@@ -128,6 +115,10 @@ void CPU_Execute(CPU* cpu);                   // Executes current CPU instructio
 char* CPU_DisassembleString(CPU* cpu, uint16_t addr);   // Generates disassembly string for the instruction at addr
 void CPU_DisassembleLog(CPU* cpu);                      // Logs disassembly string for current instruction to a file
 uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu);        // Gets the starting addresses of instructions around the current instruction
+
+/* Savestates */
+bool CPU_SaveState(CPU* cpu, FILE* file);
+bool CPU_LoadState(CPU* cpu, FILE* file);
 
 /*
 // Addressing Modes

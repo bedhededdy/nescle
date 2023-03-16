@@ -44,8 +44,11 @@ FetchContent_Declare(nativefiledialog
 FetchContent_MakeAvailable(nativefiledialog)
 
 # Set compiler flags
+set(gcc_like "$<COMPILE_LANG_AND_ID:CXX,ARMClang,ApppleClang,Clange,GNU,LCC>")
+set(msvc_like "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 project(nescle)
+
 
 # Download imgui as a zip (if it isn't here)
 if (NOT EXISTS ${PROJECT_SOURCE_DIR}/imgui)
@@ -151,6 +154,11 @@ set(SRC ${NESCLE_SRC} ${MAPPER_SRC})
 
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 add_executable(nescle ${SRC})
+# FIXME: NOT WORKING
+#target_compile_options(nescle PRIVATE
+#  "$<${gcc_like}:-Wall -Wextra -Wpedantic -Werror>"
+#  "$<${msvc_like}:/W4 /WX>"
+#)
 
 # Include directories
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}

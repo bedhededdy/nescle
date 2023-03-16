@@ -15,8 +15,7 @@
  */
 #include "EmulationWindow.h"
 
-// #include "<glad/glad.h>"
-#include "glad/glad.h"
+#include <glad/glad.h>
 
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
@@ -26,6 +25,7 @@
 
 #include <SDL.h>
 
+#include "CPU.h"
 #include "PPU.h"
 #include "Cart.h"
 #include "Emulator.h"
@@ -327,7 +327,20 @@ EmulationWindow::EmulationWindow(int w, int h) {
     //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
     // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+
+
+    emulator = Emulator_Create();
+
+    Bus* bus = emulator->nes;
+    CPU* cpu = bus->cpu;
+    PPU* ppu = bus->ppu;
+
+    Bus_PowerOn(bus);
+    Bus_SetSampleFrequency(bus, 44100);
+
     NFD_Init();
+
 
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
@@ -338,6 +351,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     gl_context = SDL_GL_CreateContext(window);
     gladLoadGLLoader(SDL_GL_GetProcAddress);
 
+    // TODO: LET THE USE RCHOOSE THIS
     // Enable vsync
     // SDL_GL_SetSwapInterval(1);
 
@@ -376,6 +390,156 @@ EmulationWindow::EmulationWindow(int w, int h) {
     setup_palette_frame();
 }
 
+void EmulationWindow::Loop() {
+    Bus *bus = emulator->nes;
+    CPU *cpu = bus->cpu;
+    PPU *ppu = bus->ppu;
+
+    // bool quit = false;
+
+    // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
+    // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
+    while (!emulator->quit)
+    {
+        uint64_t t0 = SDL_GetTicks64();
+
+        SDL_Event event;
+        SDL_LockMutex(emulator->nes_state_lock);
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                emulator->quit = true;
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_w:
+                    bus->controller1 |= BUS_CONTROLLER_UP;
+                    break;
+                case SDLK_a:
+                    bus->controller1 |= BUS_CONTROLLER_LEFT;
+                    break;
+                case SDLK_s:
+                    bus->controller1 |= BUS_CONTROLLER_DOWN;
+                    break;
+                case SDLK_d:
+                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
+                    break;
+                case SDLK_j:
+                    bus->controller1 |= BUS_CONTROLLER_B;
+                    break;
+                case SDLK_k:
+                    bus->controller1 |= BUS_CONTROLLER_A;
+                    break;
+                case SDLK_BACKSPACE:
+                    bus->controller1 |= BUS_CONTROLLER_SELECT;
+                    break;
+                case SDLK_RETURN:
+                    bus->controller1 |= BUS_CONTROLLER_START;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_c:
+                    // recall that the cpu clocks only once for every 3 bus clocks, so
+                    // that is why we must have the second while loop
+                    // additionally we also want to go to the next instr, not stay on the current one
+                    while (cpu->cycles_rem > 0)
+                        Bus_Clock(bus);
+                    while (cpu->cycles_rem == 0)
+                        Bus_Clock(bus);
+                    break;
+                case SDLK_r:
+                    Bus_Reset(bus);
+                    break;
+                case SDLK_f:
+                    // FIXME: may wanna do a do while
+                    while (!ppu->frame_complete)
+                        Bus_Clock(bus);
+                    ppu->frame_complete = false;
+                    break;
+                case SDLK_p:
+                    IncrementPalette();
+                    break;
+                case SDLK_SPACE:
+                    // FIXME: THIS SHOULD HAVE A LOCK ON IT/BE ATOMIC
+                    emulator->run_emulation = !emulator->run_emulation;
+                    break;
+
+                case SDLK_w:
+                    bus->controller1 &= ~BUS_CONTROLLER_UP;
+                    break;
+                case SDLK_a:
+                    bus->controller1 &= ~BUS_CONTROLLER_LEFT;
+                    break;
+                case SDLK_s:
+                    bus->controller1 &= ~BUS_CONTROLLER_DOWN;
+                    break;
+                case SDLK_d:
+                    bus->controller1 &= ~BUS_CONTROLLER_RIGHT;
+                    break;
+                case SDLK_j:
+                    bus->controller1 &= ~BUS_CONTROLLER_B;
+                    break;
+                case SDLK_k:
+                    bus->controller1 &= ~BUS_CONTROLLER_A;
+                    break;
+                case SDLK_BACKSPACE:
+                    bus->controller1 &= ~BUS_CONTROLLER_SELECT;
+                    break;
+                case SDLK_RETURN:
+                    bus->controller1 &= ~BUS_CONTROLLER_START;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+
+            case SDL_WINDOWEVENT:
+                switch (event.window.event)
+                {
+                case SDL_WINDOWEVENT_CLOSE:
+                    if (event.window.windowID == GetWindowID())
+                        emulator->quit = true;
+                    break;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        // Note that the event loop blocks this, so when moving the window,
+        // we still emulate since the emulation is on the audio thread,
+        // but we will not show the updates visually
+        Show(emulator);
+        SDL_UnlockMutex(emulator->nes_state_lock);
+
+        // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
+        // if (frametime < 16)
+        //     SDL_Delay(16 - frametime);
+        // else
+        //     SDL_Log("LONG FRAMETIME\n");
+
+        // POLL APPROXIMATELY 120 TIMES A SECOND FOR EVENTS
+        // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
+        // WE COULD ALSO SYNC TO VSYNC, BUT I DON'T WISH TO FORCE THAT
+        // AS OF RIGHT NOW FOR USERS THAT CHOOSE TO USE GSYNC OR FREESYNC
+        SDL_Delay(8);
+    }
+}
+
 EmulationWindow::~EmulationWindow() {
     NFD_Quit();
 
@@ -386,6 +550,11 @@ EmulationWindow::~EmulationWindow() {
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
+
+    // TODO: MAKE SURE THE AUDIO DEVICE IS CLOSED
+    // BY THE EMULATOR (AKA CALL EMULATOR DESTROY HERE)
+    Emulator_Destroy(emulator);
+    SDL_Quit();
 }
 
 void EmulationWindow::Show(Emulator* emu) {

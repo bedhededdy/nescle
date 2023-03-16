@@ -19,9 +19,6 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
-
 typedef struct cpu CPU;
 typedef struct bus Bus;
 typedef struct ppu PPU;
@@ -30,6 +27,7 @@ typedef struct cart Cart;
 typedef struct apu APU;
 
 typedef struct emulator Emulator;
+typedef struct emulator_settings Emulator_Settings;
 
 typedef struct cart_rom_header Cart_ROMHeader;
 typedef struct cpu_instr CPU_Instr;

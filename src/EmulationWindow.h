@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
+
 #include <SDL.h>
 #include <imgui.h>
 #include <glad/glad.h>
@@ -22,6 +24,8 @@ class EmulationWindow {
 private:
     SDL_Window* window;
     SDL_GLContext gl_context;
+public:
+    Emulator* emulator;
     // ImGuiIO& io;
 
     // TODO: PUT SOME OF THESE IN A STRUCT
@@ -58,6 +62,8 @@ private:
 public:
     EmulationWindow(int w, int h);
     ~EmulationWindow();
+
+    void Loop();
 
     void Show(Emulator* emu);
     void IncrementPalette();

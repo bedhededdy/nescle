@@ -30,3 +30,13 @@ bool Mapper066::MapPPUWrite(uint16_t addr, uint8_t data) {
     }
     return false;
 }
+
+void Mapper066::SaveToDisk(FILE* file) {
+    fwrite(&id, sizeof(id), 1, file);
+    fwrite(&bank_select, sizeof(bank_select), 1, file);
+}
+
+void Mapper066::LoadFromDisk(FILE* file) {
+    fread(&id, sizeof(id), 1, file);
+    fread(&bank_select, sizeof(bank_select), 1, file);
+}

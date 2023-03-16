@@ -19,6 +19,10 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+
 #include "NESCLETypes.h"
 
 struct mapper {
@@ -36,6 +40,9 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
 size_t Mapper_GetSize(uint8_t id);
 void Mapper_AssignCartridge(Mapper* mapper, Cart* cart);
+
+void Mapper_SaveToDisk(Mapper* mapper, FILE* file);
+void Mapper_LoadFromDisk(Mapper* mapper, FILE* file);
 
 #ifdef __cplusplus
 }

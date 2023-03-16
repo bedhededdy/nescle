@@ -330,8 +330,7 @@ int Bus_SaveState(Bus* bus) {
 
     // Save Mapper state (deepcopying mapper_class)
     fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
-    fwrite(bus->cart->mapper->mapper_class,
-        Mapper_GetSize(bus->cart->mapper->id), 1, savestate);
+    Mapper_SaveToDisk(bus->cart->mapper, savestate);
 
     // Save the PPU state
     fwrite(bus->ppu, sizeof(PPU), 1, savestate);
@@ -395,14 +394,29 @@ int Bus_LoadState(Bus* bus) {
     fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
 
     fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
-    bus->cart->mapper = mapper_addr;
 
-    void* mapper_class_addr = bus->cart->mapper->mapper_class;
+    // FIXME: THIS PROBALBY LEAKS MEMORY
+    bus->cart->mapper = mapper_addr;
+    if (bus->cart->mapper == NULL) {
+        bus->cart->mapper = malloc(sizeof(Mapper));
+    }
+
+    // FIXME: HEAP CORRUPTION IS OCCURRING HERE
+
+    // void* mapper_class_addr = bus->cart->mapper->mapper_class;
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
-    size_t mapper_class_size = Mapper_GetSize(bus->cart->mapper->id);
-    bus->cart->mapper->mapper_class = mapper_class_addr;
-    bus->cart->mapper->mapper_class = realloc(bus->cart->mapper->mapper_class, mapper_class_size);
-    fread(bus->cart->mapper->mapper_class, mapper_class_size, 1, savestate);
+    // bus->cart->mapper->mapper_class = mapper_class_addr;
+
+    // FIXME: THIS IS OVERRIDING THE FUNCTION ADDRESSES
+    // ALL YOU REALLY WANNA DO HERE IS JUST OVERRIDE THE VARIABLE STATES
+
+    // FIXME: THE BEST AND REALLY ONLY WAY TO DO THIS IS TO LOAD THE
+    // MAPPER AND MAKE SURE IT HAS NO FUNCTIONS OTHER THAN THE BASE FUNCTIONS
+    // THEN YOU WOULD NEED TO COPY THE FUNCTION POINTERS FOR THE CONSTRUCTOR
+    // DESTRUCTOR AND READING AND WRITING FUNCTIONS, BUT THI SIS KINDA HARD
+    bus->cart->mapper = Mapper_Create(bus->cart->mapper->id, bus->cart);
+    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
+
     Mapper_AssignCartridge(bus->cart->mapper, bus->cart);
 
     fread(bus->ppu, sizeof(PPU), 1, savestate);

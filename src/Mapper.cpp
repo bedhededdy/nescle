@@ -113,3 +113,11 @@ size_t Mapper_GetSize(uint8_t id) {
 void Mapper_AssignCartridge(Mapper* mapper, Cart* cart) {
     ((MapperBase*)mapper->mapper_class)->SetCart(cart);
 }
+
+void Mapper_SaveToDisk(Mapper* mapper, FILE* file) {
+    ((MapperBase*)mapper->mapper_class)->SaveToDisk(file);
+}
+
+void Mapper_LoadFromDisk(Mapper* mapper, FILE* file) {
+    ((MapperBase*)mapper->mapper_class)->LoadFromDisk(file);
+}

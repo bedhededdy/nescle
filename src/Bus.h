@@ -13,34 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma once
 
-#include <SDL_mutex.h>
+#include <stdbool.h>
+#include <stdint.h>
 
+#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
-
-/* UNCOMMENT IF YOU HAVE NOT IMPLEMENTED THE MAPPER */
-//#define BUS_NO_MAPPER
-
-#ifndef BUS_NO_MAPPER
-    #define BUS_RAM_SIZE    (1024 * 2)
-#else
-    #define BUS_RAM_SIZE    (1024 * 64)
-#endif
-
-#define BUS_CONTROLLER_A        (1 << 0)
-#define BUS_CONTROLLER_B        (1 << 1)
-#define BUS_CONTROLLER_SELECT   (1 << 2)
-#define BUS_CONTROLLER_START    (1 << 3)
-#define BUS_CONTROLLER_UP       (1 << 4)
-#define BUS_CONTROLLER_DOWN     (1 << 5)
-#define BUS_CONTROLLER_LEFT     (1 << 6)
-#define BUS_CONTROLLER_RIGHT    (1 << 7)
-
-#define BUS_CLOCK_FREQ          (5369318.0)
 
 /*
  * The NES Bus connects the various components of the NES together.

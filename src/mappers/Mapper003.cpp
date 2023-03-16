@@ -36,3 +36,13 @@ bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {
     printf("Mapper003: attempt to write to chr_rom\n");
     return false;
 }
+
+void Mapper003::SaveToDisk(FILE* file) {
+    fwrite(&id, sizeof(id), 1, file);
+    fwrite(&bank_select, sizeof(bank_select), 1, file);
+}
+
+void Mapper003::LoadFromDisk(FILE* file) {
+    fread(&id, sizeof(id), 1, file);
+    fread(&bank_select, sizeof(bank_select), 1, file);
+}

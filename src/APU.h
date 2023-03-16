@@ -19,9 +19,11 @@
 extern "C" {
 #endif
 
-#include "NESCLETypes.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
-#define APU_SAMPLING_RATE 44100
+#include "NESCLETypes.h"
 
 struct apu_sequencer {
     uint16_t timer;
@@ -128,6 +130,9 @@ void APU_Clock(APU* apu);
 void APU_Reset(APU* apu);
 
 double APU_GetOutputSample(APU* apu);
+
+bool APU_SaveState(APU* apu, FILE* file);
+bool APU_LoadState(APU* apu, FILE* file);
 
 #ifdef __cplusplus
 }

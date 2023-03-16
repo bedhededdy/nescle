@@ -31,3 +31,11 @@ bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
     }
     return false;
 }
+
+void Mapper000::SaveToDisk(FILE* file) {
+    fwrite(&id, sizeof(id), 1, file);
+}
+
+void Mapper000::LoadFromDisk(FILE* file) {
+    fwrite(&id, sizeof(id), 1, file);
+}
