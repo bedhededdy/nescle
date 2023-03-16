@@ -1293,3 +1293,24 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
 
     return ret;
 }
+
+
+bool CPU_SaveState(CPU* cpu, FILE* file) {
+    if (fwrite(cpu, sizeof(CPU), 1, file) < sizeof(CPU))
+        return false;
+    if (fwrite(&cpu->instr->opcode, sizeof(uint8_t), 1, file) < sizeof(uint8_t))
+        return false;
+    return true;
+}
+
+bool CPU_LoadState(CPU* cpu, FILE* file) {
+    Bus* bus = cpu->bus;
+    if (fread(cpu, sizeof(CPU), 1, file) < sizeof(CPU))
+        return false;
+    uint8_t opcode;
+    if (fread(&opcode, sizeof(uint8_t), 1, file) < sizeof(uint8_t))
+        return false;
+    cpu->instr = CPU_Decode(opcode);
+    cpu->bus = bus;
+    return true;
+}

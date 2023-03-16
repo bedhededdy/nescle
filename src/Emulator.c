@@ -17,7 +17,7 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
     emu->nes->apu->master_volume = 0.5;
 
     SDL_LockMutex(emu->nes_state_lock);
-    for (int i = 0; i < len/sizeof(int16_t); i++) {
+    for (size_t i = 0; i < len/sizeof(int16_t); i++) {
         if (emu->run_emulation) {
             while (!Bus_Clock(emu->nes)) {
                 // TODO: RESET THE FRAME THINGY HERE

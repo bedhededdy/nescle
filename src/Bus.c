@@ -92,7 +92,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         /* PPU Registers */
         return PPU_RegisterRead(bus->ppu, addr);
     }
-    else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
+    else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
         return APU_Read(bus->apu, addr);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
@@ -155,7 +155,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
         bus->dma_transfer = true;
     }
     // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
-    else if (addr >= 0x4000 && addr <= 0x4013 || addr == 0x4015 || addr == 0x4017) {
+    else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
         return APU_Write(bus->apu, addr, data);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
@@ -291,60 +291,29 @@ void Bus_Reset(Bus* bus) {
     bus->dma_data = 0;
     bus->dma_transfer = false;
     bus->dma_dummy = true;
-    // bus->run_emulation = false;
 }
 
 int Bus_SaveState(Bus* bus) {
-    // FIXME: WE SHOULD STILL ACQUIRE THE LOCK HERE FOR SAFETY
-    // The state of none of these things should change since we have the
-    // savestate lock, which prevents clocking
-
-    // TODO: CHECK FOR NO STATE MUTATIONS DURING SAVING
-    //       THERE SHOULD BE NONE
-
-    // Open binary file
     FILE* savestate = fopen("../saves/savestate.bin", "wb");
 
-    // Save Bus state
     fwrite(bus, sizeof(Bus), 1, savestate);
 
-    // Save CPU state along with the opcode of the instruction
-    fwrite(bus->cpu, sizeof(CPU), 1, savestate);
-    fwrite(&bus->cpu->instr->opcode, sizeof(uint8_t), 1, savestate);
-
-    // Save APU state
-    fwrite(bus->apu, sizeof(APU), 1, savestate);
-
-    // Save Cart state (deepcopying rom_path, prg_rom, and chr_rom)
-    fwrite(bus->cart, sizeof(Cart), 1, savestate);
-    int rom_path_len = strlen(bus->cart->rom_path) + 1;
-    fwrite(&rom_path_len, sizeof(int), 1, savestate);
-
-    fwrite(bus->cart->rom_path, sizeof(char) * rom_path_len, 1, savestate);
-    fwrite(bus->cart->prg_rom, sizeof(uint8_t),
-        bus->cart->metadata.prg_rom_size * 0x4000, savestate);
-    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1
-        : bus->cart->metadata.chr_rom_size;
-    fwrite(bus->cart->chr_rom, sizeof(uint8_t),
-        chr_rom_chunks * 0x2000, savestate);
+    CPU_SaveState(bus->cpu, savestate);
+    APU_SaveState(bus->apu, savestate);
+    Cart_SaveState(bus->cart, savestate);
 
     // Save Mapper state (deepcopying mapper_class)
     fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
     Mapper_SaveToDisk(bus->cart->mapper, savestate);
 
-    // Save the PPU state
-    fwrite(bus->ppu, sizeof(PPU), 1, savestate);
+    PPU_SaveState(bus->ppu, savestate);
 
     fclose(savestate);
 
-    // FIXME: RETURN WHETHER WE WERE SUCCESSFUL OR NOT
     return 0;
 }
 
 int Bus_LoadState(Bus* bus) {
-    // FIXME: I SHOULD HAVE TO ACQUIRE ALL THE LOCKS IN ORDER
-    // TO DO THIS AS EVEN THOUGH WE DON'T CLOCK, IF WE RUN THE DISASSEMBLER
-    // OR THE PALETTE VIEWER, THERE COULD BE A LOCK HOLDING SCENARIO
     FILE* savestate = fopen("../saves/savestate.bin", "rb");
 
     // Bus
@@ -361,39 +330,14 @@ int Bus_LoadState(Bus* bus) {
     bus->apu = apu_addr;
 
     // CPU
-    fread(bus->cpu, sizeof(CPU), 1, savestate);
-    uint8_t opcode;
-    fread(&opcode, sizeof(uint8_t), 1, savestate);
-    bus->cpu->instr = CPU_Decode(opcode);
-    bus->cpu->bus = bus;
+    CPU_LoadState(bus->cpu, savestate);
 
     // APU
-    fread(bus->apu, sizeof(APU), 1, savestate);
-    bus->apu->bus = bus;
+    APU_LoadState(bus->apu, savestate);
 
     // Cart
     Mapper* mapper_addr = bus->cart->mapper;
-    uint8_t* prg_rom_addr = bus->cart->prg_rom;
-    uint8_t* chr_rom_addr = bus->cart->chr_rom;
-    fread(bus->cart, sizeof(Cart), 1, savestate);
-    int rom_path_len;
-    fread(&rom_path_len, sizeof(int), 1, savestate);
-    // FIXME: MEMORY LEAK
-    bus->cart->rom_path = malloc(sizeof(char) * rom_path_len);
-    fread(bus->cart->rom_path, sizeof(char) * rom_path_len, 1, savestate);
-
-    // Load chr_rom and prg_rom
-    bus->cart->prg_rom = prg_rom_addr;
-    bus->cart->chr_rom = chr_rom_addr;
-    bus->cart->prg_rom = realloc(bus->cart->prg_rom,
-        sizeof(uint8_t) * bus->cart->metadata.prg_rom_size * 0x4000);
-    size_t chr_rom_chunks = bus->cart->metadata.chr_rom_size == 0 ? 1 : bus->cart->metadata.chr_rom_size;
-    bus->cart->chr_rom = realloc(bus->cart->chr_rom,
-        sizeof(uint8_t) * chr_rom_chunks * 0x2000);
-
-    fread(bus->cart->prg_rom, sizeof(uint8_t), bus->cart->metadata.prg_rom_size * 0x4000, savestate);
-
-    fread(bus->cart->chr_rom, sizeof(uint8_t), chr_rom_chunks * 0x2000, savestate);
+    Cart_LoadState(bus->cart, savestate);
 
     // FIXME: THIS PROBALBY LEAKS MEMORY
     bus->cart->mapper = mapper_addr;
@@ -401,95 +345,16 @@ int Bus_LoadState(Bus* bus) {
         bus->cart->mapper = malloc(sizeof(Mapper));
     }
 
-    // FIXME: HEAP CORRUPTION IS OCCURRING HERE
-
-    // void* mapper_class_addr = bus->cart->mapper->mapper_class;
     fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
-    // bus->cart->mapper->mapper_class = mapper_class_addr;
-
-    // FIXME: THIS IS OVERRIDING THE FUNCTION ADDRESSES
-    // ALL YOU REALLY WANNA DO HERE IS JUST OVERRIDE THE VARIABLE STATES
-
-    // FIXME: THE BEST AND REALLY ONLY WAY TO DO THIS IS TO LOAD THE
-    // MAPPER AND MAKE SURE IT HAS NO FUNCTIONS OTHER THAN THE BASE FUNCTIONS
-    // THEN YOU WOULD NEED TO COPY THE FUNCTION POINTERS FOR THE CONSTRUCTOR
-    // DESTRUCTOR AND READING AND WRITING FUNCTIONS, BUT THI SIS KINDA HARD
     bus->cart->mapper = Mapper_Create(bus->cart->mapper->id, bus->cart);
     Mapper_LoadFromDisk(bus->cart->mapper, savestate);
 
-    Mapper_AssignCartridge(bus->cart->mapper, bus->cart);
-
-    fread(bus->ppu, sizeof(PPU), 1, savestate);
-    bus->ppu->bus = bus;
-    bus->ppu->oam_ptr = (uint8_t*)bus->ppu->oam;
+    PPU_LoadState(bus->ppu, savestate);
 
     fclose(savestate);
 
-
-
-    // MASSIVE SIMPLIFICATION
-    // BY DEFAULT PRESSING AN IMGUI MENU ITEM RUNS IN THE SAME THREAD
-    // THIS MEANS THAT WE REALLY ONLY NEED TO WORRY ABOUT THE CLOCKING IN
-    // THE OTHER THREAD, WHICH IS COMPLETELY DISABLED BY US JUST ACQUIRING
-    // THE SAVESTATE LOCK
-    // THE AUDIO MAY SLOW OR DESYNC DURING THIS TIME IF WE CHOOSE NTO TO
-    // MULTITHREAD, BUT I DON'T THINK ITS A HUGE DEAL IF THE EMU LAGS FOR A
-    // SEC WHILE WE SAVE/LOAD
-
-    // WE COULD MULTITHREAD THIS AND JUST ENSURE THAT WE PROPERLY ACQUIRE
-    // OUR LOCKS FOR THE STUFF RUNNING ON THE RENDER THREAD
-
-    // WHAT WE CAN GUARANTEE IS THAT THE BUS IS NOT CLOCKING DURING THIS
-    // FUNCTION, AS WE DISALLOW IT TO CLOCK WITHOUT THE SAVESTATE LOCK
-    // HOWEVER, THE DISASSEMBLER CAN STILL READ THE CONTENTS OF BUS
-    // RAM AND THE OAM CAN STILL READ THE OAM AND THE PALETTE CAN STILL
-    // READ THE PALETTE
-
-    // THIS IN AND OF ITSELF SHOULDN'T BE AN ISSUE, EXCEPT THAT WE WOULD
-    // JUST TEMPORARILY HAVE WRONG DATA (SO WE MAY NOT EVEN NEED TO HAVE
-    // FRAMEBUFFER LOCK TO CHANGE PPU FOR INSTANCE), BUT READING FROM
-    // THE BUS IS DANGEROUS!!!! SO WATCH OUT FOR THE DISASSEMBLER
-
-    // IN ORDER TO MAKE THIS FEASIBLE, WE MAY NEED TO EITHER HAVE EVERYTHING
-    // WAIT ON A GLOBAL STATE LOCK OR HAVE A GLOBAL STATE LOCK FOR EACH
-    // NES COMPONENT.
-
-    // I DON'T KNOW IF IMGUI BUTTON PRESSES ARE ASYNC, SO WE MUST
-    // ASSUME THEY ARE
-    // WHAT WE DO KNOW FOR A FACT IS THAT IMGUI IS NOT THREAD-SAFE,
-    // SO IF THIS IS ASYNC, WE NEED SYNCHRONIZATION PRIMITIVES
-
-    // FIXME: MAY HAVE TO CHANGE THE EMULATION WINDOW TO NOT READ THE FRAME
-    // BUFFER IF THE SAVESTATE LOCK IS ACQUIRED
-
-    // WE CAN CONFIRM THAT THE SAVESTATE LOCK WILL NOT BE IN USE, AS WE HAVE IT
-    // FOR THIS FUNCTION
-    // HOWEVER WE CANNOT CONFIRM THAT THE PC LOCK AND FRAMEBUFFER LOCKS WON'T
-    // BE ACQUIRED
-
-    // I THINK THIS IS WRONG
-    // MORE THAN LIKELY WE WILL NEED A SECOND LOCK THAT PROTECTS ACCESS
-    // TO THE FRAMEBUFFER LOCK, BUT THEN I THINK THIS PROBLEM MAY INFINITELY
-    // RECURSE IN ON ITSELF
-
-    // WE MAY BE ABLE TO GET AWAY WITH SOMETHING LIKE THIS
-    // I WOULD BE WORRIED ABOUT LOCAL REFERENCES TO THINGS THOUGH,
-    // LIKE HAVING SOMETHING THAT SAYS bus->cpu->clock_count SOMEWHERE, THEN THE BUS CHANGING
-    // WITH THIS, BUT WE ARE STILL USING THE OLD CPU CLOCK COUNT IN THE FUNC, HOWEVER, IF WE REWRITE
-    // THE EXISTING CPU INSTEAD OF GIVING A NEW PTR IT SHOULD STILL WORK WITH
-    // LOCAL COPIES OF PTRS
-    // THIS IS VERY COMPILCATED AND ANNOYING B/C OF THE THREADING
-    // SDL_LockMutex(ppu->framebuffer_lock);
-    // PPU* new_ppu = malloc(sizeof(PPU));
-    // fread(new_ppu, sizeof(PPU), 1, savestate);
-    // new_ppu->frame_buffer_lock = ppu->frame_buffer_lock
-    // memcpy(ppu, new_ppu, sizeof(PPU));
-    // SDL_UnlockMutex(ppu->frame_buffer_lock);
-    // free(new_ppu);
-
-    // FIXME: RETURN IF WE SUCCEEDED OR NOT
+    // FIXME: RETURN A SUCCESS OR FAILURE
     return 0;
-
 }
 
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_frequency) {

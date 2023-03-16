@@ -353,12 +353,16 @@ void APU_Clock(APU *apu)
 
 void APU_PowerOn(APU *apu)
 {
+    Bus* bus = apu->bus;
     memset(apu, 0, sizeof(APU));
+    apu->bus = bus;
 }
 
 void APU_Reset(APU *apu)
 {
+    Bus* bus = apu->bus;
     memset(apu, 0, sizeof(APU));
+    apu->bus = bus;
 }
 
 APU *APU_Create(void)
@@ -389,4 +393,24 @@ double APU_GetOutputSample(APU *apu)
     double noise = 0.0;
 
     return 0.25 * (p1 + p2 + tri + noise) * apu->master_volume;
+}
+
+bool APU_SaveState(APU* apu, FILE* file) {
+    return fwrite(apu, sizeof(APU), 1, file) == sizeof(APU);
+}
+
+bool APU_LoadState(APU* apu, FILE* file) {
+    // FIXME: THIS FUNCTION IS NOT RESILIENT AGAINST
+    // A FAILED READ, AS THE BUS POINTER WOULD GET
+    // MESSED UP
+    // THE PROPER WAY TO DO THE SAVE STATING
+    // WOULD BE TO MAKE A COPY OF EVERYTHING
+    // AND THEN COPY IT OVER AT THE END SO THAT
+    // WE DON'T END UP WITH HALF VALID STATE AND
+    // HALF NONSENSE
+    Bus* bus = apu->bus;
+    if (fread(apu, sizeof(APU), 1, file) < sizeof(APU))
+        return false;
+    apu->bus = bus;
+    return true;
 }

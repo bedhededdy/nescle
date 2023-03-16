@@ -2,10 +2,28 @@
 
 #include "MapperBase.h"
 
-class Mapper001 : public MapperBase
-{
+class Mapper001 : public MapperBase {
 private:
+    uint8_t chr_select4_lo = 0;
+    uint8_t chr_select4_hi = 0;
+    uint8_t chr_select8 = 0;
 
+    uint8_t prg_select16_lo = 0;
+    uint8_t prg_select16_hi = 0;
+    uint8_t prg_select32 = 0;
+
+    uint8_t load = 0;
+    // Write count
+    uint8_t load_reg_ct = 0;
+    uint8_t ctrl = 0;
+
+    // OLC has mirroring, but we handle that
+    // from the cartridge, so we need no var
+
+    // OLC has some vram vector, but I don't think we need it unless
+    // we want to be able to save games to the vram backup
+
+    void reset();
 
 public:
     Mapper001(Cart* cart);

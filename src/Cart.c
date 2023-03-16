@@ -131,7 +131,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     }
 
     // Read program rom and copy it to the prg_rom section of the cart
-    for (int i = 0; i < prg_rom_nbytes/sizeof(buf); i++) {
+    for (size_t i = 0; i < prg_rom_nbytes/sizeof(buf); i++) {
         if (fread(buf, sizeof(uint8_t), sizeof(buf), rom) < sizeof(buf)) {
             printf("Cart_LoadROM: read prg_rom\n");
             return false;
@@ -152,7 +152,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
             return false;
         }
 
-        for (int i = 0; i < chr_rom_nbytes/sizeof(buf); i++) {
+        for (size_t i = 0; i < chr_rom_nbytes/sizeof(buf); i++) {
             if (fread(buf, sizeof(uint8_t), sizeof(buf), rom) < sizeof(buf)) {
                 printf("Cart_LoadROM: read chr_rom\n");
                 return false;
@@ -203,5 +203,43 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Don't forget to close the file and return true
     fclose(rom);
+    return true;
+}
+
+bool Cart_SaveState(Cart* cart, FILE* file) {
+    fwrite(cart, sizeof(Cart), 1, file);
+    size_t rom_path_len = strlen(cart->rom_path) + 1;
+    fwrite(&rom_path_len, sizeof(size_t), 1, file);
+
+    fwrite(cart->rom_path, sizeof(char), rom_path_len, file);
+    fwrite(cart->prg_rom, sizeof(uint8_t)
+        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size, 1, file);
+    size_t chr_rom_chunks = cart->metadata.chr_rom_size;
+    if (chr_rom_chunks == 0) chr_rom_chunks = 1;
+    fwrite(cart->chr_rom, sizeof(uint8_t)
+        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks, 1, file);
+    return true;
+}
+
+bool Cart_LoadState(Cart* cart, FILE* file) {
+    fread(cart, sizeof(Cart), 1, file);
+    size_t rom_path_len;
+    fread(&rom_path_len, sizeof(size_t), 1, file);
+
+    cart->rom_path = malloc(rom_path_len);
+    fread(cart->rom_path, sizeof(char), rom_path_len, file);
+
+    cart->prg_rom = malloc(sizeof(uint8_t)
+        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size);
+    fread(cart->prg_rom, sizeof(uint8_t)
+        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size, 1, file);
+    size_t chr_rom_chunks = cart->metadata.chr_rom_size;
+    if (chr_rom_chunks == 0) chr_rom_chunks = 1;
+    cart->chr_rom = malloc(sizeof(uint8_t)
+        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks);
+    fread(cart->chr_rom, sizeof(uint8_t)
+        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks, 1, file);
+
+    // Let the caller handle the mapper too
     return true;
 }

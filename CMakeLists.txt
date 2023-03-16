@@ -1,11 +1,3 @@
-# TODO: TO BUILD GLEW WITH CMAKE, YOU WOULD HAVE TO MANUALLY
-# RUN THE INSTALL COMMAND ON GLEW BEFORE RUNNING CMAKE ON
-# THIS PROJECT. THIS IS BECAUSE GLEW DOES NOT SUPPORT
-# USING FIND_PACKAGE FROM ITS BUILD TREE (IT WILL LOOK
-# FOR AN INCLUDE DIRECTORY THAT DOESN'T EXIST). SINCE
-# GLEW WOULD ALSO REQUIRE MANUAL INTERVENTION FROM THE USER
-# I TOLERATE FORCING THE USER TO INSTALL GLAD THEMSELVES
-
 #
 # Copyright 2023 Edward C. Pinkston
 #
@@ -22,11 +14,10 @@
 # limitations under the License.
 #
 
-# Require version 3.15 for generator expressions (is likely to increase)
-# upon improvements to the build process
+# Require version 3.15 for generator expressions
 cmake_minimum_required(VERSION 3.15)
 
-# Force C/C++ verison to ISO Standard C11+ and C++11+
+# Force C/C++ verison globally to ISO Standard C11+ and C++11+
 set(CMAKE_CXX_VERSION 11)
 set(CMAKE_CXX_VERSION_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -35,7 +26,7 @@ set(CMAKE_C_VERSION 11)
 set(CMAKE_C_VERSION_REQUIRED true)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# Fetch nativefiledialog
+# Fetch nativefiledialog as a CMake subproject
 include(FetchContent)
 FetchContent_Declare(nativefiledialog
   GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
@@ -43,12 +34,10 @@ FetchContent_Declare(nativefiledialog
 )
 FetchContent_MakeAvailable(nativefiledialog)
 
-# Set compiler flags
-set(gcc_like "$<COMPILE_LANG_AND_ID:CXX,ARMClang,ApppleClang,Clange,GNU,LCC>")
-set(msvc_like "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
+# Figure out what compiler we are using
+# TODO: CHANGE TO USE GENERATOR EXPRESSIONS
 
 project(nescle)
-
 
 # Download imgui as a zip (if it isn't here)
 if (NOT EXISTS ${PROJECT_SOURCE_DIR}/imgui)
@@ -62,18 +51,13 @@ if (NOT EXISTS ${PROJECT_SOURCE_DIR}/imgui)
    endif()
 
    # Unzip imgui
-   if (WIN32)
-      message(STATUS "Unzipping imgui on Windows")
-      execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/imgui.zip
-                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-      execute_process(COMMAND ${CMAKE_COMMAND} -E rename imgui-docking imgui
-                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-      # Remove imgui.zip
-      file(REMOVE ${PROJECT_SOURCE_DIR}/imgui.zip)
-   else()
-      message(STATUS "Unzipping imgui on Linux")
-      #execute_process(COMMAND unzip ${PROJECT_SOURCE_DIR}/imgui.zip -d ${PROJECT_SOURCE_DIR}/imgui)
-   endif()
+   message(STATUS "Unzipping imgui...")
+   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/imgui.zip
+                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+   execute_process(COMMAND ${CMAKE_COMMAND} -E rename imgui-docking imgui
+                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+   # Remove imgui.zip
+   file(REMOVE ${PROJECT_SOURCE_DIR}/imgui.zip)
 endif()
 
 # Build ImGui as a library
@@ -96,6 +80,7 @@ ENDFUNCTION(PREPEND)
 PREPEND(IMGUI_SRC ${IMGUI_DIR} ${IMGUI_SRC})
 PREPEND(IMGUI_BACKENDS ${IMGUI_BACKENDS_DIR} ${IMGUI_BACKENDS})
 
+# imgui recommends against building it as a shared lib
 add_library(imgui STATIC ${IMGUI_SRC} ${IMGUI_BACKENDS})
 
 # Download SDL2 libraries (don't build from source)
@@ -110,28 +95,23 @@ if (NOT EXISTS ${PROJECT_SOURCE_DIR}/SDL2)
    endif()
 
    # Unzip SDL2
-   if (WIN32)
-      message(STATUS "Unzipping SDL2 on Windows")
-      execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/SDL2.zip
-                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-      execute_process(COMMAND ${CMAKE_COMMAND} -E rename SDL2-2.26.4 SDL2
-                      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-      # Remove SDL2.zip
-      file(REMOVE ${PROJECT_SOURCE_DIR}/SDL2.zip)
-   else()
-      message(STATUS "Unzipping SDL2 on Linux")
-      #execute_process(COMMAND unzip ${PROJECT_SOURCE_DIR}/SDL2.zip -d ${PROJECT_SOURCE_DIR}/SDL2)
-   endif()
+   message(STATUS "Unzipping SDL2...")
+   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf ${PROJECT_SOURCE_DIR}/SDL2.zip
+                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+   execute_process(COMMAND ${CMAKE_COMMAND} -E rename SDL2-2.26.4 SDL2
+                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+   # Remove SDL2.zip
+   file(REMOVE ${PROJECT_SOURCE_DIR}/SDL2.zip)
 endif()
 
-# Locate SDL libraries
+# Add SDL2 as a package
 set(SDL2_DIR ${PROJECT_SOURCE_DIR}/SDL2/cmake)
 find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2)
 # FIXME: MAYBE THIS IS NOT FINDING SDL2main BECAUSE I GET WARNINGS
 #        ABOUT WMAIN AND MAIN FROM THE LINKER
 find_package(SDL2 REQUIRED CONFIG REQUIRED SDL2main)
 
-# Build glad as a library
+# Build glad as a library (it must already be here)
 set(GLAD_SRC ${PROJECT_SOURCE_DIR}/glad/src/glad.c)
 set(GLAD_INC ${PROJECT_SOURCE_DIR}/glad/include)
 add_library(glad STATIC ${GLAD_SRC})
@@ -145,27 +125,51 @@ set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
 set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.c
       EmulationWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
-        Mapper007.cpp Mapper066.cpp)
+        Mapper004.cpp Mapper007.cpp Mapper066.cpp)
 
 PREPEND(NESCLE_SRC ${NESCLE_SRC_DIR} ${NESCLE_SRC})
 PREPEND(MAPPER_SRC ${MAPPER_SRC_DIR} ${MAPPER_SRC})
 
 set(SRC ${NESCLE_SRC} ${MAPPER_SRC})
-
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
+
 add_executable(nescle ${SRC})
-# FIXME: NOT WORKING
-#target_compile_options(nescle PRIVATE
-#  "$<${gcc_like}:-Wall -Wextra -Wpedantic -Werror>"
-#  "$<${msvc_like}:/W4 /WX>"
-#)
 
 # Include directories
+# FIXME: INCLUDE ALL LIBS AS SYSTEM HEADERS TO AVOID THEIR HEADERS
+# PROPOGATING ERRORS TO MY CODE
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
                                  PUBLIC ${IMGUI_INC})
 target_include_directories(glad PUBLIC ${GLAD_INC})
-
 target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
+
+# Set compile options for each library
+set(mycc undefined)
+# FIXME: CHANGE THIS IMMEDIATELY
+set(mycc COMPILER_CLANGCL)
+
+if (mycc STREQUAL COMPILER_CLANGCL)
+   target_compile_options(imgui PRIVATE -w)
+   target_compile_options(glad PRIVATE -w)
+   target_compile_options(nescle PRIVATE -Wall
+   -Wextra -Wpedantic -Wold-style-cast -Wimplicit
+   -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
+   -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
+   -Wwrite-strings -Wnull-dereference)
+
+elseif(mycc STREQUAL COMPILER_MSVC)
+   message(STATUS "Using MSVC FLAGS NEEDED TO BE ADDED")
+elseif(mycc STREQUAL COMPILER_GNU)
+   target_compile_options(imgui PRIVATE -w)
+   target_compile_options(glad PRIVATE -w)
+   target_compile_options(nescle PRIVATE -Wall
+   -Wextra -Wpedantic -Wold-style-cast -Wimplicit
+   -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
+   -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
+   -Wwrite-strings -Wnull-dereference)
+else()
+   message(FATAL_ERROR "Unknown compiler")
+endif()
 
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
