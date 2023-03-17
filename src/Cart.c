@@ -36,10 +36,18 @@ Cart* Cart_Create(void) {
 }
 
 void Cart_Destroy(Cart* cart) {
-    Mapper_Destroy(cart->mapper);
-    free(cart->prg_rom);
-    free(cart->chr_rom);
-    free(cart);
+    if (cart != NULL) {
+        Mapper_Destroy(cart->mapper);
+        // Even if path was allocated via malloc from the save states
+        // we are safe because NFD_FreePath uses stdlib's free
+        // HOWEVER, it does assert that the pointer is not NULL
+        // so we have to check
+        if (cart->rom_path != NULL)
+            NFD_FreePath(cart->rom_path);
+        free(cart->prg_rom);
+        free(cart->chr_rom);
+        free(cart);
+    }
 }
 
 

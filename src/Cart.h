@@ -50,7 +50,7 @@ struct cart_rom_header {
 struct cart {
     Cart_ROMHeader metadata;
 
-    char* rom_path;
+    const char* rom_path;
     // TODO: I DON'T KNOW IF THIS IS THE BEST PLACE FOR THIS
     Cart_MirrorMode mirror_mode;
     // Maybe reducable to a bool that just checks for NES 2.0 or not

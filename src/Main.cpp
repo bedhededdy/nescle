@@ -51,6 +51,12 @@
 //       TO AVOID MAJOR REWRITES, WE COULD JUST TO A CHDIR TO SET THE WORKING
 //       DIRECTORY TO WHERE I WANT IT TO BE
 
+#ifdef _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
 #include "EmulationWindow.h"
 
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
@@ -568,8 +574,25 @@ int main(int argc, char** argv) {
     // FAILS TIMING WITH CODE 3
     // FAILS EDGE TIMING WITH CODE 3
 
-    EmulationWindow emuWin(256 * 3, 240 * 3);
-    emuWin.Loop();
+    //EmulationWindow emuWin(256 * 3, 240 * 3);
+    //emuWin.Loop();
+
+    // Have to alloc on the heap to check for leaks
+    EmulationWindow* emuWin = new EmulationWindow(256 * 3, 240 * 3);
+    emuWin->Loop();
+    delete emuWin;
+
+    #ifdef _DEBUG
+    // Send all reports to STDOUT
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
+
+    _CrtDumpMemoryLeaks();
+    #endif
 
     return 0;
 }

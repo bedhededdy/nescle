@@ -59,8 +59,10 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
 }
 
 void Mapper_Destroy(Mapper* mapper) {
-    delete (MapperBase*)mapper->mapper_class;
-    free(mapper);
+    if (mapper != NULL) {
+        delete (MapperBase*)mapper->mapper_class;
+        free(mapper);
+    }
 }
 
 uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {

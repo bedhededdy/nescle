@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MapperBase.h"
+#include <vector>
 
 class Mapper001 : public MapperBase {
 private:
@@ -16,6 +17,10 @@ private:
     // Write count
     uint8_t load_reg_ct = 0;
     uint8_t ctrl = 0;
+
+    std::vector<uint8_t> sram;
+
+
 
     // OLC has mirroring, but we handle that
     // from the cartridge, so we need no var
