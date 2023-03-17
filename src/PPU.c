@@ -1303,14 +1303,18 @@ uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
 }
 
 bool PPU_SaveState(PPU* ppu, FILE* file) {
-    return fwrite(ppu, sizeof(PPU), 1, file) == sizeof(PPU);
+    if (fwrite(ppu, sizeof(PPU), 1, file) < 1)
+        return false;
+    return true;
+
 }
 
 bool PPU_LoadState(PPU* ppu, FILE* file) {
     // FIXME: THIS FUNCTION IS NOT RESILIENT AGAINST
     // FAILED READS
     Bus* bus = ppu->bus;
-    if (fread(ppu, sizeof(PPU), 1, file) < sizeof(PPU))
+    size_t size = fread(ppu, sizeof(PPU), 1, file);
+    if (size < 1)
         return false;
     ppu->bus = bus;
     ppu->oam_ptr = (uint8_t*)ppu->oam;

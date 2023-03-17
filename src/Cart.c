@@ -22,8 +22,6 @@
 #include "PPU.h"
 #include "Mapper.h"
 
-#include <nfd.h>
-
 Cart* Cart_Create(void) {
     Cart* cart = malloc(sizeof(Cart));
     if (cart == NULL)
@@ -38,18 +36,12 @@ Cart* Cart_Create(void) {
 void Cart_Destroy(Cart* cart) {
     if (cart != NULL) {
         Mapper_Destroy(cart->mapper);
-        // Even if path was allocated via malloc from the save states
-        // we are safe because NFD_FreePath uses stdlib's free
-        // HOWEVER, it does assert that the pointer is not NULL
-        // so we have to check
-        if (cart->rom_path != NULL)
-            NFD_FreePath(cart->rom_path);
+        free(cart->rom_path);
         free(cart->prg_rom);
         free(cart->chr_rom);
         free(cart);
     }
 }
-
 
 // FIXME: THIS LEAKS MEMORY ON EACH ROM LOAD AS WE NEVER FREE THE PREVIOUS
 // CHAR ROM OR PRG ROM
@@ -61,11 +53,6 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Check for null path or path.equals("")
     if (path == NULL || path[0] == '\0') {
         printf("Cart_LoadROM: invalid path\n");
-
-        // Free path if it exists
-        if (cart->rom_path != NULL)
-            NFD_FreePath(cart->rom_path);
-
         return false;
     }
 
@@ -131,7 +118,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Now that we know the program rom size, we can allocate memory for it
     const size_t prg_rom_nbytes = sizeof(uint8_t)
         * CART_PRG_ROM_CHUNK_SIZE * header->prg_rom_size;
-    cart->prg_rom = malloc(prg_rom_nbytes);
+    cart->prg_rom = realloc(cart->prg_rom, prg_rom_nbytes);
 
     if (cart->prg_rom == NULL) {
         printf("Cart_LoadROM: alloc prg_rom\n");
@@ -153,7 +140,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     if (chr_rom_nbytes > 0) {
         // Load char rom if exists
         // similar logic to program rom, but with 8kb instead of 16
-        cart->chr_rom = malloc(chr_rom_nbytes);
+        cart->chr_rom = realloc(cart->chr_rom, chr_rom_nbytes);
 
         if (cart->chr_rom == NULL) {
             printf("Cart_LoadROM: alloc chr_rom\n");
@@ -172,7 +159,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     else {
         // If the file type is 1, we still give it 0x2000 bytes
         // but those bytes will be used as RAM instead of ROM
-        cart->chr_rom = malloc(CART_CHR_ROM_CHUNK_SIZE * sizeof(uint8_t));
+        cart->chr_rom = realloc(cart->chr_rom, CART_CHR_ROM_CHUNK_SIZE * sizeof(uint8_t));
 
         if (cart->chr_rom == NULL) {
             printf("Cart_LoadROM: alloc chr_ram\n");
@@ -192,6 +179,8 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     printf("mirror mode: %d\n", cart->mirror_mode);
 
     // Initialize cart's mapper
+    if (cart->mapper != NULL)
+        Mapper_Destroy(cart->mapper);
     cart->mapper = Mapper_Create(mapper_id, cart);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
@@ -201,13 +190,16 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Fill in some fields
     cart->file_type = file_type;
 
-    // FIXME: DEAL WITH THE CONSTNESS ISSUE HERE
-
-    // FIXME: THIS HAS HAS NOT BEEN TESTED AT ALL
     // Free previous path if it exists
-    if (cart->rom_path != NULL)
-        NFD_FreePath(cart->rom_path);
-    cart->rom_path = path;
+    size_t path_len = strlen(path) + 1;
+    cart->rom_path = realloc(cart->rom_path, path_len);
+    if (cart->rom_path == NULL) {
+        printf("Cart_LoadROM: alloc rom_path\n");
+        return false;
+    }
+
+    // Copy path into cart
+    memcpy(cart->rom_path, path, path_len);
 
     // Don't forget to close the file and return true
     fclose(rom);
@@ -215,6 +207,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 }
 
 bool Cart_SaveState(Cart* cart, FILE* file) {
+    // FIXME: THIS DOES NOT ACCOUNT FOR A NULL CART
     fwrite(cart, sizeof(Cart), 1, file);
     size_t rom_path_len = strlen(cart->rom_path) + 1;
     fwrite(&rom_path_len, sizeof(size_t), 1, file);
@@ -230,11 +223,16 @@ bool Cart_SaveState(Cart* cart, FILE* file) {
 }
 
 bool Cart_LoadState(Cart* cart, FILE* file) {
+    // free the old addresses
+    free(cart->rom_path);
+    free(cart->prg_rom);
+    free(cart->chr_rom);
+
     fread(cart, sizeof(Cart), 1, file);
     size_t rom_path_len;
     fread(&rom_path_len, sizeof(size_t), 1, file);
 
-    cart->rom_path = malloc(rom_path_len);
+    cart->rom_path = malloc(sizeof(char) * rom_path_len);
     fread(cart->rom_path, sizeof(char), rom_path_len, file);
 
     cart->prg_rom = malloc(sizeof(uint8_t)

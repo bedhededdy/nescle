@@ -1296,19 +1296,19 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
 
 
 bool CPU_SaveState(CPU* cpu, FILE* file) {
-    if (fwrite(cpu, sizeof(CPU), 1, file) < sizeof(CPU))
+    if (fwrite(cpu, sizeof(CPU), 1, file) < 1)
         return false;
-    if (fwrite(&cpu->instr->opcode, sizeof(uint8_t), 1, file) < sizeof(uint8_t))
+    if (fwrite(&cpu->instr->opcode, sizeof(uint8_t), 1, file) < 1)
         return false;
     return true;
 }
 
 bool CPU_LoadState(CPU* cpu, FILE* file) {
     Bus* bus = cpu->bus;
-    if (fread(cpu, sizeof(CPU), 1, file) < sizeof(CPU))
+    if (fread(cpu, sizeof(CPU), 1, file) < 1)
         return false;
     uint8_t opcode;
-    if (fread(&opcode, sizeof(uint8_t), 1, file) < sizeof(uint8_t))
+    if (fread(&opcode, sizeof(uint8_t), 1, file) < 1)
         return false;
     cpu->instr = CPU_Decode(opcode);
     cpu->bus = bus;

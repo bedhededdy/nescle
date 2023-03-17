@@ -37,5 +37,5 @@ void Mapper000::SaveToDisk(FILE* file) {
 }
 
 void Mapper000::LoadFromDisk(FILE* file) {
-    fwrite(&id, sizeof(id), 1, file);
+    fread(&id, sizeof(id), 1, file);
 }

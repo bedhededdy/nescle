@@ -42,7 +42,6 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
         {
             if (ImGui::MenuItem("Open ROM", "Ctrl+O"))
             {
-                // FIXME: ALSO NEED TO CAST ROM SAFELY TO CONST CHAR*
                 nfdchar_t *rom;
                 nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
                 nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
@@ -55,13 +54,16 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                     SDL_Log("Error opening file: %s\n", NFD_GetError());
                 }
 
-                if (!Cart_LoadROM(bus->cart, rom)) {
+                if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
                     emu->run_emulation = false;
                     show_popup = true;
                 } else {
                     emu->run_emulation = true;
                     Bus_Reset(bus);
                 }
+
+                if (rom != NULL)
+                    NFD_FreePath(rom);
             }
             if (ImGui::MenuItem("Save state", "Ctrl+S")) {
                 Bus_SaveState(bus);

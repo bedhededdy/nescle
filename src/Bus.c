@@ -296,17 +296,25 @@ void Bus_Reset(Bus* bus) {
 int Bus_SaveState(Bus* bus) {
     FILE* savestate = fopen("../saves/savestate.bin", "wb");
 
-    fwrite(bus, sizeof(Bus), 1, savestate);
+    if (fwrite(bus, sizeof(Bus), 1, savestate) < 1)
+        printf("bus too short");
 
-    CPU_SaveState(bus->cpu, savestate);
-    APU_SaveState(bus->apu, savestate);
-    Cart_SaveState(bus->cart, savestate);
+    if (!CPU_SaveState(bus->cpu, savestate))
+        printf("cpu too short");
+
+    if (!APU_SaveState(bus->apu, savestate))
+        printf("apu too short");
+
+    if (!Cart_SaveState(bus->cart, savestate))
+        printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
-    fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate);
+    if (fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate) < 1)
+        printf("mapper too short");
     Mapper_SaveToDisk(bus->cart->mapper, savestate);
 
-    PPU_SaveState(bus->ppu, savestate);
+    if (!PPU_SaveState(bus->ppu, savestate))
+        printf("ppu too short");
 
     fclose(savestate);
 
@@ -339,14 +347,15 @@ int Bus_LoadState(Bus* bus) {
     Mapper* mapper_addr = bus->cart->mapper;
     Cart_LoadState(bus->cart, savestate);
 
-    // FIXME: THIS PROBALBY LEAKS MEMORY
+    // Mapper
     bus->cart->mapper = mapper_addr;
-    if (bus->cart->mapper == NULL) {
-        bus->cart->mapper = malloc(sizeof(Mapper));
+    if (bus->cart->mapper != NULL) {
+        Mapper_Destroy(bus->cart->mapper);
     }
-
-    fread(bus->cart->mapper, sizeof(Mapper), 1, savestate);
-    bus->cart->mapper = Mapper_Create(bus->cart->mapper->id, bus->cart);
+    uint8_t dummy_buf[sizeof(Mapper)];
+    fread(dummy_buf, sizeof(Mapper), 1, savestate);
+    uint8_t mapper_id = dummy_buf[0];
+    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
     Mapper_LoadFromDisk(bus->cart->mapper, savestate);
 
     PPU_LoadState(bus->ppu, savestate);

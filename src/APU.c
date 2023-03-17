@@ -396,7 +396,7 @@ double APU_GetOutputSample(APU *apu)
 }
 
 bool APU_SaveState(APU* apu, FILE* file) {
-    return fwrite(apu, sizeof(APU), 1, file) == sizeof(APU);
+    return fwrite(apu, sizeof(APU), 1, file) == 1;
 }
 
 bool APU_LoadState(APU* apu, FILE* file) {
@@ -409,7 +409,7 @@ bool APU_LoadState(APU* apu, FILE* file) {
     // WE DON'T END UP WITH HALF VALID STATE AND
     // HALF NONSENSE
     Bus* bus = apu->bus;
-    if (fread(apu, sizeof(APU), 1, file) < sizeof(APU))
+    if (fread(apu, sizeof(APU), 1, file) < 1)
         return false;
     apu->bus = bus;
     return true;
