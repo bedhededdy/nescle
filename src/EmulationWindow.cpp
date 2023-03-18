@@ -28,6 +28,7 @@
 #include "CPU.h"
 #include "PPU.h"
 #include "Cart.h"
+#include "Mapper.h"
 #include "Emulator.h"
 #include "Bus.h"
 
@@ -86,6 +87,8 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                 show_pattern = true;
             if (ImGui::MenuItem("Show OAM"))
                 show_oam = true;
+            if (ImGui::MenuItem("Show MMC1 Banks"))
+                show_mmc1_banks = true;
             ImGui::EndMenu();
         }
         else
@@ -559,6 +562,12 @@ EmulationWindow::~EmulationWindow() {
     SDL_Quit();
 }
 
+void EmulationWindow::render_mmc1_banks() {
+    ImGui::Begin("MMC1 Banks", &show_mmc1_banks);
+    ImGui::Text("");
+    ImGui::End();
+}
+
 void EmulationWindow::Show(Emulator* emu) {
     Bus* bus = emu->nes;
 
@@ -576,6 +585,8 @@ void EmulationWindow::Show(Emulator* emu) {
         render_pattern(bus);
     if (show_oam)
         render_oam();
+    if (show_mmc1_banks)
+        render_mmc1_banks();
 
     ImGuiIO& io = ImGui::GetIO();
 

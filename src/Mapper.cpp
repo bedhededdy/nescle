@@ -23,6 +23,7 @@
 #include "mappers/Mapper001.h"
 #include "mappers/Mapper002.h"
 #include "mappers/Mapper003.h"
+#include "mappers/Mapper004.h"
 #include "mappers/Mapper007.h"
 #include "mappers/Mapper066.h"
 
@@ -42,6 +43,9 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
         break;
     case 3:
         mapper->mapper_class = (void*)(new Mapper003(cart));
+        break;
+    case 4:
+        mapper->mapper_class = (void*)(new Mapper004(cart));
         break;
     case 7:
         mapper->mapper_class = (void*)(new Mapper007(cart));
@@ -96,6 +100,9 @@ size_t Mapper_GetSize(uint8_t id) {
         break;
     case 3:
         res = sizeof(Mapper003);
+        break;
+    case 4:
+        res = sizeof(Mapper004);
         break;
     case 7:
         res = sizeof(Mapper007);

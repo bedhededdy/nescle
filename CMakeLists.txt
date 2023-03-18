@@ -155,7 +155,7 @@ if (mycc STREQUAL COMPILER_CLANGCL)
    -Wextra -Wpedantic -Wold-style-cast -Wimplicit
    -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference)
+   -Wwrite-strings -Wnull-dereference -Wmagic-number)
 
 elseif(mycc STREQUAL COMPILER_MSVC)
    message(STATUS "Using MSVC FLAGS NEEDED TO BE ADDED")
@@ -166,7 +166,7 @@ elseif(mycc STREQUAL COMPILER_GNU)
    -Wextra -Wpedantic -Wold-style-cast -Wimplicit
    -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference)
+   -Wwrite-strings -Wnull-dereference -Wmagic-number)
 else()
    message(FATAL_ERROR "Unknown compiler")
 endif()

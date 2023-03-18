@@ -39,7 +39,7 @@ public:
     GLuint palette_texture;
     GLuint dummy_tex;
 
-    // Bus* bus;
+    bool show_mmc1_banks = false;
 
     // TODO: MOVE THESE DEFAULT VALUES TO THE CONSTRUCTOR
     int palette = 0;
@@ -54,6 +54,7 @@ public:
     void render_disassembler();
     void render_oam();
     void render_pattern(Bus* bus);
+    void render_mmc1_banks();
     void render_main_gui(Emulator* emu);
 
     void setup_main_frame();

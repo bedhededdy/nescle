@@ -62,6 +62,9 @@ struct cart {
 
     uint8_t* prg_rom;
     uint8_t* chr_rom;
+
+    // TODO: NEED TO ADD THIS
+    // Bus* bus;
 };
 
 Cart* Cart_Create(void);

@@ -96,19 +96,11 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         }
     }
 
-    // TODO: THIS ASSUMES FILE TYPE 1, DOES NOT SUPPORT OTHERS
-    int file_type = 1;
-    switch (file_type) {
-    case 0:
-        break;
-    case 1:
-        break;
-    case 2:
-        break;
+    int file_type;
+    file_type = (header->mapper2 & 0x0c) == 0x0c ? 2 : 1;
+    printf("Header type: %d\n", file_type);
 
-    default:
-        break;
-    }
+    // TODO: HAVE DIFFERENT LOGIC BASED ON THE HEADER TYPE
 
     // FIXME: THIS HAS COMPLETELY NON DETERMINISTIC VALUES, INDICATING A
     // BUFFER OVERFLOW SOMEWHERE
@@ -200,6 +192,10 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Copy path into cart
     memcpy(cart->rom_path, path, path_len);
+
+    printf("prg_ram_size: %d\n", cart->metadata.prg_ram_size);
+    printf("prg_rom_size: %d\n", cart->metadata.prg_rom_size);
+    printf("chr_rom_size: %d\n", cart->metadata.chr_rom_size);
 
     // Don't forget to close the file and return true
     fclose(rom);

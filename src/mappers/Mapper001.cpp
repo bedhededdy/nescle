@@ -1,5 +1,44 @@
-// FIXME: THIS IS RIGHT EXCEPT FOR CASES OF RESET AND FOR
-// CASES WHERE THE GAME HAS SAVES, SUCH AS ZELDA
+// FIXME: WHAT'S HORRIFYING ABOUT THIS, IS THAT IT EXHIBITS NON DETERMINISTIC
+// BEHAVIOR. WATCH OUT!!!
+
+// FIXME: WE NEED TO IMPLEMENT PROPERLY THE PRG RAM ASPECT OF THESE THINGS
+// BECAUSE AS OF NOW WE ONLY ALLOW 8K ACCESS TO THE BATTERY BACKED SRAM
+// BUT THE MAPPERS CAN HAVE 32K OF PRG RAM SO WE NEED TO FIGURE THAT OUT
+// ADDITIONALLY, THERE IS NO LOGIC FOR THE PRG RAM BANK SWITCHING
+// SO THAT NEEDS TO BE IMPLEMENTED
+// UNTIL THIS IS DONE, AND WHILE WE ARE USING VECTORS INSTEAD OF ARRAYS
+// SAVING MAPPER001 GAMES IS IMPOSSIBLE
+
+// THE WAY THIS WOULD BE DONE IS THAT BANK SELECT FOR PRG RAM
+// WOULD HAPPEN BASED
+// ON SOME BITS OF THE UPPER CHAR BANK SELECT REGISTER, SO WHEN
+// READING AND WRITING THAT, YOU NEED TO PAY ATTENTION
+// TO THE AMOUNT OF PRG RAM ,CHR ROM, AND PRG ROM
+// THE PROPER BEHAVIORS ARE DEFINED AT THE END OF THE NESDEV ARTICLE
+
+// FIXME: TO GET BILL AND TED TO WORK RIGHT, YOU NEED TO HAVE
+// A CHECK FOR CONSECUTIVE WRITES. IF THEY HAPPEN, ALL OF THEM
+// ARE IGNORED EXCEPT THE FIRST ONE.
+
+// PRG BANK SELECT 5TH BIT (OR 4TH COUNTING FROM 0)
+// CONTROLS WHETHER PRG RAM IS ENABLED
+// I DON'T KNOW IF THE CHR BANK SELECT BEHAVIOR CHANGES BASED ON
+// WHETHER THE SELECT IS ENABLED OR NOT
+
+// IT APPEARS THAT POSSIBLY, THE SIZE OF PRG RAM WILL NOT BE SPECIFIED TO US
+// IN THIS CASE WE WILL JUST HAVE TO HOLD A 32K ARRAY IN THE MAPPER
+
+// GETTING ENALBING AND DISABLING RIGHT, MAY NOT BE NECESSARY
+// I GUESS YOU JUST GET OPEN BUS BEHAVIRO WHEN DISABLED
+// SO MAYBE THAT MEANS WRITES FAIL BUT READS DON'T? IDK
+// IT DOESN'T MAKE SENSE
+
+// MIGHT ALSO BE FAILING BECAUSE SOME GAMES USE THE PRG RAM AS
+// WORKING RAM AND NOT SAVE RAM
+
+// TODO: RUN MESEN UNDER THE VISUAL STUDIO DEBUGGER AND SEE IF
+// THE DUMMY WRITES ARE THE CAUSE OF THE ISSUE WITH ZELDA 2, KID ICARUS,
+// ETC
 #include "Mapper001.h"
 
 void Mapper001::reset() {
@@ -22,7 +61,6 @@ void Mapper001::reset() {
     ctrl = 0;
 
     cart->mirror_mode = CART_MIRRORMODE_HORZ;
-
 }
 
 Mapper001::Mapper001(Cart* cart) {
@@ -59,7 +97,12 @@ uint8_t Mapper001::MapCPURead(uint16_t addr) {
 }
 
 bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
-    // Writes to battery memory, which we don't have
+    //if (cycles_since_last_write < 2) {
+    //    printf("short write\n");
+    //    return true;
+    //}
+
+    // Writes to battery memory
     if (addr < 0x8000) {
         sram[addr % 0x2000] = data;
         return true;
@@ -94,16 +137,56 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     cart->mirror_mode = CART_MIRRORMODE_HORZ;
                     break;
                 }
+                printf("changed mirror mode to %d\n", cart->mirror_mode);
             } else if (target == 1) {
                 if (ctrl & 0x10) {
                     chr_select4_lo = load & 0x1f;
+                    printf("changed chr lo to %d\n", chr_select4_lo);
                 } else {
                     // 8k
-                    chr_select8 = load & 0x1e;
+                    // FIXME: THIS IS RIGHT FOR ZELDA 2, BUT FUCKS UP DOUBLE
+                    // DRAGON
+                    // THE ONLY SOLUTION MAY BE TO JUST DO IT LIKE THE HW
+                    // DOES AND NOT USE A SEPARATE VAR FOR THE 8K SELECT
+                    // THE PROBLEM HERE MAY ALSO BE CAUSED BY THE FACT THAT
+                    // ZELDA HAS SRAM
+
+                    // FIXME: DOUBLE DRAGON IS EXHIBITING NON-DETERMINISTIC
+                    // BEHAVIOR
+                    // IT IS OVERRUNNING SOMETHING
+
+                    // WHEN RESETTING AFTER LAUNCHING ,THE STUFF IS RIGHT
+                    // SO MAYBE IT EXPECTS DIFFERENT DEFAULT STATES??
+
+
+                    // OTHER GAMES THAT WERE BUSTED WITH MMC1 ARE STILL FUCKED
+                    // LIKE KID ICARUS AND FINAL FANTASY 1
+                    // SO I REALLY DON'T KNOW WHAT COULD BE HAPPENING
+                    // NEED TO FIND THE DIFF THAT OCCURS ON RESET
+                    // WHEN YOU RUN THE RESET, EVEN ON INITAL GO, IT FIXES
+                    // DOUBLE DRAGON
+                    // SO MAYBE THERE IS SOME STATE THAT ISN'T QUITE RIGHT
+                    // WHEN THE ROM GETS LOADED
+
+                    // ON THE RESET, BASICALLY THE HI BANK SOMEHOW CHANGES
+                    // TO 27 WITHOUT ME DOING ANYTHING, WHICH IS THE RIHGT
+                    // BANK
+
+                    // RESETTING AGAIN SHOWS THE THE GAMEPLAY OPTIONS IN THE
+                    // MENU, SO IDK WTF IS GOING ON
+
+                    // I AM NOT STUPID, THE ROMS ARE NOT INES 1.0 AND IDK
+                    // HOW TO PARSE THAT SHIT
+
+                    chr_select8 = (load & 0x1e) >> 1;
+                    printf("changed chr 8k to %d\n", chr_select8);
                 }
             } else if (target == 2) {
+                // FIXME: NEED TO HANDLE THE SCENARIO WHERE CHR HI GETS SET
+                // TO 0 IN DOUBLE DRAGON
                 if (ctrl & 0x10)
                     chr_select4_hi = load & 0x1f;
+                printf("changed chr hi to %d\n", chr_select4_hi);
             } else if (target == 3) {
                 uint8_t prg_mode = (ctrl >> 2) & 3;
 
@@ -116,6 +199,8 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     prg_select16_lo = load & 0x0f;
                     prg_select16_hi = cart->metadata.prg_rom_size - 1;
                 }
+
+                printf("changed prg\n");
             }
 
             load = 0;
@@ -149,11 +234,13 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
         return true;
     }
 
+    printf("invalid write\n");
     return false;
 }
 
 void Mapper001::SaveToDisk(FILE* file) {
     fwrite(&id, sizeof(id), 1, file);
+
 }
 
 void Mapper001::LoadFromDisk(FILE* file) {

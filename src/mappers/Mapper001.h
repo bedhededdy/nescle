@@ -18,15 +18,13 @@ private:
     uint8_t load_reg_ct = 0;
     uint8_t ctrl = 0;
 
+    // TODO: NEED TO ADD THIS
+    // int cycles_since_last_write = 0;
+
     std::vector<uint8_t> sram;
-
-
 
     // OLC has mirroring, but we handle that
     // from the cartridge, so we need no var
-
-    // OLC has some vram vector, but I don't think we need it unless
-    // we want to be able to save games to the vram backup
 
     void reset();
 
