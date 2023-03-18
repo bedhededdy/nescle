@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: HAVE TWO HEADER STRUCTS, AND HAVE A UNION BETWEEN THEM DEPENDING
+// ON HEADER TYPE
 #include "Cart.h"
 
 #include <stdio.h>
@@ -43,12 +45,6 @@ void Cart_Destroy(Cart* cart) {
     }
 }
 
-// FIXME: THIS LEAKS MEMORY ON EACH ROM LOAD AS WE NEVER FREE THE PREVIOUS
-// CHAR ROM OR PRG ROM
-// SOLUTION: USE REALLOC AND ENSURE THAT THE POINTERS ARE SET TO NULL
-// FIXME: THERE ARE VARIOUS PATHS THAT DO NOT FREE THE PATH, BUT IT IS
-// REASONALBE TO ASSUME THAT THE USER WON'T GIVE ME 1000 BAD ROMS IN A ROW
-// SO I WILL NOT FIX THIS FOR NOW
 bool Cart_LoadROM(Cart* cart, const char* path) {
     // Check for null path or path.equals("")
     if (path == NULL || path[0] == '\0') {
@@ -86,6 +82,13 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     memcpy(&cart->metadata, buf, sizeof(Cart_ROMHeader));    // THIS IS RISKY, BUT WORKS
 
     Cart_ROMHeader* header = &cart->metadata;
+    // Can't use strcmp to compare because header->name is not null terminated
+    if (header->name[0] != 'N' || header->name[1] != 'E'
+        || header->name[2] != 'S' || header->name[3] != 0x1a) {
+        printf("Cart_LoadROM: invalid header\n");
+        return false;
+    }
+
 
     // Load trainer data if it exists
     // TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT
@@ -97,7 +100,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     }
 
     int file_type;
-    file_type = (header->mapper2 & 0x0c) == 0x0c ? 2 : 1;
+    file_type = (header->mapper2 & 0x0c) == 0x08 ? 2 : 1;
     printf("Header type: %d\n", file_type);
 
     // TODO: HAVE DIFFERENT LOGIC BASED ON THE HEADER TYPE

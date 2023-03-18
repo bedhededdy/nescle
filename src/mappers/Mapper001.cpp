@@ -58,7 +58,6 @@ void Mapper001::reset() {
 
     load = 0;
     load_reg_ct = 0;
-    ctrl = 0;
 
     cart->mirror_mode = CART_MIRRORMODE_HORZ;
 }
@@ -137,56 +136,22 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     cart->mirror_mode = CART_MIRRORMODE_HORZ;
                     break;
                 }
-                printf("changed mirror mode to %d\n", cart->mirror_mode);
+                // printf("changed mirror mode to %d\n", cart->mirror_mode);
             } else if (target == 1) {
                 if (ctrl & 0x10) {
                     chr_select4_lo = load & 0x1f;
-                    printf("changed chr lo to %d\n", chr_select4_lo);
+                    // printf("changed chr lo to %d\n", chr_select4_lo);
                 } else {
                     // 8k
-                    // FIXME: THIS IS RIGHT FOR ZELDA 2, BUT FUCKS UP DOUBLE
-                    // DRAGON
-                    // THE ONLY SOLUTION MAY BE TO JUST DO IT LIKE THE HW
-                    // DOES AND NOT USE A SEPARATE VAR FOR THE 8K SELECT
-                    // THE PROBLEM HERE MAY ALSO BE CAUSED BY THE FACT THAT
-                    // ZELDA HAS SRAM
-
-                    // FIXME: DOUBLE DRAGON IS EXHIBITING NON-DETERMINISTIC
-                    // BEHAVIOR
-                    // IT IS OVERRUNNING SOMETHING
-
-                    // WHEN RESETTING AFTER LAUNCHING ,THE STUFF IS RIGHT
-                    // SO MAYBE IT EXPECTS DIFFERENT DEFAULT STATES??
-
-
-                    // OTHER GAMES THAT WERE BUSTED WITH MMC1 ARE STILL FUCKED
-                    // LIKE KID ICARUS AND FINAL FANTASY 1
-                    // SO I REALLY DON'T KNOW WHAT COULD BE HAPPENING
-                    // NEED TO FIND THE DIFF THAT OCCURS ON RESET
-                    // WHEN YOU RUN THE RESET, EVEN ON INITAL GO, IT FIXES
-                    // DOUBLE DRAGON
-                    // SO MAYBE THERE IS SOME STATE THAT ISN'T QUITE RIGHT
-                    // WHEN THE ROM GETS LOADED
-
-                    // ON THE RESET, BASICALLY THE HI BANK SOMEHOW CHANGES
-                    // TO 27 WITHOUT ME DOING ANYTHING, WHICH IS THE RIHGT
-                    // BANK
-
-                    // RESETTING AGAIN SHOWS THE THE GAMEPLAY OPTIONS IN THE
-                    // MENU, SO IDK WTF IS GOING ON
-
-                    // I AM NOT STUPID, THE ROMS ARE NOT INES 1.0 AND IDK
-                    // HOW TO PARSE THAT SHIT
-
                     chr_select8 = (load & 0x1e) >> 1;
-                    printf("changed chr 8k to %d\n", chr_select8);
+                    // printf("changed chr 8k to %d\n", chr_select8);
                 }
             } else if (target == 2) {
                 // FIXME: NEED TO HANDLE THE SCENARIO WHERE CHR HI GETS SET
                 // TO 0 IN DOUBLE DRAGON
                 if (ctrl & 0x10)
                     chr_select4_hi = load & 0x1f;
-                printf("changed chr hi to %d\n", chr_select4_hi);
+                // printf("changed chr hi to %d\n", chr_select4_hi);
             } else if (target == 3) {
                 uint8_t prg_mode = (ctrl >> 2) & 3;
 
@@ -200,7 +165,7 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     prg_select16_hi = cart->metadata.prg_rom_size - 1;
                 }
 
-                printf("changed prg\n");
+                // printf("changed prg\n");
             }
 
             load = 0;
