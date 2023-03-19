@@ -11,6 +11,7 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
 
     // TODO: ALLOW USER TO CONFIG THIS
     // Force volume levels
+    // THIS AIN'T SAFE TO DO BEFORE THE LOCK, IDIOT
     emu->nes->apu->pulse1.volume = 1.0;
     emu->nes->apu->pulse2.volume = 1.0;
     emu->nes->apu->triangle.volume = 1.0;
@@ -47,14 +48,19 @@ Emulator* Emulator_Create(void) {
             "Emulator_Create: Bad alloc SDL_Mutex");
     }
 
+    emu->settings.sync = EMULATOR_SYNC_VIDEO;
+
     SDL_AudioSpec desired_spec = { 0 };
     desired_spec.freq = 44100;
     desired_spec.format = AUDIO_S16SYS;
     desired_spec.channels = 1;
     // TODO: LET THE USER CHOOSE THIS
     desired_spec.samples = 512;
-    desired_spec.callback = &audio_callback;
-    desired_spec.userdata = emu;
+
+    if (emu->settings.sync == EMULATOR_SYNC_AUDIO) {
+        desired_spec.callback = &audio_callback;
+        desired_spec.userdata = emu;
+    }
 
     emu->audio_device = SDL_OpenAudioDevice(NULL, 0, &desired_spec,
         &emu->audio_settings, 0);
@@ -67,6 +73,8 @@ Emulator* Emulator_Create(void) {
 
     emu->quit = false;
     emu->run_emulation = false;
+
+    // SDL_TimerID timer = SDL_AddTimer(16, &timer_callback, emu);
 
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);

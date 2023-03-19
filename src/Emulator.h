@@ -11,8 +11,13 @@ extern "C" {
 
 #include "NESCLETypes.h"
 
+typedef enum emulator_sync_type {
+    EMULATOR_SYNC_AUDIO,
+    EMULATOR_SYNC_VIDEO
+} Emulator_SyncType;
+
 struct emulator_settings {
-    int foo;
+    Emulator_SyncType sync;
 };
 
 // TODO: GET RID OF THE NES STATE LOCK
@@ -23,6 +28,8 @@ struct emulator {
 
     SDL_AudioSpec audio_settings;
     SDL_AudioDeviceID audio_device;
+
+    Emulator_Settings settings;
 
     // TODO: YOU CAN REPLACE RUN_EMULATION
     // WITH JUST PAUSING THE AUDIO DEVICE

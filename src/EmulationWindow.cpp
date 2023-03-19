@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: THIS DROPS INPUTS BECAUSE IF IT SEES START PRESSED TWICE WITHIN
+// 8MS, IT WILL NOT PAUSE AND UNPAUSE THE GAME
+// FIXME: ADD BACK THE SLEEPS
 #include "EmulationWindow.h"
 
 #include <glad/glad.h>
@@ -30,6 +33,7 @@
 #include "Cart.h"
 #include "Mapper.h"
 #include "Emulator.h"
+#include "APU.h"
 #include "Bus.h"
 
 // FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
@@ -334,7 +338,6 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
-
     emulator = Emulator_Create();
 
     Bus* bus = emulator->nes;
@@ -358,7 +361,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 
     // TODO: LET THE USE RCHOOSE THIS
     // Enable vsync
-    // SDL_GL_SetSwapInterval(1);
+    SDL_GL_SetSwapInterval(1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -571,6 +574,8 @@ void EmulationWindow::render_mmc1_banks() {
 void EmulationWindow::Show(Emulator* emu) {
     Bus* bus = emu->nes;
 
+
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -590,6 +595,31 @@ void EmulationWindow::Show(Emulator* emu) {
 
     ImGuiIO& io = ImGui::GetIO();
 
+    if (emu->settings.sync == EMULATOR_SYNC_VIDEO) {
+        int16_t stream[735];
+        emu->nes->apu->pulse1.volume = 1.0;
+        emu->nes->apu->pulse2.volume = 1.0;
+        emu->nes->apu->triangle.volume = 1.0;
+        emu->nes->apu->master_volume = 0.5;
+        for (size_t i = 0; i < 735; i++) {
+            if (emu->run_emulation) {
+                // THERE IS A SORT OF FLAW IN REASONING HERE
+                // THIS REASONS THAT GETTING 735 SAMPLES A SECOND WILL AMOUNT
+                // TO EXACTLY 1 FRAME'S WORTH OF EMULATION
+                // THIS MAY NOT NECESSARILY HAPPEN THIS WAY
+                // YOU MAY HAVE TO HAVE A VARIABLE NUMBER OF SAMPLES AND USE
+                // A VECTOR TO DO THIS
+                while (!Bus_Clock(bus));
+                stream[i] = 32767 * bus->audio_sample;
+            } else {
+                stream[i] = 0;
+            }
+        }
+
+        if (SDL_QueueAudio(emu->audio_device, stream, sizeof(stream)) < 0)
+            SDL_Log("SDL_QueueAudio failed: %s", SDL_GetError());
+    }
+
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -605,6 +635,8 @@ void EmulationWindow::Show(Emulator* emu) {
     // flipping the bytes on a little endian machine
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
         GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->frame_buffer);
+    // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
+    //     GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->screen);
 
     glBindVertexArray(main_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
