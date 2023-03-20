@@ -39,10 +39,10 @@ public:
     GLuint palette_texture;
     GLuint dummy_tex;
 
-    bool show_mmc1_banks = false;
-
     // TODO: MOVE THESE DEFAULT VALUES TO THE CONSTRUCTOR
     int palette = 0;
+
+    const char* exe_path;
 
     bool show_disassembler = false;
     bool show_oam = false;

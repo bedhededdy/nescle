@@ -33,25 +33,25 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
 
     switch (id) {
     case 0:
-        mapper->mapper_class = (void*)(new Mapper000(cart));
+        mapper->mapper_class = new Mapper000(cart);
         break;
     case 1:
-        mapper->mapper_class = (void*)(new Mapper001(cart));
+        mapper->mapper_class = new Mapper001(cart);
         break;
     case 2:
-        mapper->mapper_class = (void*)(new Mapper002(cart));
+        mapper->mapper_class = new Mapper002(cart);
         break;
     case 3:
-        mapper->mapper_class = (void*)(new Mapper003(cart));
+        mapper->mapper_class = new Mapper003(cart);
         break;
     case 4:
-        mapper->mapper_class = (void*)(new Mapper004(cart));
+        mapper->mapper_class = new Mapper004(cart);
         break;
     case 7:
-        mapper->mapper_class = (void*)(new Mapper007(cart));
+        mapper->mapper_class = new Mapper007(cart);
         break;
     case 66:
-        mapper->mapper_class = (void*)(new Mapper066(cart));
+        mapper->mapper_class = new Mapper066(cart);
         break;
 
     default:
@@ -64,28 +64,31 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
 
 void Mapper_Destroy(Mapper* mapper) {
     if (mapper != NULL) {
-        delete (MapperBase*)mapper->mapper_class;
+        delete static_cast<MapperBase*>(mapper->mapper_class);
         free(mapper);
     }
 }
 
 uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {
-    return ((MapperBase*)mapper->mapper_class)->MapCPURead(addr);
+    return static_cast<MapperBase*>(mapper->mapper_class)->MapCPURead(addr);
 }
 
 bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    return ((MapperBase*)mapper->mapper_class)->MapCPUWrite(addr, data);
+    return static_cast<MapperBase*>(mapper->mapper_class)->MapCPUWrite(addr, data);
 }
 
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr) {
-    return ((MapperBase*)mapper->mapper_class)->MapPPURead(addr);
+    return static_cast<MapperBase*>(mapper->mapper_class)->MapPPURead(addr);
 }
 
 bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    return ((MapperBase*)mapper->mapper_class)->MapPPUWrite(addr, data);
+    return static_cast<MapperBase*>(mapper->mapper_class)->MapPPUWrite(addr, data);
 }
 
 size_t Mapper_GetSize(uint8_t id) {
+    // TODO: MIGHT BE ABLE TO DO THIS USING TYPEOF (DECLTYPE IN C++11)
+    // TYPEOF IS GCC EXTENSION, SO WE CAN'T USE IT
+
     size_t res;
 
     switch (id) {
@@ -120,13 +123,13 @@ size_t Mapper_GetSize(uint8_t id) {
 }
 
 void Mapper_AssignCartridge(Mapper* mapper, Cart* cart) {
-    ((MapperBase*)mapper->mapper_class)->SetCart(cart);
+    static_cast<MapperBase*>(mapper->mapper_class)->SetCart(cart);
 }
 
 void Mapper_SaveToDisk(Mapper* mapper, FILE* file) {
-    ((MapperBase*)mapper->mapper_class)->SaveToDisk(file);
+    static_cast<MapperBase*>(mapper->mapper_class)->SaveToDisk(file);
 }
 
 void Mapper_LoadFromDisk(Mapper* mapper, FILE* file) {
-    ((MapperBase*)mapper->mapper_class)->LoadFromDisk(file);
+    static_cast<MapperBase*>(mapper->mapper_class)->LoadFromDisk(file);
 }

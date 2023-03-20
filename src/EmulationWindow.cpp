@@ -16,6 +16,14 @@
 // FIXME: THIS DROPS INPUTS BECAUSE IF IT SEES START PRESSED TWICE WITHIN
 // 8MS, IT WILL NOT PAUSE AND UNPAUSE THE GAME
 // FIXME: ADD BACK THE SLEEPS
+
+// TODO: INVESTIGATE USING SDL_PERFORMANCECOUNTER FOR TIMING INSTEAD OF VSYNC
+// AS THERE IS A FUNCTION YOU CAN CALL THAT GETS THE FREQUENCY
+// HOWEVER THIS STILL WOULND'T BE ACCURATE IF THE FREQ CHANGED INBETWEEN TWO
+// CALLS TO IT, I WOULD ONLY GET THE CURRENT FREQ
+// AND THAT APPROACH WOULD STILL REQUIRE SLEEPING TO AVOID STARVING THE CPU
+// SO ON ANY SYSTEM WITH A LOW RESOLUTION CLOCK IT FIXES NOTHING
+// WITH REGARDS TO IT SLEEPING FOR TOO LONG
 #include "EmulationWindow.h"
 
 #include <glad/glad.h>
@@ -41,12 +49,9 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
     Bus* bus = emu->nes;
 
     bool show_popup = false;
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("Open ROM", "Ctrl+O"))
-            {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open ROM", "Ctrl+O")) {
                 nfdchar_t *rom;
                 nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
                 nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
@@ -71,43 +76,47 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                     NFD_FreePath(rom);
             }
             if (ImGui::MenuItem("Save state", "Ctrl+S")) {
-                Bus_SaveState(bus);
+                Emulator_SaveState(emu, NULL);
             }
             if (ImGui::MenuItem("Load state", "Ctrl+L")) {
-                Bus_LoadState(bus);
+                Emulator_LoadState(emu, NULL);
             }
             ImGui::EndMenu();
         }
-        else
-        {
+        else {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                          "EmulationWindow::Show(): Unable to create File menu");
         }
-        if (ImGui::BeginMenu("Debug"))
-        {
+        if (ImGui::BeginMenu("Debug")) {
             if (ImGui::MenuItem("Show Disassembler", "Ctrl+D"))
                 show_disassembler = true;
             if (ImGui::MenuItem("Show Pattern Mem", "Ctrl+P"))
                 show_pattern = true;
             if (ImGui::MenuItem("Show OAM"))
                 show_oam = true;
-            if (ImGui::MenuItem("Show MMC1 Banks"))
-                show_mmc1_banks = true;
             ImGui::EndMenu();
         }
-        else
-        {
+        else {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                          "EmulationWindow::Show(): Unable to create Debug menu");
         }
-        if (ImGui::BeginMenu("Config"))
-        {
-            if (ImGui::MenuItem("Enable VSYNC")) {
-                SDL_Log("enable vsync\n");
+        if (ImGui::BeginMenu("Config")) {
+            if (ImGui::MenuItem("Toggle VSYNC")) {
+                emulator->settings.vsync = !emulator->settings.vsync;
+                SDL_Log("VSYNC: %s\n", emulator->settings.vsync ? "ON" : "OFF");
+
+                if (emulator->settings.vsync) {
+                    SDL_GL_SetSwapInterval(1);
+                } else {
+                    SDL_GL_SetSwapInterval(0);
+                }
+            } else {
+                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                             "EmulationWindow::Show(): Unable to create VSYNC menu item");
             }
+            ImGui::EndMenu();
         }
-        else
-        {
+        else {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                          "EmulationWindow::Show(): Unable to create Config menu");
         }
@@ -176,12 +185,14 @@ void EmulationWindow::set_gl_options() {
 }
 
 void EmulationWindow::render_disassembler() {
+    // TODO: LOCK AND RELEASE
     ImGui::Begin("Disassembler", &show_disassembler);
     ImGui::Text("This is the disassembler");
     ImGui::End();
 }
 
 void EmulationWindow::render_oam() {
+    // TODO: LOCK AND RELEASE
     ImGui::Begin("OAM", &show_oam);
     ImGui::Text("This is the OAM");
     ImGui::End();
@@ -207,8 +218,19 @@ void EmulationWindow::render_pattern(Bus* bus) {
     // SAVESTATE, WHICH IS KEEPING THE PREVIOUS TILES LOADED ON A SAVESTATE
     // RESUME, INSTEAD OF THE NEW TILES. PROBABLY A POINTER RELATED THING
     // I BET IF I ACTUALLY LOAD THE CART BEFORE THE PPU THIS WOULD BE FIXED
+
+
+    // IT IS FINE NOT TO LOCK THIS, SINCE THE ONLY WAY THE SPR PATTERN TABLE
+    // CAN BE CHANGED IS BY CLALING THIS FUNCTION (WHCIH THE EMULATION
+    // NEVER DOES)
+    // IT WOULD BE CHANGED BY WRITING NEW PALETTE INFO, BUT IF I HAVE PALETTE
+    // INFO A FRAME OR TWO OLD, WHO CARES
+    // HOWEVER, IF YOU EVENTUALLY ALLOW WRITES TO THE PATTERN MEMORY FROM A
+    // TILE EDITOR, YOU GOTTA LOCK HERE
     PPU_GetPatternTable(bus->ppu, 0, palette);
     PPU_GetPatternTable(bus->ppu, 1, palette);
+
+
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 128, 0, 128, 128,
@@ -338,7 +360,14 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
-    emulator = Emulator_Create();
+    emulator = Emulator_Create("");
+
+    // NOTE: EVEN IF YOU DON'T FREE THIS, SDL DOES NOT SHOW A MEMORY LEAK
+    // BECAUSE ALTHOUGH SDL_malloc IS A MACRO TO MALLOC
+    // IT JUST PLAIN SUBSTITUES THE REGULAR MALLOC AND NOT THE DEBUG
+    // VERSION OF MALLOC THAT ALLOWS US TO TRACK MEMORY LEAKS
+    const char* exe_path = SDL_GetBasePath();
+    SDL_Log("Base path: %s\n", exe_path);
 
     Bus* bus = emulator->nes;
     CPU* cpu = bus->cpu;
@@ -359,9 +388,19 @@ EmulationWindow::EmulationWindow(int w, int h) {
     gl_context = SDL_GL_CreateContext(window);
     gladLoadGLLoader(SDL_GL_GetProcAddress);
 
-    // TODO: LET THE USE RCHOOSE THIS
-    // Enable vsync
-    SDL_GL_SetSwapInterval(1);
+    // NOTE: IF THE USER IS USING SYNC TO AUDIO, THEY ARE BETTER OFF DISABLGIN
+    // VSYNC, AS THE FRAMES WILL BE LESS DELAYED AND HONESTLY IT SEEMS
+    // SMOOTHER THAN WITH VSYNC. ADDITIONALLY, WITH VSYNC ON, THE INPUT
+    // LATENCY IS RIDICULOUSLY HIGH, BORDERLINE UNPLAYABLE
+    // TODO: SUPPORT ADAPTIVE SYNC BY CALLING WITH -1
+    // IF ADAPTIVE SYNC FAILS THEN WE TRY THE OTHER OPTIONS
+    // IT MAY BE POSSIBLE THAT ADAPTIVE SYNC KICKS IN WITHOUT ME TELLING IT
+    // YOU CAN CHECK THIS BY SETTING THE GSYNC INDICATOR IN NVCP
+    if (emulator->settings.vsync) {
+        SDL_GL_SetSwapInterval(1);
+    } else {
+        SDL_GL_SetSwapInterval(0);
+    }
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -399,6 +438,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 }
 
 void EmulationWindow::Loop() {
+    Emulator* emu = emulator;
     Bus *bus = emulator->nes;
     CPU *cpu = bus->cpu;
     PPU *ppu = bus->ppu;
@@ -407,56 +447,33 @@ void EmulationWindow::Loop() {
 
     // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
     // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
-    while (!emulator->quit)
-    {
+    while (!emulator->quit) {
         uint64_t t0 = SDL_GetTicks64();
 
         SDL_Event event;
+        bool opressed = false;
+        bool spressed = false;
+        bool lpressed = false;
+
+        // TODO: SHOULD ONLY CALL THIS ONCE AT THE BEGINNING OF THE APP
+        // AND STORE IT SO WE DON'T HAVE TO CONTINUOUSLY DO IT
+        int numkeys;
+        SDL_GetKeyboardState(&numkeys);
+
+        // TODO: THIS SHOULD BE STORED BY THE EMULATORWINDOW AND BE ON THE HEAP
+        // C++ DOESN'T ALLOW VARIABLE SIZED ARRAYS ????
+        // uint8_t keys[numkeys] = {0};
+
         SDL_LockMutex(emulator->nes_state_lock);
-        while (SDL_PollEvent(&event))
-        {
+        while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
 
-            switch (event.type)
-            {
+            switch (event.type) {
             case SDL_QUIT:
                 emulator->quit = true;
                 break;
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym)
-                {
-                case SDLK_w:
-                    bus->controller1 |= BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 |= BUS_CONTROLLER_LEFT;
-                    break;
-                case SDLK_s:
-                    bus->controller1 |= BUS_CONTROLLER_DOWN;
-                    break;
-                case SDLK_d:
-                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 |= BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 |= BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 |= BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 |= BUS_CONTROLLER_START;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
             case SDL_KEYUP:
-                switch (event.key.keysym.sym)
-                {
+                switch (event.key.keysym.sym) {
                 case SDLK_c:
                     // recall that the cpu clocks only once for every 3 bus clocks, so
                     // that is why we must have the second while loop
@@ -482,30 +499,14 @@ void EmulationWindow::Loop() {
                     // FIXME: THIS SHOULD HAVE A LOCK ON IT/BE ATOMIC
                     emulator->run_emulation = !emulator->run_emulation;
                     break;
-
-                case SDLK_w:
-                    bus->controller1 &= ~BUS_CONTROLLER_UP;
-                    break;
-                case SDLK_a:
-                    bus->controller1 &= ~BUS_CONTROLLER_LEFT;
+                case SDLK_o:
+                    opressed = true;
                     break;
                 case SDLK_s:
-                    bus->controller1 &= ~BUS_CONTROLLER_DOWN;
+                    spressed = true;
                     break;
-                case SDLK_d:
-                    bus->controller1 &= ~BUS_CONTROLLER_RIGHT;
-                    break;
-                case SDLK_j:
-                    bus->controller1 &= ~BUS_CONTROLLER_B;
-                    break;
-                case SDLK_k:
-                    bus->controller1 &= ~BUS_CONTROLLER_A;
-                    break;
-                case SDLK_BACKSPACE:
-                    bus->controller1 &= ~BUS_CONTROLLER_SELECT;
-                    break;
-                case SDLK_RETURN:
-                    bus->controller1 &= ~BUS_CONTROLLER_START;
+                case SDLK_l:
+                    lpressed = true;
                     break;
 
                 default:
@@ -528,11 +529,188 @@ void EmulationWindow::Loop() {
             }
         }
 
+        // TODO: TO IMPLEMENT TURBO BUTTONS YOU WILL NEED TO
+        // ALTERNATE THE VALUES THAT GET SENT TO THE EMULATOR ON EACH FRAME
+        // FOR NON-60FPS THIS MAY BE BUGGY, BUT I THINK THAT IF WE DO IT
+        // BASED ON THE BUS->PPU->FRAME_COMPLETE AS OPPOSED TO USING OUR
+        // REAL FRAMERATE, IT SHOULD POLL PROPERLY
+        // WE WOULD NEED TO KEEP TRACK OF THE PREVIOUS STATE OF THE BUTTON
+        // AND THEN SAY IF WE ARE TURBOING, FLIP THE STATE
+        // Use keyboard state functions
+        // Has to be called after event
+        // polling since the event polling
+        // populated this
+        uint8_t prev_controller1 = bus->controller1;
+        bus->controller1 = 0;
+        const uint8_t* keyboard_state = SDL_GetKeyboardState(NULL);
+
+        bool ctrl = keyboard_state[SDL_SCANCODE_LCTRL]
+            || keyboard_state[SDL_SCANCODE_RCTRL];
+        emu->aturbo = keyboard_state[SDL_SCANCODE_I];
+        emu->bturbo = keyboard_state[SDL_SCANCODE_U];
+
+        // TODO: AVOID DUPLICATING CODE BY USING A FUNCTION
+        if (ctrl) {
+            // only process one of these if multiple are pressed
+            if (opressed) {
+                nfdchar_t *rom;
+                nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
+                nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
+
+                if (result == NFD_OKAY) {
+                } else if (result == NFD_CANCEL) {
+                    rom = NULL;
+                } else {
+                    rom = NULL;
+                    SDL_Log("Error opening file: %s\n", NFD_GetError());
+                }
+
+                if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
+                    emu->run_emulation = false;
+                    // FIXEME: AVOID SHOWING THIS FOR NOW BUT FIX LATER
+                    // show_popup = true;
+                } else {
+                    emu->run_emulation = true;
+                    Bus_Reset(bus);
+                }
+
+                if (rom != NULL)
+                    NFD_FreePath(rom);
+            }
+            else if (lpressed) {
+                Emulator_LoadState(emu, NULL);
+            } else if (spressed) {
+                Emulator_SaveState(emu, NULL);
+            }
+
+        } else {
+            // FIXME: THIS IS NOT CONDUCIVE TO TURBO SINCE WE RESET THE STATE
+            // EACH TIME
+            // WE WOULD NEED TO DO IT WITH THE EVENT LOOP THAT FIXES THIS
+            // AND THE TURBOS WE WOULD HAVE A BOOL FOR WHICH WOULD
+            // TOGGLE THE BIT ON EACH FRAME
+            if (emu->aturbo)
+                bus->controller1 |= prev_controller1 & BUS_CONTROLLER_A;
+            if (emu->bturbo)
+                bus->controller1 |= prev_controller1 & BUS_CONTROLLER_B;
+            if (keyboard_state[SDL_SCANCODE_W])
+                bus->controller1 |= BUS_CONTROLLER_UP;
+            if (keyboard_state[SDL_SCANCODE_A])
+                bus->controller1 |= BUS_CONTROLLER_LEFT;
+            if (keyboard_state[SDL_SCANCODE_S])
+                bus->controller1 |= BUS_CONTROLLER_DOWN;
+            if (keyboard_state[SDL_SCANCODE_D])
+                bus->controller1 |= BUS_CONTROLLER_RIGHT;
+            if (keyboard_state[SDL_SCANCODE_J])
+                bus->controller1 |= BUS_CONTROLLER_B;
+            if (keyboard_state[SDL_SCANCODE_K])
+                bus->controller1 |= BUS_CONTROLLER_A;
+            if (keyboard_state[SDL_SCANCODE_BACKSPACE])
+                bus->controller1 |= BUS_CONTROLLER_SELECT;
+            if (keyboard_state[SDL_SCANCODE_RETURN])
+                bus->controller1 |= BUS_CONTROLLER_START;
+        }
+
+
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,
         // but we will not show the updates visually
         Show(emulator);
-        SDL_UnlockMutex(emulator->nes_state_lock);
+        // FIXME: THIS SHOULDN'T WORK BUT SOMEHOW IT DOES
+        // THE LOCK IS HELD BY THE EMULATOR FOR 16ms - delay
+        // WHEN VSYNC IS ENABLED
+        // EVEN THOUGH THE CALLBACK SHOULD RUN EVERY 11ms
+        // SO IF I DELAY FOR 1MS, THE CALLBACK COULD ONLY FEED SAMPLES EVERY 15MS
+        // THIS LEADS TO THE EMULATION RUNNING BELOW FULL SPEED, AS IT IS
+        // TIED TO THE SPEED OF THE CALLBACK
+        // THE SOLUTION TO THIS IS THAT THE SHOW FUNCTION HAS TO UNLOCK
+        // BEFORE THE FIRST BLOCKING CALL
+        // HOWEVER, THIS POSES ANOTHER ISSUE
+        // STUFF LIKE THE PALETTE WINDOW WILL EITHER HAVE TO MEMCPY THE PALETTE
+        // WHILE THE LOCK IS ACTIVE, OR THE PALETTE WILL HAVE TO HAVE OUT OF
+        // DATE INFO, OR IT WILL HAVE TO LOCK AGAIN SO THAT IT CAN GET THE
+        // CURRENT STATE
+        // HAVING OUT OF DATE INFO IS NOT SO BAD FOR THIS, EXCEPT FOR THE FACT
+        // THAT I MAY ADD THE ABILITY OF SOME OF THESE WINDOWS TO WRITE TO THE
+        // BUS. FOR INSTANCE, LET'S SAY I WANT TO BE ABLE TO WRITE TO THE BUS
+        // RAM TO CHANGE A CPU INSTRUCTION. THIS WOULD HAVE TO BE LOCKED, OR
+        // ELSE THE EMULATION COULD END UP WITH HALF OF MY INSTRUCTION AND HALF
+        // THE OLD ONE, WHICH OBVIOUSLY IS AN ISSUE
+        // I WOULD NEED TO HAVE SOME STUFF BE DRAWN SO THE USER CAN CLICK, BUT
+        // ITS FINE IF THAT LAGS A BIT
+        // BUT IMGUI WINDOWS NEED ALL THEIR SHIT BEFORE I CALL END ON IT
+        // BASICALLY THE WINDOW CANNOT BE COMPLETED UNTIL I HAVE DRAWN TO IT
+        // WHICH WILL BE BLOCKING
+        // SO SUPPOSE I HAVE A BUTTON THAT CHANGES THE STATE OF
+        // THE CPU. THE BUTTON HAS TO BE DRAWN TO BE PRESSED
+        // BUT SUPPOSE I HAVE SOMETHING THAT SHOWS THE CPU STATE BEFOREHAND
+        // WHICH IS A BLOCKING CALL TO GL
+        // I WOULD EITHER HAVE TO RELEASE THE LOCK BEFORE THE DRAW, AND
+        // RECLAIM IT ONCE I AM DONE DRAWING, OR I WOULD HAVE TO HOLD IT THROUGH
+        // THE WHOLE DRAW CALL
+        // I WOULD HAVE TO HANDLE THE BUTTON PRESS (LOCK TO CHANGE THE CPU STATE)
+        // UNLOCK AND THEN DRAW THE OUTPUT
+        // SO CONSIDER THE WHOLE LOOP HERE
+        // I NEED TO LOCK BEFORE EVENT POLLING, AS EVENTS CAN CHANGE THE
+        // STATE
+        // THEN IN THE SHOW FUNCTION I KNOW I HAVE STUFF IN THE MAIN MENU
+        // THAT CAN CHANGE THE STATE, BUT THANKFULLY NO GL CALLS SO I CAN HOLD
+        // THE LOCK THROUGH THAT
+        // HOWEVER, ALL WINDOWS AFTER THAT HAVE THE POTENTIAL TO CALL GL
+        // SO I NEED TO RELEASE THE LOCK AFTER DRAWING THE MAIN MENU
+        // AND THEN EACH WINDOW WILL HAVE TO RELOCK BEFORE ACCESSING
+        // THE BUS STATE AND UNLOCK BEFORE DRAWING TO AVOID HOLDING THE LOCK
+        // THROUGH THE VSYNC INTERVAL
+        // THE AUDIO CALLBACK ON LAPTOP TAKES BETWEEN 3-5ms TO EMULATE 512
+        // SAMPLES OF AUDIO (11MS worth of sound),
+        // SO GETTING A FULL FRAME OF VIDEO IN UNDER 16ms
+        // SHOUDL BE POSSIBLE, EVEN HAVING TO KEEP RELOCKING
+        // BASICALLY WHAT I'M SAYING IS THAT
+        // THE SUM OF THE TIME BEFORE THE FIRST BLOCKING CALL AND
+        // THE TIME AFTER THE FIRST BLOCKING CALL (SINCE OTHER BLOCKING CALLS
+        // WILL NO LONGER BLOCK AS I HAVE NOT CALLED SDL_GL_SWAPWINDOW)
+        // HAS TO FINISH IN APPROXIMATELY 6-8ms
+        // SINCE THE AUDIO THREAD RUNS EVERY 11ms AND IT TAKES 3-5ms TO EMULATE
+        // THIS SHOULD BE DOABLE
+        // OBVIOUSLY, THOUGH, THE IDEAL IS THAT PEOPLE ARE NOT SYNCING TO AUDIO
+        // AND THAT I CAN JUST RUN EVERYTHING ON THE SAME THREAD IN WHICH CASE
+        // ALL THAT MATTERS IS THAT EVERYTHING IS DONE IN UNDER 16MS AND LOCKING
+        // BECOMES A COMPLETE NON-ISSUE
+        // EVEN IF I CALL THE LOCKS, THERE WILL BE NO CONTENTION, SO
+        // ACQUIRING THE LOCKS WILL BE CHEAP
+        // BUT WHAT IF I NEED TO SHOW UPDATED INFO, AS IN THE CASE OF THE
+        // PPU FRAMEBUFFER. WELL I COULD EITHER HAVE A SEPARATE MUTEX JUST
+        // FOR THAT TO ENSURE I DON'T READ IT AS IT'S WRITTEN, OR I CAN MEMCPY
+        // IT UNDER A LOCK AND THEN RELEASE IT BEFORE DRAWING
+        // BECAUSE THERE IS A CASE WHERE I NEED TO READ THE STATE AND THEN DRAW
+        // AND IT COULD BE THE FIRST DRAW (THAT CASE BEING THE EMULATION WINDOW
+        // IS THE ONLY WINDOW OPEN) SO IN THIS CASE I SHOULD NOT HOLD THE LOCK
+        // THROUGH THE DRAW
+        // SO THE ONLY OPTION IS EITHER GETTING THE LOCK AND MEMCPYING OR
+        // HAVING A FRAMEBUFFER MUTEX. I CAN'T READ WITHOUT LOCKING
+        // OR I WILL HAVE FRAMES THAT ARE HALF OLD AND HALF NEW
+        // THIS GOES FOR ANYTHING THAT READS FROM THE BUS BTW
+        // EITHER YOU HAVE TO LOCK AND MEMCPY OR YOU HAVE TO HAVE TO HAVE
+        // A SEPARATE MUTEX
+        // SEPARATE MUTEX IS MUCH MORE COMPLICATED SO I WOULD SAY THE APPROACH
+        // SHOULD BE EITHER TO BE OKAY WITH SLIGHTLY OUTDATED DATA (FINE
+        // FOR THINGS LIKE PALETTE MEMORY) OR TO MEMCPY UNDER A LOCK
+        // IF ALL WE DO IS READ, WE ARE PROBABLY BETTER OFF MEMCPYING EVERYTHING
+        // BEFORE WE INITIALLY RELEASE THE LOCK AND THEN
+        // NEVER REACQUIRING IT (WHICH IS THE SIMPLEST WAY TO DO THINGS),
+        // BUT FOR THINGS THAT WRITE
+        // IN THE MIDDLE OF AN IMGUI WINDOW (SUCH AS A BUTTON PRESS)
+        // WE NEED TO LOCK AGAIN SO MAYBE IT MIGHT BE BETTER TO HAVE
+        // EVERYONE GET THE LOCK AND THEN MEMCPY EVERYTHING AS THEY GO ALONG
+        // INSTEAD OF ALL AT ONCE
+        // THE ALTERNATIVE IS TO DO ALL THE MEMCPYS AT THE BEGINNING FOR THE
+        // READ ONLYS AND THEN HAVE ALL THE WRITERS RELOCK
+        // BUT DOING THIS CAN LEAD TO A SCENARIO WHERE WE GET A NEW PPU
+        // FRAME AFTER WE'VE DONE THE INITIAL LOCK AND BEFORE THE DRAW
+        // SO WE WOULD HAVE AN OLD FRAME DISPLAYED TO THE USER WHICH IS
+        // NOT IDEAL
+        // SO PROBABLY THE BEST BET IS TO RELEASE AFTER DRAWING THE MAIN MENU
+        // AND THEN HAVE EVERYONE LOCK, MEMCPY, AND UNLOCK AS THEY GO ALONG
 
         // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
         // if (frametime < 16)
@@ -544,7 +722,14 @@ void EmulationWindow::Loop() {
         // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
         // WE COULD ALSO SYNC TO VSYNC, BUT I DON'T WISH TO FORCE THAT
         // AS OF RIGHT NOW FOR USERS THAT CHOOSE TO USE GSYNC OR FREESYNC
-        SDL_Delay(8);
+
+
+        // TODO: THIS IS NO LONGER TRULY NECESSARY AS WE NOW ARE NOT
+        // HOLDING  THE LOCK 100% OF THE TIME
+        // SO YOU CAN GET AWAY WITH NO SLEEP ON A SYSTEM THAT HAS A
+        // LOW RES CLOCK THAT WOULD END UP FUCKING US OVER
+        if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
+            SDL_Delay(8);
     }
 }
 
@@ -556,17 +741,22 @@ EmulationWindow::~EmulationWindow() {
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
+    SDL_free(const_cast<char*>(exe_path));
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
 
     // TODO: MAKE SURE THE AUDIO DEVICE IS CLOSED
     // BY THE EMULATOR (AKA CALL EMULATOR DESTROY HERE)
     Emulator_Destroy(emulator);
+
+    // TODO: SEE IF A FUNCTION LIKE THIS EXISTS FOR GL
+    // FIXME: THERE IS ONE OUSTANDING ALLOCATION
     SDL_Quit();
+    SDL_Log("remaining allocations: %d\n", SDL_GetNumAllocations());
 }
 
 void EmulationWindow::render_mmc1_banks() {
-    ImGui::Begin("MMC1 Banks", &show_mmc1_banks);
+    ImGui::Begin("MMC1 Banks");
     ImGui::Text("");
     ImGui::End();
 }
@@ -574,34 +764,31 @@ void EmulationWindow::render_mmc1_banks() {
 void EmulationWindow::Show(Emulator* emu) {
     Bus* bus = emu->nes;
 
-
-
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    glUseProgram(main_shader);
-
-    render_main_gui(emu);
-
-    if (show_disassembler)
-        render_disassembler();
-    if (show_pattern)
-        render_pattern(bus);
-    if (show_oam)
-        render_oam();
-    if (show_mmc1_banks)
-        render_mmc1_banks();
-
     ImGuiIO& io = ImGui::GetIO();
 
+    // emulate before drawing anything, because glTexSubImage2D is blocking
     if (emu->settings.sync == EMULATOR_SYNC_VIDEO) {
+        // FIXME: TO DO THIS FOR ANY REFRESH RATE, WHAT WE NEED TO DO IS
+        // FIGURE OUT HOW MANY SAMPLES ARE IN A FRAME AND THEN ADD X SAMPLES
+        // EVERY Y FRAMES
+        // TO DO THIS WE SHOULD GET THE GCD OF THE MODULO
+        // (THAT IS EXTRA FRAMES) AND THE REFRESH RATE TO SPREAD OUT THE
+        // EXTRA SAMPLES
+        // SO IF WE END UP GETTING THAT THE GCD OF THE REFRESH AND THE
+        // MODULO IS 20 AND THE MODULO WAS 40 AND THE REFRESH WAS 60
+        // WE WOULD ADD 2 SAMPLES EVERY 3 FRAMES
         int16_t stream[735];
+        // this is way inaccurate, will desync fairly fast
+        // int16_t stream[330];
         emu->nes->apu->pulse1.volume = 1.0;
         emu->nes->apu->pulse2.volume = 1.0;
         emu->nes->apu->triangle.volume = 1.0;
         emu->nes->apu->master_volume = 0.5;
-        for (size_t i = 0; i < 735; i++) {
+        for (size_t i = 0; i < sizeof(stream)/sizeof(int16_t); i++) {
             if (emu->run_emulation) {
                 // THERE IS A SORT OF FLAW IN REASONING HERE
                 // THIS REASONS THAT GETTING 735 SAMPLES A SECOND WILL AMOUNT
@@ -609,7 +796,7 @@ void EmulationWindow::Show(Emulator* emu) {
                 // THIS MAY NOT NECESSARILY HAPPEN THIS WAY
                 // YOU MAY HAVE TO HAVE A VARIABLE NUMBER OF SAMPLES AND USE
                 // A VECTOR TO DO THIS
-                while (!Bus_Clock(bus));
+                Emulator_EmulateSample(emu);
                 stream[i] = 32767 * bus->audio_sample;
             } else {
                 stream[i] = 0;
@@ -619,6 +806,22 @@ void EmulationWindow::Show(Emulator* emu) {
         if (SDL_QueueAudio(emu->audio_device, stream, sizeof(stream)) < 0)
             SDL_Log("SDL_QueueAudio failed: %s", SDL_GetError());
     }
+
+    glUseProgram(main_shader);
+
+    render_main_gui(emu);
+
+
+    // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
+    // BUS STATE
+    SDL_UnlockMutex(emulator->nes_state_lock);
+
+    if (show_disassembler)
+        render_disassembler();
+    if (show_pattern)
+        render_pattern(bus);
+    if (show_oam)
+        render_oam();
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
@@ -633,8 +836,38 @@ void EmulationWindow::Show(Emulator* emu) {
     // as opposed to interpreting the data as a sequence of 4-bytes.
     // The alternative is storing the data in ARGB format, as we do, and
     // flipping the bytes on a little endian machine
+
+
+
+    // YOU HAVE TO LCOK TO AVOID THE PPU CHANGING THIS WHILE WE ARE
+    // READING IT
+    // BUT THE LOCK CANNOT BE HELD THROUGH THIS CALL, AS IF THE EMULATION
+    // WINDOW IS THE ONLY ONE OPEN, THIS CALL BLOCKS
+    // SO WE MUST LOCK, MEMCPY, AND UNLOCK
+    // check execution time
+
+
+    // this looks expensive, but i've never seen it exceed 2000 cycles
+    // and usuually it is much less
+    // and mind you, this is without vsync
+    // with vsync, it is much more evenly spaced in the sub 1000 cycle range
+    // the only time it should shoot up is when there is contention for the
+    // lock (or a cache miss)
+    // uint64_t t0 = SDL_GetPerformanceCounter();
+    SDL_LockMutex(emulator->nes_state_lock);
+    // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
+    // NEW AND DELETE ON EVERY FRAME
+    uint32_t* ppu_framebuffer = new uint32_t[PPU_RESOLUTION_X * PPU_RESOLUTION_Y];
+    memcpy(ppu_framebuffer, bus->ppu->frame_buffer, PPU_RESOLUTION_X * PPU_RESOLUTION_Y * sizeof(uint32_t));
+    SDL_UnlockMutex(emulator->nes_state_lock);
+    // SDL_Log("cycles taken: %llu", SDL_GetPerformanceCounter() - t0);
+
+    // THIS CALL CAN BE BLOCKING
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
-        GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->frame_buffer);
+        GL_BGRA, GL_UNSIGNED_BYTE, ppu_framebuffer);
+    delete[] ppu_framebuffer;
+
+
     // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
     //     GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->screen);
 
@@ -651,6 +884,7 @@ void EmulationWindow::Show(Emulator* emu) {
         ImGui::RenderPlatformWindowsDefault();
         SDL_GL_MakeCurrent(window, gl_context);
     }
+
 
     SDL_GL_SwapWindow(window);
 }
