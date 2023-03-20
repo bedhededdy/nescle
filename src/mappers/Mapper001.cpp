@@ -70,8 +70,6 @@ Mapper001::Mapper001(Cart* cart) {
     id = 1;
     this->cart = cart;
 
-    // Give some space for saving
-    sram.resize(32 * 1024);
 
     // FIXME: THIS MAY NOT WORK, REALLY THIS IS SUPPOSED TO HAPPEN
     // WHEN THE CONSOLE RESET IS TRIGGERED, BUT SINCE
@@ -209,9 +207,28 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
 
 void Mapper001::SaveToDisk(FILE* file) {
     fwrite(&id, sizeof(id), 1, file);
-
+    fwrite(&ctrl, sizeof(ctrl), 1, file);
+    fwrite(&load, sizeof(load), 1, file);
+    fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file);
+    fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file);
+    fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file);
+    fwrite(&chr_select8, sizeof(chr_select8), 1, file);
+    fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file);
+    fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file);
+    fwrite(&prg_select32, sizeof(prg_select32), 1, file);
+    fwrite(sram, sizeof(sram), 1, file);
 }
 
 void Mapper001::LoadFromDisk(FILE* file) {
     fread(&id, sizeof(id), 1, file);
+    fread(&ctrl, sizeof(ctrl), 1, file);
+    fread(&load, sizeof(load), 1, file);
+    fread(&load_reg_ct, sizeof(load_reg_ct), 1, file);
+    fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file);
+    fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file);
+    fread(&chr_select8, sizeof(chr_select8), 1, file);
+    fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file);
+    fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file);
+    fread(&prg_select32, sizeof(prg_select32), 1, file);
+    fread(sram, sizeof(sram), 1, file);
 }

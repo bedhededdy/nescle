@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MapperBase.h"
-#include <vector>
 
 class Mapper001 : public MapperBase {
 private:
@@ -21,10 +20,9 @@ private:
     // TODO: NEED TO ADD THIS
     // int cycles_since_last_write = 0;
 
-    std::vector<uint8_t> sram;
-
-    // OLC has mirroring, but we handle that
-    // from the cartridge, so we need no var
+    // Since we may not know what the size of the prg ram is from
+    // the iNES header, we must allocate the maximum possible amount of 32kb
+    uint8_t sram[0x8000];
 
     void reset();
 
