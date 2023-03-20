@@ -43,6 +43,7 @@
 #include "Emulator.h"
 #include "APU.h"
 #include "Bus.h"
+#include "PatternWindow.h"
 
 // FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
 void EmulationWindow::render_main_gui(Emulator* emu) {
@@ -147,35 +148,6 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
     }
 }
 
-void EmulationWindow::setup_palette_frame() {
-    glGenTextures(1, &dummy_tex);
-    glBindTexture(GL_TEXTURE_2D, dummy_tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 128, 0,
-        GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glGenFramebuffers(1, &palette_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, palette_fbo);
-    glGenTextures(1, &palette_texture);
-    glBindTexture(GL_TEXTURE_2D, palette_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 128, 0,
-        GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, palette_texture, 0);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        SDL_Log("framebuf err\n");
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
 void EmulationWindow::set_gl_options() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE);
@@ -198,57 +170,10 @@ void EmulationWindow::render_oam() {
     ImGui::End();
 }
 
-void EmulationWindow::render_pattern(Bus* bus) {
-    // FIXME: THIS DOESN'T WORK, DO THE OPENGL TUT ON FRAMEBUFFER AND REALLY
-    // GRASP IT BEFORE YOU TRY THIS
-
-    // FIXME: BANK SWITCHING CAN PRODUCE EPILEPTIC REXSULTS
-    // IT MAY ACTUALLY BE WORKING PROPERLY TO GET CURRENT SELECTED BANK
-
-    glViewport(0, 0, 256, 128);
-    glBindFramebuffer(GL_FRAMEBUFFER, palette_fbo);
-    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glUseProgram(main_shader);
-    glBindVertexArray(main_vao);
-    glBindTexture(GL_TEXTURE_2D, dummy_tex);
-    // FIXME: THIS IS WRONG, WE SHOULD BE RENDERING THE TWO SELECTED BANKS
-    // OF CHAR ROM, NOT JUST THE FIRST TWO BANKS. THIS ALSO PLAYS INTO THE
-    // SAVESTATE, WHICH IS KEEPING THE PREVIOUS TILES LOADED ON A SAVESTATE
-    // RESUME, INSTEAD OF THE NEW TILES. PROBABLY A POINTER RELATED THING
-    // I BET IF I ACTUALLY LOAD THE CART BEFORE THE PPU THIS WOULD BE FIXED
-
-
-    // IT IS FINE NOT TO LOCK THIS, SINCE THE ONLY WAY THE SPR PATTERN TABLE
-    // CAN BE CHANGED IS BY CLALING THIS FUNCTION (WHCIH THE EMULATION
-    // NEVER DOES)
-    // IT WOULD BE CHANGED BY WRITING NEW PALETTE INFO, BUT IF I HAVE PALETTE
-    // INFO A FRAME OR TWO OLD, WHO CARES
-    // HOWEVER, IF YOU EVENTUALLY ALLOW WRITES TO THE PATTERN MEMORY FROM A
-    // TILE EDITOR, YOU GOTTA LOCK HERE
-    PPU_GetPatternTable(bus->ppu, 0, palette);
-    PPU_GetPatternTable(bus->ppu, 1, palette);
-
-
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
-       GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 128, 0, 128, 128,
-        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[1]);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-    glBindVertexArray(0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    ImGui::Begin("Pattern Memory", &show_pattern);
-    ImGui::Image((ImTextureID)(intptr_t)palette_texture, ImVec2(256 * 2, 128 * 2),
-        ImVec2(0, 1), ImVec2(1, 0));
-    ImGui::End();
-}
-
 void EmulationWindow::IncrementPalette() {
-    palette = (palette + 1) % 8;
+    if (sub_windows[WindowType::PATTERN] != nullptr)
+        static_cast<PatternWindow*>(sub_windows[WindowType::PATTERN])
+            ->IncrementPalette();
 }
 
 void EmulationWindow::setup_main_frame() {
@@ -366,18 +291,20 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // BECAUSE ALTHOUGH SDL_malloc IS A MACRO TO MALLOC
     // IT JUST PLAIN SUBSTITUES THE REGULAR MALLOC AND NOT THE DEBUG
     // VERSION OF MALLOC THAT ALLOWS US TO TRACK MEMORY LEAKS
-    const char* exe_path = SDL_GetBasePath();
+    exe_path = SDL_GetBasePath();
     SDL_Log("Base path: %s\n", exe_path);
 
     Bus* bus = emulator->nes;
     CPU* cpu = bus->cpu;
     PPU* ppu = bus->ppu;
 
+    for (size_t i = 0; i < WindowType::COUNT; i++)
+        sub_windows[i] = nullptr;
+
     Bus_PowerOn(bus);
     Bus_SetSampleFrequency(bus, 44100);
 
     NFD_Init();
-
 
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
@@ -434,7 +361,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     setup_main_frame();
-    setup_palette_frame();
+    // setup_palette_frame();
 }
 
 void EmulationWindow::Loop() {
@@ -443,7 +370,6 @@ void EmulationWindow::Loop() {
     CPU *cpu = bus->cpu;
     PPU *ppu = bus->ppu;
 
-    // bool quit = false;
 
     // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
     // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
@@ -736,6 +662,9 @@ void EmulationWindow::Loop() {
 EmulationWindow::~EmulationWindow() {
     NFD_Quit();
 
+    for (int i = 0; i < WindowType::COUNT; i++)
+        delete sub_windows[i];
+
     // TODO: MISSING OPENGL CLEANUP
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
@@ -745,6 +674,7 @@ EmulationWindow::~EmulationWindow() {
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
 
+
     // TODO: MAKE SURE THE AUDIO DEVICE IS CLOSED
     // BY THE EMULATOR (AKA CALL EMULATOR DESTROY HERE)
     Emulator_Destroy(emulator);
@@ -753,12 +683,6 @@ EmulationWindow::~EmulationWindow() {
     // FIXME: THERE IS ONE OUSTANDING ALLOCATION
     SDL_Quit();
     SDL_Log("remaining allocations: %d\n", SDL_GetNumAllocations());
-}
-
-void EmulationWindow::render_mmc1_banks() {
-    ImGui::Begin("MMC1 Banks");
-    ImGui::Text("");
-    ImGui::End();
 }
 
 void EmulationWindow::Show(Emulator* emu) {
@@ -809,19 +733,46 @@ void EmulationWindow::Show(Emulator* emu) {
 
     glUseProgram(main_shader);
 
+    bool prev_showing_disassembler = show_disassembler;
+    bool prev_showing_pattern = show_pattern;
+    bool prev_showing_oam = show_oam;
     render_main_gui(emu);
-
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
     SDL_UnlockMutex(emulator->nes_state_lock);
 
-    if (show_disassembler)
-        render_disassembler();
-    if (show_pattern)
-        render_pattern(bus);
-    if (show_oam)
-        render_oam();
+    if (!prev_showing_disassembler && show_disassembler) {
+        // sub_windows[WindowType::DISASSEMBLER] = new DisassemblerWindow(emu);
+    }
+
+    if (!prev_showing_pattern && show_pattern) {
+        SDL_Log("Call new\n");
+        sub_windows[WindowType::PATTERN] =
+            new PatternWindow(main_shader, main_vao, &show_pattern);
+    }
+
+    // iterate over the map to show each window that exists
+    for (size_t i = 0; i < WindowType::COUNT; i++) {
+       if (sub_windows[i] != nullptr)
+           sub_windows[i]->Show(emu);
+    }
+
+    if (prev_showing_disassembler && !show_disassembler) {
+        // delete sub_windows[WindowType::DISASSEMBLER];
+        // sub_windows[WindowType::DISASSEMBLER] = nullptr;
+    }
+    if (prev_showing_pattern && !show_pattern) {
+        SDL_Log("Call delete\n");
+        delete sub_windows[WindowType::PATTERN];
+        sub_windows[WindowType::PATTERN] = nullptr;
+    }
+    if (!prev_showing_oam && show_oam) {
+        //sub_windows[WindowType::OAM] = new OAMWindow(emu);
+    } else if (prev_showing_oam && !show_oam) {
+        //delete sub_windows[WindowType::OAM];
+        //sub_windows[WindowType::OAM] = nullptr;
+    }
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);

@@ -18,7 +18,9 @@
 #include <SDL.h>
 #include <imgui.h>
 #include <glad/glad.h>
+
 #include "NESCLETypes.h"
+#include "NESCLEWindow.h"
 
 class EmulationWindow {
 private:
@@ -35,10 +37,6 @@ public:
     GLuint main_texture;
     GLuint main_shader;
 
-    GLuint palette_fbo;
-    GLuint palette_texture;
-    GLuint dummy_tex;
-
     // TODO: MOVE THESE DEFAULT VALUES TO THE CONSTRUCTOR
     int palette = 0;
 
@@ -48,13 +46,28 @@ public:
     bool show_oam = false;
     bool show_pattern = false;
 
+    // can access the window via an enumeration of their types
+    enum WindowType {
+        PATTERN,
+        OAM,
+        DISASSEMBLER,
+        SETTINGS,
+        COUNT
+    };
+
+    NESCLEWindow* sub_windows[WindowType::COUNT];
+
     void set_gl_options();
 
     // TODO: EXAMINE HAVING A DIFFERENT OBJECT FOR EACH VIEWPORT
+    // BEST WAY OF DOING THIS IS TO HAVE A STD::VECTOR OF SOME WRAPPER
+    // CLASS I HAVE FOR THE WINDOWS AND THEN BASICALLY HAVE A FUNCTION
+    // THAT SAYS, HEY WHEN YOU CLICK THIS ADD THIS TO THE VECTOR
+    // AND WHEN IT'S ADDED TO THE VECTOR IT CALLS NEW AND WHEN IT
+    // IS REMOVED IT CALLS DELETE
     void render_disassembler();
     void render_oam();
     void render_pattern(Bus* bus);
-    void render_mmc1_banks();
     void render_main_gui(Emulator* emu);
 
     void setup_main_frame();
