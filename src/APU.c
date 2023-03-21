@@ -106,6 +106,16 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->pulse2.enable = data & 2;
         // FIXME: I DON'T CONFIRM THE FOLLOWING IS CORRECT
         apu->triangle.enable = data & 4;
+
+        // FIXME: MAYBE REMOVE THIS
+        // THIS APPEARS TO HAVE FIXED THE HANGOVER ISSUES
+        // IT MAY NOT WORK THE SAME FOR THE PULSE WAVES THO
+        if (!apu->triangle.enable)
+            apu->triangle.length = 0;
+        if (!apu->pulse1.enable)
+            apu->pulse1.length = 0;
+        if (!apu->pulse2.enable)
+            apu->pulse2.length = 0;
         break;
 
     case 0x4017:
@@ -218,6 +228,10 @@ static void clock_envelope(APU_PulseChannel *pulse)
 
 void APU_Clock(APU *apu)
 {
+    // FIXME: SOMETIMES THE STUFF DOESN'T SILENCE
+    // I THINK THIS IS BECAUSE WHEN YOU WRITE TO THE HALT IT ACTUALLY
+    // CLEARS THE LENGTH COUNTER AND IT DOESN'T BECOME NON-ZERO AGAIN
+    // UNTIL WRITTEN THIS IS ALMOST CERTAINLY THE CASE FOR TRIANGLE WAVE
     bool quarter_frame = false;
     bool half_frame = false;
 
@@ -333,7 +347,7 @@ void APU_Clock(APU *apu)
         // IN GAMES LIKE MEGAMAN 2 (I HOPE)
         // COULD ALSO USE A FADE IN AS WELL IF THE FADE OUT ISN'T ENOUGH
         // COULD ALSO HAVE A FILTER THAT PREVENTS MASSIVE JUMPS OUT OF
-        // NOWHERE AND EITHER SMOOTHS THEM OR PREVENTS THEM ENTIRELY
+       // NOWHERE AND EITHER SMOOTHS THEM OR PREVENTS THEM ENTIRELY
         // FREQUENCY SWEEPS MAY ELIMINATE THE ISSUE ALSO, BUT I DOUBT IT
         clock_pulse(&apu->pulse1);
         clock_pulse(&apu->pulse2);

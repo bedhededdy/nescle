@@ -2,8 +2,12 @@
 
 #include <SDL_log.h>
 
+#include <string.h>
+
 #include "APU.h"
 #include "Bus.h"
+#include "CPU.h"
+#include "Cart.h"
 #include "PPU.h"
 
 static void audio_callback(void* userdata, uint8_t* stream, int len) {
@@ -88,8 +92,77 @@ void Emulator_Destroy(Emulator* emu) {
 }
 
 bool Emulator_SaveState(Emulator* emu, const char* path) {
+    if (emu->nes->cart->rom_path == NULL) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            "Emulator_LoadState: Cannot save state with no cart loaded");
+        return false;
+    }
     return Bus_SaveState(emu->nes);
 }
+/*
+bool Emulator_LoadState(Emulator* emu, const char* path) {
+    FILE* to_load = fopen(path, "rb");
+    if (to_load == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Emulator_LoadState: Could not open file %s", path);
+        return false;
+    }
+
+    // FIXME: THIS IS NOT THE WAY TO DO TMP FILES
+    if (!Emulator_SaveState(emu, "emusavtmp.bin")) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Emulator_LoadState: Could not backup state to tmp file");
+        fclose(to_load);
+        return false;
+    }
+
+    // Do the loading
+    bool success = Bus_LoadState(emu->nes, to_load);
+    success = success && CPU_LoadState(emu->nes->cpu, to_load);
+    success = success && PPU_LoadState(emu->nes->ppu, to_load);
+    success = success && APU_LoadState(emu->nes->apu, to_load);
+    // FIXME: FOR THIS TO WORK, THE CART'S GOTTA HANDLE ITS OWN SHIT
+    success = success && Cart_LoadState(emu->nes->cart, to_load);
+
+    if (!success) {
+        // FIXME: THIS IS NOT RESILIENT, BECAUSE IF WE FAIL PARTWAY THROUGH
+        // SOME POINTERS WILL BE MESSED UP THAT MAY NOT BE RESTORED
+        // IF WE ARE LUCKY, I WROTE THE FUNCTIONS TO RESTORE THE POINTERS
+        // AFTER FAILURE
+        // IF WE ARE UNLUCKY, WE HAVE UNDEFINED BEHAVIOR
+        FILE* backup = fopen("emusavtmp.bin", "rb");
+        if (backup == NULL) {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                "Emulator_LoadState: Could not open backup file");
+            fclose(to_load);
+            return false;
+        }
+
+        success = Bus_LoadState(emu->nes, backup);
+        success = success && CPU_LoadState(emu->nes->cpu, backup);
+        success = success && PPU_LoadState(emu->nes->ppu, backup);
+        success = success && APU_LoadState(emu->nes->apu, backup);
+        success = success && Cart_LoadState(emu->nes->cart, backup);
+
+        if (!success) {
+            SDL_LogCritical(SDL_LOG_CATEGORY_ERROR,
+                "Emulator_LoadState: Could not restore backup state");
+            fclose(to_load);
+            fclose(backup);
+            exit(EXIT_FAILURE);
+            return false;
+        }
+
+        fclose(backup);
+        return false;
+    }
+
+    fclose(to_load);
+    emu->run_emulation = true;
+
+    return true;
+}
+*/
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
     return Bus_LoadState(emu->nes);
