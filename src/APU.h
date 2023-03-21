@@ -41,6 +41,17 @@ struct apu_envelope {
     uint16_t decay_count;
 };
 
+struct apu_sweeper {
+    bool enabled;
+    bool down;
+    bool reload;
+    uint8_t shift;
+    uint8_t timer;
+    uint8_t period;
+    uint16_t change;
+    bool mute;
+};
+
 struct apu_pulse_channel {
     bool enable;
 
@@ -57,6 +68,7 @@ struct apu_pulse_channel {
 
     APU_Sequencer sequencer;
     APU_Envelope envelope;
+    APU_Sweeper sweeper;
 };
 
 struct apu_triangle_channel {
@@ -90,16 +102,6 @@ struct apu_sample_channel {
 };
 
 
-struct apu_sweeper {
-    bool enabled;
-    bool down;
-    bool reload;
-    uint8_t shift;
-    uint8_t timer;
-    uint8_t period;
-    uint16_t change;
-    bool mute;
-};
 
 struct apu {
     Bus* bus;

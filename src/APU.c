@@ -49,6 +49,11 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->pulse1.envelope.volume = data & 0xf;
         break;
     case 0x4001:
+        apu->pulse1.sweeper.enabled = data & 0x80;
+        apu->pulse1.sweeper.period = (data >> 4) & 7;
+        apu->pulse1.sweeper.down = data & 8;
+        apu->pulse1.sweeper.shift = data & 7;
+        apu->pulse1.sweeper.reload = true;
         break;
     case 0x4002:
         apu->pulse1.sequencer.reload = (apu->pulse1.sequencer.reload & 0xff00) | data;
@@ -69,6 +74,11 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->pulse2.envelope.volume = data & 0xf;
         break;
     case 0x4005:
+        apu->pulse2.sweeper.enabled = data & 0x80;
+        apu->pulse2.sweeper.period = (data >> 4) & 7;
+        apu->pulse2.sweeper.down = data & 8;
+        apu->pulse2.sweeper.shift = data & 7;
+        apu->pulse2.sweeper.reload = true;
         break;
     case 0x4006:
         apu->pulse2.sequencer.reload = (apu->pulse2.sequencer.reload & 0xff00) | data;
@@ -104,7 +114,6 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
     case 0x4015:
         apu->pulse1.enable = data & 1;
         apu->pulse2.enable = data & 2;
-        // FIXME: I DON'T CONFIRM THE FOLLOWING IS CORRECT
         apu->triangle.enable = data & 4;
 
         // FIXME: MAYBE REMOVE THIS
@@ -132,14 +141,59 @@ uint8_t APU_Read(APU *apu, uint16_t addr)
     return 0;
 }
 
+//static void track_sweeper(APU_PulseChannel *pulse) {
+//    if (pulse->sweeper.enabled) {
+//        // FIXME: SHOULD
+//    }
+//}
+
+static void clock_sweeper(APU_PulseChannel* pulse) {
+    // FIXME: MM2 ISSUES MAY BE CAUSED BY ME NOT SOTRING THE ORIGINAL FREQ
+    // FOR THE CALUCLATIONS
+    // CUZ I GET WEIRD BUZZING NOISES WHEN SHOOTING AND NOT HITTING ANYTHIN
+    pulse->sweeper.mute = (pulse->sequencer.reload < 8) || (pulse->sequencer.reload > 0x7ff);
+
+    if (pulse->sweeper.enabled) {
+        if (pulse->sweeper.timer == 0 && !pulse->sweeper.mute && pulse->sweeper.shift > 0) {
+            // FIXME: DELTA IS SLIGHTLY DIFF FOR NEG BETWEEN THE CHANNELS
+            // AND YOU CAN MAKE THIS MORE EFFICIENT BY NOT USING IF
+            // AND FIGURING OUT HOW THE MATH WORKS OUT FOR THIS STUFF
+
+            // i have no idea how this is right
+            int delta = pulse->sequencer.reload >> pulse->sweeper.shift;
+            int neg = pulse->sweeper.down ? -1 : 1;
+            pulse->sequencer.reload += (uint16_t)(delta * neg);
+        }
+    }
+
+    if (pulse->sweeper.timer == 0 || pulse->sweeper.reload) {
+        pulse->sweeper.timer = pulse->sweeper.period;
+        pulse->sweeper.reload = false;
+    } else {
+        pulse->sweeper.timer--;
+    }
+
+    pulse->sweeper.mute = (pulse->sequencer.reload < 8) || (pulse->sequencer.reload > 0x7ff);
+}
+
 static void clock_pulse(APU_PulseChannel *pulse)
 {
-    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7)
-    {
+    // it is the job of the sweeper mute to handle the lo and hi pass
+    // filtering
+    // NOTE: HAVE TO CHECK FREQ HERE B/C MEGA MAN 2
+    // MM2 AUDIO IS STILL A BIT GLITCHY, BUT ITS TOLERABLE
+    // MM2 GUNSHUTS HAVE WEIRD SOUND
+    // SOMETHING IS NOT SILENCING RIHGT OR CUTTING THE FREQUENCY RIGHT
+    // YEAH THE HIGH PASS FILTER AND LO PASS FILTER ARE MESSY
+    // PROBABLY EITHER WANNA CHECK LO PASS HERE TOO OR CHECK THE MUTE EACH FRAME
+    // LIKE OLC
+    // NAH MM2 IS STILL WEIRD, HAVE TO INVESTIGATE IT AS IT IS WELL KNOWN
+    // TO BE WEIRD
+    if (pulse->enable && pulse->length > 0 && !pulse->sweeper.mute
+        && pulse->sequencer.reload > 7 && pulse->sequencer.reload < 0x7ff) {
         pulse->sequencer.timer--;
 
-        if (pulse->sequencer.timer == 0xffff)
-        {
+        if (pulse->sequencer.timer == 0xffff) {
             pulse->sequencer.timer = pulse->sequencer.reload;
             pulse->duty_index = (pulse->duty_index + 1) % 8;
 
@@ -147,10 +201,8 @@ static void clock_pulse(APU_PulseChannel *pulse)
             pulse->sample *= 1.0 / 15.0 * pulse->envelope.output;
             pulse->prev_sample = pulse->sample;
         }
-    }
-    else
-    {
-        pulse->sample = pulse->prev_sample;
+    } else {
+        pulse->sample = 0;
     }
 }
 
@@ -320,6 +372,9 @@ void APU_Clock(APU *apu)
             {
                 apu->pulse2.length--;
             }
+
+            clock_sweeper(&apu->pulse1);
+            clock_sweeper(&apu->pulse2);
         }
 
         // update sequencers
