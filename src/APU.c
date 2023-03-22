@@ -122,14 +122,15 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
     case 0x400e:
         apu->noise.mode = data & 0x80;
         apu->noise.sequencer.reload = noise_period_table[data & 0xf];
-
+        break;
 
     case 0x400f:
-        // FIXME: MAYBE THIS RESETS OTHER ENVELOPES TOO
-        //apu->pulse1.envelope.start = true;
-        //apu->pulse2.envelope.start = true;
-        apu->noise.envelope.start = true;
-        apu->noise.length = length_table[data >> 3];
+    //    // FIXME: MAYBE THIS RESETS OTHER ENVELOPES TOO
+    //    //apu->pulse1.envelope.start = true;
+    //    //apu->pulse2.envelope.start = true;
+       apu->noise.envelope.start = true;
+       apu->noise.length = length_table[data >> 3];
+       break;
 
     case 0x4015:
         apu->pulse1.enable = data & 1;
@@ -522,7 +523,7 @@ void APU_PowerOn(APU *apu)
     Bus* bus = apu->bus;
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
-    apu->noise.shift_register
+    apu->noise.shift_register = 1;
 }
 
 void APU_Reset(APU *apu)
@@ -557,8 +558,8 @@ double APU_GetOutputSample(APU *apu)
     double p2 = apu->pulse2.sample * apu->pulse2.volume;
     // double tri = 0.0;
     double tri = apu->triangle.sample * apu->triangle.volume;
-    // double noise = apu->noise.sample * apu->noise.volume;
-    double noise = 0.0;
+    double noise = apu->noise.sample * apu->noise.volume / 2.0;
+    // double noise = 0.0;
 
     return 0.25 * (p1 + p2 + tri + noise) * apu->master_volume;
 }
