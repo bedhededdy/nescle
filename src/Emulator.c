@@ -205,7 +205,40 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 */
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
-    return Bus_LoadState(emu->nes, NULL);
+
+    FILE* savestate = fopen("../saves/savestate.bin", "rb");
+
+    Bus* bus = emu->nes;
+
+    Bus_LoadState(bus, savestate);
+
+    // CPU
+    CPU_LoadState(bus->cpu, savestate);
+
+    // APU
+    APU_LoadState(bus->apu, savestate);
+
+    // Cart
+    Mapper* mapper_addr = bus->cart->mapper;
+    Cart_LoadState(bus->cart, savestate);
+
+    // Mapper
+    bus->cart->mapper = mapper_addr;
+    if (bus->cart->mapper != NULL) {
+        Mapper_Destroy(bus->cart->mapper);
+    }
+    uint8_t dummy_buf[sizeof(Mapper)];
+    fread(dummy_buf, sizeof(Mapper), 1, savestate);
+    uint8_t mapper_id = dummy_buf[0];
+    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
+    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
+
+    PPU_LoadState(bus->ppu, savestate);
+
+    fclose(savestate);
+
+    // FIXME: RETURN A SUCCESS OR FAILURE
+    return 0;
 }
 
 bool Emulator_SaveSettings(Emulator* emu, const char* path) {

@@ -298,48 +298,20 @@ int Bus_SaveState(Bus* bus, FILE* file) {
 }
 
 int Bus_LoadState(Bus* bus, FILE* file) {
-    FILE* savestate = fopen("../saves/savestate.bin", "rb");
-
     // Bus
     CPU* cpu_addr = bus->cpu;
     PPU* ppu_addr = bus->ppu;
     Cart* cart_addr = bus->cart;
     APU* apu_addr = bus->apu;
 
-    fread(bus, sizeof(Bus), 1, savestate);
+    bool res = fread(bus, sizeof(Bus), 1, file);
 
     bus->cpu = cpu_addr;
     bus->ppu = ppu_addr;
     bus->cart = cart_addr;
     bus->apu = apu_addr;
 
-    // CPU
-    CPU_LoadState(bus->cpu, savestate);
-
-    // APU
-    APU_LoadState(bus->apu, savestate);
-
-    // Cart
-    Mapper* mapper_addr = bus->cart->mapper;
-    Cart_LoadState(bus->cart, savestate);
-
-    // Mapper
-    bus->cart->mapper = mapper_addr;
-    if (bus->cart->mapper != NULL) {
-        Mapper_Destroy(bus->cart->mapper);
-    }
-    uint8_t dummy_buf[sizeof(Mapper)];
-    fread(dummy_buf, sizeof(Mapper), 1, savestate);
-    uint8_t mapper_id = dummy_buf[0];
-    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
-    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
-
-    PPU_LoadState(bus->ppu, savestate);
-
-    fclose(savestate);
-
-    // FIXME: RETURN A SUCCESS OR FAILURE
-    return 0;
+    return res;
 }
 
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_frequency) {

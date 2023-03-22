@@ -123,7 +123,8 @@ find_package(OpenGL REQUIRED)
 set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
 set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.c
-      EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c Util.c)
+      EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
+      DisassemblerWindow.cpp OAMWindow.cpp Util.c)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper004.cpp Mapper007.cpp Mapper066.cpp)
 
@@ -155,7 +156,7 @@ if (mycc STREQUAL COMPILER_CLANGCL)
    -Wextra -Wpedantic -Wold-style-cast -Wimplicit
    -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference -Wmagic-number)
+   -Wwrite-strings -Wnull-dereference)
 
 elseif(mycc STREQUAL COMPILER_MSVC)
    message(STATUS "Using MSVC FLAGS NEEDED TO BE ADDED")
@@ -166,7 +167,7 @@ elseif(mycc STREQUAL COMPILER_GNU)
    -Wextra -Wpedantic -Wold-style-cast -Wimplicit
    -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference -Wmagic-number)
+   -Wwrite-strings -Wnull-dereference)
 else()
    message(FATAL_ERROR "Unknown compiler")
 endif()
