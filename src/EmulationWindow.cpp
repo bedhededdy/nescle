@@ -716,6 +716,7 @@ void EmulationWindow::Show(Emulator* emu) {
         emu->nes->apu->pulse1.volume = 1.0;
         emu->nes->apu->pulse2.volume = 1.0;
         emu->nes->apu->triangle.volume = 1.0;
+        emu->nes->apu->noise.volume = 1.0;
         emu->nes->apu->master_volume = 0.5;
         for (size_t i = 0; i < sizeof(stream)/sizeof(int16_t); i++) {
             if (emu->run_emulation) {

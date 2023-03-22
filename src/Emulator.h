@@ -65,6 +65,8 @@ bool Emulator_LoadState(Emulator* emu, const char* path);
 bool Emulator_SaveSettings(Emulator* emu, const char* path);
 bool Emulator_LoadSettings(Emulator* emu, const char* path);
 void Emulator_SetDefaultSettings(Emulator* emu);
+void Emulator_PowerOn(Emulator* emu);
+void Emulator_Reset(Emulator* emu);
 
 // After we emulate a sample, we will check to see if a frame has been rendered
 // if it has and we are pressing the turbo button, we will flip the state

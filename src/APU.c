@@ -32,6 +32,8 @@ static const int duty_cycles[4][8] = {
     {1, 1, 1, 1, 1, 1, 0, 0}
 };
 
+static const int noise_period_table[16] = {4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
+
 bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
 {
     switch (addr)
@@ -111,10 +113,29 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         // FIXME: NEED TO APPROPRIATELY SET THE LENGTH
         break;
 
+    case 0x400c:
+        apu->noise.envelope.constant_volume = data & 0x10;
+        apu->noise.envelope.volume = data & 0xf;
+        apu->noise.halt = data & 0x20;
+        break;
+
+    case 0x400e:
+        apu->noise.mode = data & 0x80;
+        apu->noise.sequencer.reload = noise_period_table[data & 0xf];
+
+
+    case 0x400f:
+        // FIXME: MAYBE THIS RESETS OTHER ENVELOPES TOO
+        //apu->pulse1.envelope.start = true;
+        //apu->pulse2.envelope.start = true;
+        apu->noise.envelope.start = true;
+        apu->noise.length = length_table[data >> 3];
+
     case 0x4015:
         apu->pulse1.enable = data & 1;
         apu->pulse2.enable = data & 2;
         apu->triangle.enable = data & 4;
+        apu->noise.enable = data & 8;
 
         // FIXME: MAYBE REMOVE THIS
         // THIS APPEARS TO HAVE FIXED THE HANGOVER ISSUES
@@ -125,6 +146,8 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
             apu->pulse1.length = 0;
         if (!apu->pulse2.enable)
             apu->pulse2.length = 0;
+        if (!apu->noise.enable)
+            apu->noise.length = 0;
         break;
 
     case 0x4017:
@@ -206,6 +229,32 @@ static void clock_pulse(APU_PulseChannel *pulse)
     }
 }
 
+static void clock_noise(APU_NoiseChannel* pulse) {
+    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7)
+    {
+        pulse->sequencer.timer--;
+
+        if (pulse->sequencer.timer == 0xffff)
+        {
+            pulse->sequencer.timer = pulse->sequencer.reload;
+
+            int shift_amnt = pulse->mode ? 6 : 1;
+            uint16_t feedback = (pulse->shift_register & 1) ^ ((pulse->shift_register >> shift_amnt) & 1);
+            pulse->shift_register >>= 1;
+            pulse->shift_register |= feedback << 14;
+            pulse->sample = !(pulse->shift_register & 1);
+
+            pulse->sample *= 1.0 / 15.0 * pulse->envelope.output;
+            pulse->prev_sample = pulse->sample;
+        }
+    }
+    else
+    {
+        // FIXME: MAYBE 0
+        pulse->sample = pulse->prev_sample;
+    }
+}
+
 static void clock_triangle(APU_TriangleChannel *triangle)
 {
     if (triangle->linear_counter > 0 && triangle->length > 0)
@@ -241,6 +290,41 @@ static void clock_triangle(APU_TriangleChannel *triangle)
 //         length_counter->length--;
 //     }
 // }
+
+static void clock_envelope_noise(APU_NoiseChannel* pulse) {
+    if (!pulse->envelope.start)
+    {
+        if (pulse->envelope.divider_count == 0)
+        {
+            pulse->envelope.divider_count = pulse->envelope.volume;
+
+            if (pulse->envelope.decay_count == 0)
+            {
+                if (pulse->halt)
+                    pulse->envelope.decay_count = 15;
+            }
+            else
+            {
+                pulse->envelope.decay_count--;
+            }
+        }
+        else
+        {
+            pulse->envelope.divider_count--;
+        }
+    }
+    else
+    {
+        pulse->envelope.start = false;
+        pulse->envelope.decay_count = 15;
+        pulse->envelope.divider_count = pulse->envelope.volume;
+    }
+
+    if (pulse->envelope.constant_volume)
+        pulse->envelope.output = pulse->envelope.volume;
+    else
+        pulse->envelope.output = pulse->envelope.decay_count;
+}
 
 static void clock_envelope(APU_PulseChannel *pulse)
 {
@@ -333,6 +417,7 @@ void APU_Clock(APU *apu)
 
             clock_envelope(&apu->pulse1);
             clock_envelope(&apu->pulse2);
+            clock_envelope_noise(&apu->noise);
         }
 
         if (half_frame)
@@ -373,6 +458,15 @@ void APU_Clock(APU *apu)
                 apu->pulse2.length--;
             }
 
+            if (!apu->noise.enable)
+            {
+                apu->noise.length = 0;
+            }
+            else if (apu->noise.length > 0 && !apu->noise.halt)
+            {
+                apu->noise.length--;
+            }
+
             clock_sweeper(&apu->pulse1);
             clock_sweeper(&apu->pulse2);
         }
@@ -406,6 +500,9 @@ void APU_Clock(APU *apu)
         // FREQUENCY SWEEPS MAY ELIMINATE THE ISSUE ALSO, BUT I DOUBT IT
         clock_pulse(&apu->pulse1);
         clock_pulse(&apu->pulse2);
+        clock_noise(&apu->noise);
+
+
 
         // FIXME: IT MAY BE THE CASE THAT THE PULSE WAVES SHOULD BE CLOCKED NO
         // MATTER WHAT
@@ -425,6 +522,7 @@ void APU_PowerOn(APU *apu)
     Bus* bus = apu->bus;
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
+    apu->noise.shift_register
 }
 
 void APU_Reset(APU *apu)
@@ -432,6 +530,7 @@ void APU_Reset(APU *apu)
     Bus* bus = apu->bus;
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
+    apu->noise.shift_register = 1;
 }
 
 APU *APU_Create(void)

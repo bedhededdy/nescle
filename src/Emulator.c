@@ -36,6 +36,7 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
     emu->nes->apu->pulse1.volume = 1.0;
     emu->nes->apu->pulse2.volume = 1.0;
     emu->nes->apu->triangle.volume = 1.0;
+    emu->nes->apu->noise.volume = 1.0;
     emu->nes->apu->master_volume = 0.5;
 
     SDL_LockMutex(emu->nes_state_lock);

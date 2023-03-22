@@ -94,7 +94,20 @@ struct apu_triangle_channel {
 };
 
 struct apu_noise_channel {
-    int foo;
+    bool enable;
+    double volume;
+    bool halt;
+    uint8_t length;
+
+    double sample;
+    double prev_sample;
+
+    uint16_t shift_register;
+
+    uint8_t mode;
+
+    APU_Envelope envelope;
+    APU_Sequencer sequencer;
 };
 
 struct apu_sample_channel {
