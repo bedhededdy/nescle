@@ -9,6 +9,7 @@
 #include "CPU.h"
 #include "Cart.h"
 #include "PPU.h"
+#include "Mapper.h"
 
 static void audio_callback(void* userdata, uint8_t* stream, int len) {
     Emulator* emu = (Emulator*)userdata;
@@ -97,7 +98,33 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
     }
-    return Bus_SaveState(emu->nes);
+
+    FILE* savestate = fopen("../saves/savestate.bin", "wb");
+
+    Bus* bus = emu->nes;
+    if (!Bus_SaveState(emu->nes, savestate))
+        printf("bus too short");
+
+    if (!CPU_SaveState(bus->cpu, savestate))
+        printf("cpu too short");
+
+    if (!APU_SaveState(bus->apu, savestate))
+        printf("apu too short");
+
+    if (!Cart_SaveState(bus->cart, savestate))
+        printf("cart too short");
+
+    // Save Mapper state (deepcopying mapper_class)
+    if (fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate) < 1)
+        printf("mapper too short");
+    Mapper_SaveToDisk(bus->cart->mapper, savestate);
+
+    if (!PPU_SaveState(bus->ppu, savestate))
+        printf("ppu too short");
+
+    fclose(savestate);
+
+    return 0;
 }
 /*
 bool Emulator_LoadState(Emulator* emu, const char* path) {
@@ -109,12 +136,14 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     }
 
     // FIXME: THIS IS NOT THE WAY TO DO TMP FILES
-    if (!Emulator_SaveState(emu, "emusavtmp.bin")) {
+    if (!Emulator_SaveState(emu, "../saves/emusavtmp.bin")) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Emulator_LoadState: Could not backup state to tmp file");
         fclose(to_load);
         return false;
     }
+
+    Bus* bus = emu->nes;
 
     // Do the loading
     bool success = Bus_LoadState(emu->nes, to_load);
@@ -122,7 +151,18 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     success = success && PPU_LoadState(emu->nes->ppu, to_load);
     success = success && APU_LoadState(emu->nes->apu, to_load);
     // FIXME: FOR THIS TO WORK, THE CART'S GOTTA HANDLE ITS OWN SHIT
+    Mapper* mapper_addr = bus->cart->mapper;
     success = success && Cart_LoadState(emu->nes->cart, to_load);
+    // Mapper
+    bus->cart->mapper = mapper_addr;
+    if (bus->cart->mapper != NULL) {
+        Mapper_Destroy(bus->cart->mapper);
+    }
+    uint8_t dummy_buf[sizeof(Mapper)];
+    fread(dummy_buf, sizeof(Mapper), 1, savestate);
+    uint8_t mapper_id = dummy_buf[0];
+    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
+    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
 
     if (!success) {
         // FIXME: THIS IS NOT RESILIENT, BECAUSE IF WE FAIL PARTWAY THROUGH
@@ -165,7 +205,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 */
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
-    return Bus_LoadState(emu->nes);
+    return Bus_LoadState(emu->nes, NULL);
 }
 
 bool Emulator_SaveSettings(Emulator* emu, const char* path) {

@@ -293,35 +293,11 @@ void Bus_Reset(Bus* bus) {
     bus->dma_dummy = true;
 }
 
-int Bus_SaveState(Bus* bus) {
-    FILE* savestate = fopen("../saves/savestate.bin", "wb");
-
-    if (fwrite(bus, sizeof(Bus), 1, savestate) < 1)
-        printf("bus too short");
-
-    if (!CPU_SaveState(bus->cpu, savestate))
-        printf("cpu too short");
-
-    if (!APU_SaveState(bus->apu, savestate))
-        printf("apu too short");
-
-    if (!Cart_SaveState(bus->cart, savestate))
-        printf("cart too short");
-
-    // Save Mapper state (deepcopying mapper_class)
-    if (fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate) < 1)
-        printf("mapper too short");
-    Mapper_SaveToDisk(bus->cart->mapper, savestate);
-
-    if (!PPU_SaveState(bus->ppu, savestate))
-        printf("ppu too short");
-
-    fclose(savestate);
-
-    return 0;
+int Bus_SaveState(Bus* bus, FILE* file) {
+    return fwrite(bus, sizeof(Bus), 1, file) == 1;
 }
 
-int Bus_LoadState(Bus* bus) {
+int Bus_LoadState(Bus* bus, FILE* file) {
     FILE* savestate = fopen("../saves/savestate.bin", "rb");
 
     // Bus

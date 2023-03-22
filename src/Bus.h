@@ -21,6 +21,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
@@ -82,8 +83,8 @@ bool Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick
 void Bus_PowerOn(Bus* bus); // Sets entire system to powerup state
 void Bus_Reset(Bus* bus);   // Equivalent to pushing the RESET button on a NES
 
-int Bus_SaveState(Bus* bus);
-int Bus_LoadState(Bus* bus);
+int Bus_SaveState(Bus* bus, FILE* file);
+int Bus_LoadState(Bus* bus, FILE* file);
 
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_rate);
 
