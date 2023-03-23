@@ -833,6 +833,15 @@ break;
 
     }
 
+    // FIXME: CHECK FOR CORRECTNESS
+    // Set first 8 pixels to the global background color if we aren't enabling
+    // the bg left column (maybe also the spr left)
+    if (!(ppu->mask & PPU_MASK_BG_LEFT_COLUMN_ENABLE)
+        && !(ppu->mask & PPU_MASK_SPR_LEFT_COLUMN_ENABLE) && ppu->cycle < 9) {
+        final_pixel = 0;
+        final_palette = 0;
+    }
+
     // We write to cycle-1 because cycle 0 is a dummy cycle
     screen_write(ppu, ppu->cycle-1, ppu->scanline,
         PPU_GetColorFromPalette(ppu, final_palette, final_pixel));

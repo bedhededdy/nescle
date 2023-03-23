@@ -816,6 +816,12 @@ void EmulationWindow::Show(Emulator* emu) {
     // NEW AND DELETE ON EVERY FRAME
     uint32_t* ppu_framebuffer = new uint32_t[PPU_RESOLUTION_X * PPU_RESOLUTION_Y];
     memcpy(ppu_framebuffer, bus->ppu->frame_buffer, PPU_RESOLUTION_X * PPU_RESOLUTION_Y * sizeof(uint32_t));
+
+    // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
+    // should 0 out the first 8 pixels of each scanline
+    //for (int i = 0; i < PPU_RESOLUTION_Y; i++) {
+    //    memset(ppu_framebuffer + i * PPU_RESOLUTION_X, 0, 8 * sizeof(uint32_t));
+    //}
     SDL_UnlockMutex(emulator->nes_state_lock);
     // SDL_Log("cycles taken: %llu", SDL_GetPerformanceCounter() - t0);
 
