@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// FIXME: KNOWN BUGS
-// BATTLETOADS PAUSE MUSIC DOESN'T PLAY :((
+// TODO: IMPLEMENT LAST CHANNEL, BATTLETOADS PAUSE MUSIC USES IT
 #include "APU.h"
 #include <stdlib.h>
 #include <math.h>

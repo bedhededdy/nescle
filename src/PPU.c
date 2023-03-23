@@ -15,7 +15,10 @@
  */
 // FIXME: SPRITE OVERFLOW WORKS THE OLC WAY BUT DOES NOT WORK THE WAY THE NES DOES
 //        YOU NEED TO RESEARCH HOW TO DO IT CORRECTLY
-
+// FIXME: BUBBLE BOBBLE DOES NOT HAVE CONSISTENT STATE ON STARTUP, BUT REQUIRES
+// BLACK AT BG MAIN COLOR
+// TRIED THIS, BUT IT DIDN'T WORK. IT ENDS UP BLUE
+// CLEARLY IT RELIES ON A CERTAIN STARTUP STATE WHICH I DON'T HAVE
 #include "PPU.h"
 
 #include <stdlib.h>
@@ -847,7 +850,14 @@ break;
         PPU_GetColorFromPalette(ppu, final_palette, final_pixel));
 
     // Properly increment the cycle and scanline
+    // FIXME: OLC DOES THIS AFTER INCREMENT BUT I DO IT BEFORE
+    if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
+        if (ppu->cycle == 260 && ppu->scanline < 240) {
+            Mapper_Scanline(ppu->bus->cart->mapper);
+        }
+    }
     ppu->cycle++;
+
     if (ppu->cycle > 340) {
         ppu->cycle = 0;
         ppu->scanline++;
@@ -873,6 +883,7 @@ void PPU_PowerOn(PPU* ppu) {
     ppu->status = 0xc0;
 
     ppu->oam_ptr = (uint8_t*)ppu->oam;
+    memset(ppu->screen, 0, sizeof(ppu->screen));
 
     // just run the reset for safety
     PPU_Reset(ppu);
@@ -949,6 +960,8 @@ void PPU_Reset(PPU* ppu) {
     ppu->bg_shifter_attr_lo = 0;
     ppu->vram_addr = 0;
     ppu->tram_addr = 0;
+
+    ppu->oam_ptr = (uint8_t*)ppu->oam;
 }
 
 uint8_t PPU_Read(PPU* ppu, uint16_t addr) {

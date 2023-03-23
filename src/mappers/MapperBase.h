@@ -37,4 +37,10 @@ public:
     // FIXME: REFACTOR THESE TOO BOOLS
     virtual void SaveToDisk(FILE* file) = 0;
     virtual void LoadFromDisk(FILE* file) = 0;
+
+    virtual void Reset() {}
+    virtual void Scanline() {}
+
+    virtual bool IRQState() { return false; }
+    virtual void IRQClear() {}
 };

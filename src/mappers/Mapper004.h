@@ -19,6 +19,22 @@
 
 class Mapper004 : public MapperBase {
 private:
+    uint8_t sram[0x8000];
+
+    // FIXME: SHOULDN'T THESE BE 8 BYTES
+    uint32_t registers[8];
+    uint32_t chr_banks[8];
+    uint32_t prg_banks[4];
+
+    uint8_t target_register = 0;
+    bool prg_bank_mode = false;
+    bool chr_inversion = false;
+
+    bool irq_active = false;
+    bool irq_enabled = false;
+    bool irq_update = false;
+    uint16_t irq_counter;
+    uint16_t irq_reload;
 
 public:
     Mapper004(Cart* cart);
@@ -30,4 +46,9 @@ public:
 
     void SaveToDisk(FILE* file) override;
     void LoadFromDisk(FILE* file) override;
+
+    void Reset() override;
+    void Scanline() override;
+    bool IRQState() override;
+    void IRQClear() override;
 };

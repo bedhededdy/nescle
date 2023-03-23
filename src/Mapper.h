@@ -44,6 +44,11 @@ void Mapper_AssignCartridge(Mapper* mapper, Cart* cart);
 void Mapper_SaveToDisk(Mapper* mapper, FILE* file);
 void Mapper_LoadFromDisk(Mapper* mapper, FILE* file);
 
+void Mapper_Reset(Mapper* mapper);
+void Mapper_Scanline(Mapper* mapper);
+bool Mapper_IRQState(Mapper* mapper);
+void Mapper_IRQClear(Mapper* mapper);
+
 #ifdef __cplusplus
 }
 #endif

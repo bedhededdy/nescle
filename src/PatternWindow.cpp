@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: ADD SOMETHING THAT VISUALIZES THE COLOR OF EACH PALETTE ENTRY
 #include "PatternWindow.h"
 
 #include "Bus.h"
@@ -88,6 +89,9 @@ void PatternWindow::Show(Emulator* emu) {
     PPU_GetPatternTable(bus->ppu, 0, palette);
     PPU_GetPatternTable(bus->ppu, 1, palette);
 
+    // to do this showing the palettes basically make the 1 texture bigger
+    // then draw the palette colors, then the pattern table and change the
+    // coordinates given to subimage
 
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);

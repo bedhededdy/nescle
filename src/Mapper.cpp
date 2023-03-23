@@ -133,3 +133,19 @@ void Mapper_SaveToDisk(Mapper* mapper, FILE* file) {
 void Mapper_LoadFromDisk(Mapper* mapper, FILE* file) {
     static_cast<MapperBase*>(mapper->mapper_class)->LoadFromDisk(file);
 }
+
+void Mapper_Reset(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->Reset();
+}
+
+void Mapper_Scanline(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->Scanline();
+}
+
+bool Mapper_IRQState(Mapper* mapper) {
+    return static_cast<MapperBase*>(mapper->mapper_class)->IRQState();
+}
+
+void Mapper_IRQClear(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->IRQClear();
+}
