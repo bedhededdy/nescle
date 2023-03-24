@@ -47,10 +47,10 @@ bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper000::SaveToDisk(FILE* file) {
-    fwrite(&id, sizeof(id), 1, file);
+bool Mapper000::SaveState(FILE* file) {
+    return fwrite(&id, sizeof(id), 1, file) == 1;
 }
 
-void Mapper000::LoadFromDisk(FILE* file) {
-    fread(&id, sizeof(id), 1, file);
+bool Mapper000::LoadState(FILE* file) {
+    return fread(&id, sizeof(id), 1, file) == 1;
 }

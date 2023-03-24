@@ -133,7 +133,7 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     // Save Mapper state (deepcopying mapper_class)
     if (fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate) < 1)
         printf("mapper too short");
-    Mapper_SaveToDisk(bus->cart->mapper, savestate);
+    Mapper_SaveState(bus->cart->mapper, savestate);
 
     if (!PPU_SaveState(bus->ppu, savestate))
         printf("ppu too short");
@@ -247,7 +247,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
     bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
-    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
+    Mapper_LoadState(bus->cart->mapper, savestate);
 
     PPU_LoadState(bus->ppu, savestate);
 

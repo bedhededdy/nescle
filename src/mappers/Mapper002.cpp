@@ -21,6 +21,10 @@ Mapper002::Mapper002(Cart* cart) {
     bank_select = 0;
 }
 
+void Mapper002::Reset() {
+    bank_select = 0;
+}
+
 uint8_t Mapper002::MapCPURead(uint16_t addr) {
     if (addr < 0x8000)
         return 0;
@@ -62,12 +66,14 @@ bool Mapper002::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper002::SaveToDisk(FILE* file) {
-    fwrite(&id, sizeof(id), 1, file);
-    fwrite(&bank_select, sizeof(bank_select), 1, file);
+bool Mapper002::SaveState(FILE* file) {
+    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
+    return b1 && b2;
 }
 
-void Mapper002::LoadFromDisk(FILE* file) {
-    fread(&id, sizeof(id), 1, file);
-    fread(&bank_select, sizeof(bank_select), 1, file);
+bool Mapper002::LoadState(FILE* file) {
+    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
+    return b1 && b2;
 }

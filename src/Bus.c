@@ -251,8 +251,8 @@ bool Bus_Clock(Bus* bus) {
         CPU_NMI(bus->cpu);
     }
 
-    if (Mapper_IRQState(bus->cart->mapper)) {
-        Mapper_IRQClear(bus->cart->mapper);
+    if (Mapper_GetIRQStatus(bus->cart->mapper)) {
+        Mapper_ClearIRQStatus(bus->cart->mapper);
         CPU_IRQ(bus->cpu);
     }
 

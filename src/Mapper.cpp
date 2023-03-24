@@ -91,26 +91,26 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
         (mapper->mapper_class)->MapPPUWrite(addr, data);
 }
 
-void Mapper_SaveToDisk(Mapper* mapper, FILE* file) {
-    static_cast<MapperBase*>(mapper->mapper_class)->SaveToDisk(file);
+bool Mapper_SaveState(Mapper* mapper, FILE* file) {
+    static_cast<MapperBase*>(mapper->mapper_class)->SaveState(file);
 }
 
-void Mapper_LoadFromDisk(Mapper* mapper, FILE* file) {
-    static_cast<MapperBase*>(mapper->mapper_class)->LoadFromDisk(file);
+bool Mapper_LoadState(Mapper* mapper, FILE* file) {
+    static_cast<MapperBase*>(mapper->mapper_class)->LoadState(file);
 }
 
 void Mapper_Reset(Mapper* mapper) {
     static_cast<MapperBase*>(mapper->mapper_class)->Reset();
 }
 
-void Mapper_Scanline(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->Scanline();
+void Mapper_CountdownScanline(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->CountdownScanline();
 }
 
-bool Mapper_IRQState(Mapper* mapper) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->IRQState();
+bool Mapper_GetIRQStatus(Mapper* mapper) {
+    return static_cast<MapperBase*>(mapper->mapper_class)->GetIRQStatus();
 }
 
-void Mapper_IRQClear(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->IRQClear();
+void Mapper_ClearIRQStatus(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->ClearIRQStatus();
 }

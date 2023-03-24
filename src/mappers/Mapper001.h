@@ -39,16 +39,16 @@ private:
     // the iNES header, we must allocate the maximum possible amount of 32kb
     uint8_t sram[0x8000];
 
-    void reset();
-
 public:
     Mapper001(Cart* cart);
+
+    void Reset() override;
 
     uint8_t MapCPURead(uint16_t addr) override;
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;
     uint8_t MapPPURead(uint16_t addr) override;
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
 
-    void SaveToDisk(FILE* file) override;
-    void LoadFromDisk(FILE* file) override;
+    bool SaveState(FILE* file) override;
+    bool LoadState(FILE* file) override;
 };

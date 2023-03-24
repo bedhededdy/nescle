@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// FIXME: WHAT'S HORRIFYING ABOUT THIS, IS THAT IT EXHIBITS NON DETERMINISTIC
-// BEHAVIOR. WATCH OUT!!!
-
 // FIXME: WE NEED TO IMPLEMENT PROPERLY THE PRG RAM ASPECT OF THESE THINGS
 // BECAUSE AS OF NOW WE ONLY ALLOW 8K ACCESS TO THE BATTERY BACKED SRAM
 // BUT THE MAPPERS CAN HAVE 32K OF PRG RAM SO WE NEED TO FIGURE THAT OUT
@@ -60,7 +57,7 @@
 // THE LO POINTER?
 #include "Mapper001.h"
 
-void Mapper001::reset() {
+void Mapper001::Reset() {
     // FIXME: HAVE TO GET THIS CALLED ON RESET, NOT JUST ON
     // CREATE
     load = 0;
@@ -89,7 +86,7 @@ Mapper001::Mapper001(Cart* cart) {
     // FIXME: THIS MAY NOT WORK, REALLY THIS IS SUPPOSED TO HAPPEN
     // WHEN THE CONSOLE RESET IS TRIGGERED, BUT SINCE
     // WE RECREATE THE MAPPER EACH TIME, I THINK THIS MAY WORK
-    reset();
+    Reset();
 }
 
 uint8_t Mapper001::MapCPURead(uint16_t addr) {
@@ -220,30 +217,32 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper001::SaveToDisk(FILE* file) {
-    fwrite(&id, sizeof(id), 1, file);
-    fwrite(&ctrl, sizeof(ctrl), 1, file);
-    fwrite(&load, sizeof(load), 1, file);
-    fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file);
-    fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file);
-    fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file);
-    fwrite(&chr_select8, sizeof(chr_select8), 1, file);
-    fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file);
-    fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file);
-    fwrite(&prg_select32, sizeof(prg_select32), 1, file);
-    fwrite(sram, sizeof(sram), 1, file);
+bool Mapper001::SaveState(FILE* file) {
+    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
+    bool b3 = fwrite(&load, sizeof(load), 1, file) == 1;
+    bool b4 = fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
+    bool b5 = fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
+    bool b6 = fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
+    bool b7 = fwrite(&chr_select8, sizeof(chr_select8), 1, file) == 1;
+    bool b8 = fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
+    bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
+    bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
+    bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
+    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }
 
-void Mapper001::LoadFromDisk(FILE* file) {
-    fread(&id, sizeof(id), 1, file);
-    fread(&ctrl, sizeof(ctrl), 1, file);
-    fread(&load, sizeof(load), 1, file);
-    fread(&load_reg_ct, sizeof(load_reg_ct), 1, file);
-    fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file);
-    fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file);
-    fread(&chr_select8, sizeof(chr_select8), 1, file);
-    fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file);
-    fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file);
-    fread(&prg_select32, sizeof(prg_select32), 1, file);
-    fread(sram, sizeof(sram), 1, file);
+bool Mapper001::LoadState(FILE* file) {
+    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b2 = fread(&ctrl, sizeof(ctrl), 1, file) == 1;
+    bool b3 = fread(&load, sizeof(load), 1, file) == 1;
+    bool b4 = fread(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
+    bool b5 = fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
+    bool b6 = fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
+    bool b7 = fread(&chr_select8, sizeof(chr_select8), 1, file) == 1;
+    bool b8 = fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
+    bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
+    bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
+    bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
+    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }

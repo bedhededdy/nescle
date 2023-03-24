@@ -38,13 +38,13 @@ bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr);
 bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 
-void Mapper_SaveToDisk(Mapper* mapper, FILE* file);
-void Mapper_LoadFromDisk(Mapper* mapper, FILE* file);
+bool Mapper_SaveState(Mapper* mapper, FILE* file);
+bool Mapper_LoadState(Mapper* mapper, FILE* file);
 
 void Mapper_Reset(Mapper* mapper);
-void Mapper_Scanline(Mapper* mapper);
-bool Mapper_IRQState(Mapper* mapper);
-void Mapper_IRQClear(Mapper* mapper);
+void Mapper_CountdownScanline(Mapper* mapper);
+bool Mapper_GetIRQStatus(Mapper* mapper);
+void Mapper_ClearIRQStatus(Mapper* mapper);
 
 #ifdef __cplusplus
 }

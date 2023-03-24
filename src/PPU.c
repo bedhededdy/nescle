@@ -853,7 +853,7 @@ break;
     // FIXME: OLC DOES THIS AFTER INCREMENT BUT I DO IT BEFORE
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
-            Mapper_Scanline(ppu->bus->cart->mapper);
+            Mapper_CountdownScanline(ppu->bus->cart->mapper);
         }
     }
     ppu->cycle++;

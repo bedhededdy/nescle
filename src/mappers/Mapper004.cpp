@@ -46,7 +46,7 @@ void Mapper004::Reset() {
     prg_banks[3] = (cart->metadata.prg_rom_size * 2 - 1) * 0x2000;
 }
 
-void Mapper004::Scanline() {
+void Mapper004::CountdownScanline() {
     if (irq_counter == 0)
         irq_counter = irq_reload;
     else
@@ -57,11 +57,11 @@ void Mapper004::Scanline() {
         irq_active = true;
 }
 
-bool Mapper004::IRQState() {
+bool Mapper004::GetIRQStatus() {
     return irq_active;
 }
 
-void Mapper004::IRQClear() {
+void Mapper004::ClearIRQStatus() {
     irq_active = false;
 }
 
@@ -208,8 +208,8 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper004::SaveToDisk(FILE* file) {
+bool Mapper004::SaveState(FILE* file) {
 }
 
-void Mapper004::LoadFromDisk(FILE* file) {
+bool Mapper004::LoadState(FILE* file) {
 }

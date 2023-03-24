@@ -26,6 +26,6 @@ public:
     uint8_t MapPPURead(uint16_t addr) override;
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
 
-    void SaveToDisk(FILE* file) override;
-    void LoadFromDisk(FILE* file) override;
+    bool SaveState(FILE* file) override;
+    bool LoadState(FILE* file) override;
 };
