@@ -28,24 +28,19 @@
 
 static void audio_callback(void* userdata, uint8_t* stream, int len) {
     Emulator* emu = (Emulator*)userdata;
-    uint16_t* stream16 = (uint16_t*)stream;
+    float* streamF32 = (float*)stream;
 
-    // TODO: ALLOW USER TO CONFIG THIS
     // Force volume levels
     // THIS AIN'T SAFE TO DO BEFORE THE LOCK, IDIOT
-    // emu->nes->apu->pulse1.volume = 1.0;
-    // emu->nes->apu->pulse2.volume = 1.0;
-    // emu->nes->apu->triangle.volume = 1.0;
-    // emu->nes->apu->noise.volume = 1.0;
     emu->nes->apu->master_volume = 0.5;
 
     SDL_LockMutex(emu->nes_state_lock);
-    for (size_t i = 0; i < len/sizeof(int16_t); i++) {
+    for (size_t i = 0; i < len/sizeof(float); i++) {
         if (emu->run_emulation) {
             Emulator_EmulateSample(emu);
-            stream16[i] = 32767 * emu->nes->audio_sample;
+            streamF32[i] = emu->nes->audio_sample;
         } else {
-            stream16[i] = 0;
+            streamF32[i] = 0;
         }
     }
     SDL_UnlockMutex(emu->nes_state_lock);
@@ -72,7 +67,8 @@ Emulator* Emulator_Create(const char* settings_path) {
 
     SDL_AudioSpec desired_spec = { 0 };
     desired_spec.freq = 44100;
-    desired_spec.format = AUDIO_S16SYS;
+    // desired_spec.format = AUDIO_S16SYS;
+    desired_spec.format = AUDIO_F32SYS;
     desired_spec.channels = 1;
     // TODO: LET THE USER CHOOSE THIS
     desired_spec.samples = 512;
@@ -267,8 +263,9 @@ bool Emulator_LoadSettings(Emulator* emu, const char* path) {
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
     emu->settings.sync = EMULATOR_SYNC_AUDIO;
-    // emu->settings.sync = EMULATOR_SYNC_VIDEO;
     emu->settings.vsync = false;
+    // emu->settings.sync = EMULATOR_SYNC_VIDEO;
+    // emu->settings.vsync = true;
 }
 
 void Emulator_EmulateSample(Emulator* emu) {

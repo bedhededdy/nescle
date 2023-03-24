@@ -217,6 +217,8 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
+// FIXME: WILL SHOW THE WRONG TILES ON RELOAD SOMETIMES
+// BECAUSE THE MIRRORING MODE IS ALWAYS RESET TO HORIZONTAL
 bool Mapper001::SaveState(FILE* file) {
     bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
     bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
@@ -229,6 +231,7 @@ bool Mapper001::SaveState(FILE* file) {
     bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
+    printf("mirror mode: %d\n", cart->mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }
 
@@ -244,5 +247,6 @@ bool Mapper001::LoadState(FILE* file) {
     bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
+    printf("mirror mode: %d\n", cart->mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }

@@ -215,7 +215,7 @@ static void clock_pulse(APU_PulseChannel *pulse)
             pulse->duty_index = (pulse->duty_index + 1) % 8;
 
             pulse->sample = duty_cycles[pulse->duty_sequence][pulse->duty_index];
-            pulse->sample *= 1.0 / 15.0 * pulse->envelope.output;
+            pulse->sample *= 1.0f/15.0f * pulse->envelope.output;
             pulse->prev_sample = pulse->sample;
         }
     } else {
@@ -238,7 +238,7 @@ static void clock_noise(APU_NoiseChannel* pulse) {
             pulse->shift_register |= feedback << 14;
             pulse->sample = !(pulse->shift_register & 1);
 
-            pulse->sample *= 1.0 / 15.0 * pulse->envelope.output;
+            pulse->sample *= 1.0f/15.0f * pulse->envelope.output;
             pulse->prev_sample = pulse->sample;
         }
     }
@@ -264,7 +264,7 @@ static void clock_triangle(APU_TriangleChannel *triangle)
                 triangle->sequencer.output = amp_table[triangle->index];
             }
 
-            triangle->sample = 1.0 / 15.0 * triangle->sequencer.output;
+            triangle->sample = 1.0f/15.0f * triangle->sequencer.output;
             triangle->prev_sample = triangle->sample;
         }
 
@@ -490,34 +490,27 @@ void APU_Reset(APU *apu)
     apu->noise.volume = 0.5;
 }
 
-APU *APU_Create(void)
-{
+APU *APU_Create(void) {
     APU *apu = malloc(sizeof(APU));
     return apu;
 }
 
-void APU_Destroy(APU *apu)
-{
+void APU_Destroy(APU *apu) {
     free(apu);
 }
 
-double APU_GetOutputSample(APU *apu)
-{
+float APU_GetOutputSample(APU *apu) {
     // TODO: SEE APU MIXER ARTICLE ON NESDEV
 
     // For now, we will just trivially mix the channels
     // We have 4 channels, meaning each one is potentially allowed to
     // take up 1/4 of the output sample
-    double p1 = apu->pulse1.sample * apu->pulse1.volume;
-    // double p1 = 0;
-    // double p2 = 0;
-    double p2 = apu->pulse2.sample * apu->pulse2.volume;
-    // double tri = 0.0;
-    double tri = apu->triangle.sample * apu->triangle.volume;
-    double noise = apu->noise.sample * apu->noise.volume;
-    // double noise = 0.0;
+    float p1 = apu->pulse1.sample * apu->pulse1.volume;
+    float p2 = apu->pulse2.sample * apu->pulse2.volume;
+    float tri = apu->triangle.sample * apu->triangle.volume;
+    float noise = apu->noise.sample * apu->noise.volume;
 
-    return 0.25 * (p1 + p2 + tri + noise) * apu->master_volume;
+    return 0.25f * (p1 + p2 + tri + noise) * apu->master_volume;
 }
 
 bool APU_SaveState(APU* apu, FILE* file) {

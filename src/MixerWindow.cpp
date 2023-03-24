@@ -20,21 +20,17 @@ void MixerWindow::Show(Emulator* emu) {
             ImGui::TableNextColumn();
             x = ImGui::GetCursorPosX();
             mid = x + 50.0f - slider_dim.x / 2.0f;
-            float p1 = emu->nes->apu->pulse1.volume;
             ImGui::SetCursorPosX(mid);
-            ImGui::VSliderFloat("##sq1", slider_dim, &p1, 0.0f, 1.0f, "");
+            ImGui::VSliderFloat("##sq1", slider_dim, &emu->nes->apu->pulse1.volume, 0.0f, 1.0f, "");
             mid = x + 50.0f - ImGui::CalcTextSize("Square 1").x / 2.0f;
             ImGui::SetCursorPosX(mid);
             ImGui::Text("Square 1");
-            emu->nes->apu->pulse1.volume = p1;
 
             ImGui::TableNextColumn();
             x = ImGui::GetCursorPosX();
             mid = x + 50.0f - slider_dim.x / 2.0f;
-            float p2 = emu->nes->apu->pulse2.volume;
             ImGui::SetCursorPosX(mid);
-            ImGui::VSliderFloat("##sq2", slider_dim, &p2, 0.0f, 1.0f, "");
-            emu->nes->apu->pulse2.volume = p2;
+            ImGui::VSliderFloat("##sq2", slider_dim, &emu->nes->apu->pulse2.volume, 0.0f, 1.0f, "");
             mid = x + 50.0f - ImGui::CalcTextSize("Square 2").x / 2.0f;
             ImGui::SetCursorPosX(mid);
             ImGui::Text("Square 2");
@@ -42,10 +38,8 @@ void MixerWindow::Show(Emulator* emu) {
             ImGui::TableNextColumn();
             x = ImGui::GetCursorPosX();
             mid = x + 50.0f - slider_dim.x / 2.0f;
-            float t1 = emu->nes->apu->triangle.volume;
             ImGui::SetCursorPosX(mid);
-            ImGui::VSliderFloat("##tri", slider_dim, &t1, 0.0f, 1.0f, "");
-            emu->nes->apu->triangle.volume = t1;
+            ImGui::VSliderFloat("##tri", slider_dim, &emu->nes->apu->triangle.volume, 0.0f, 1.0f, "");
             mid = x + 50.0f - ImGui::CalcTextSize("Triangle").x / 2.0f;
             ImGui::SetCursorPosX(mid);
             ImGui::Text("Triangle");
@@ -53,10 +47,8 @@ void MixerWindow::Show(Emulator* emu) {
             ImGui::TableNextColumn();
             x = ImGui::GetCursorPosX();
             mid = x + 50.0f - slider_dim.x / 2.0f;
-            float n1 = emu->nes->apu->noise.volume;
             ImGui::SetCursorPosX(mid);
-            ImGui::VSliderFloat("##noise", slider_dim, &n1, 0.0f, 1.0f, "");
-            emu->nes->apu->noise.volume = n1;
+            ImGui::VSliderFloat("##noise", slider_dim, &emu->nes->apu->noise.volume, 0.0f, 1.0f, "");
             mid = x + 50.0f - ImGui::CalcTextSize("Noise").x / 2.0f;
             ImGui::SetCursorPosX(mid);
             ImGui::Text("Noise");

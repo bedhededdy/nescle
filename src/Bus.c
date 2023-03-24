@@ -236,6 +236,8 @@ bool Bus_Clock(Bus* bus) {
     bus->audio_time += bus->time_per_clock;
 
     // enough time has elapsed to push an audio sample
+    // this should account for the extra time that we overshot by, although
+    // it may get less accurate over time due to floating point errors
     if (bus->audio_time >= bus->time_per_sample) {
         bus->audio_time -= bus->time_per_sample;
         bus->audio_sample = APU_GetOutputSample(bus->apu);
@@ -290,6 +292,7 @@ void Bus_Reset(Bus* bus) {
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
     APU_Reset(bus->apu);
+    Mapper_Reset(bus->cart->mapper);
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;

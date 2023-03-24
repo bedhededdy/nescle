@@ -717,7 +717,7 @@ void EmulationWindow::Show(Emulator* emu) {
         // SO IF WE END UP GETTING THAT THE GCD OF THE REFRESH AND THE
         // MODULO IS 20 AND THE MODULO WAS 40 AND THE REFRESH WAS 60
         // WE WOULD ADD 2 SAMPLES EVERY 3 FRAMES
-        int16_t stream[735];
+        float stream[735];
         // this is way inaccurate, will desync fairly fast
         // int16_t stream[330];
         // emu->nes->apu->pulse1.volume = 1.0;
@@ -725,7 +725,7 @@ void EmulationWindow::Show(Emulator* emu) {
         // emu->nes->apu->triangle.volume = 1.0;
         // emu->nes->apu->noise.volume = 1.0;
         emu->nes->apu->master_volume = 0.5;
-        for (size_t i = 0; i < sizeof(stream)/sizeof(int16_t); i++) {
+        for (size_t i = 0; i < sizeof(stream)/sizeof(float); i++) {
             if (emu->run_emulation) {
                 // THERE IS A SORT OF FLAW IN REASONING HERE
                 // THIS REASONS THAT GETTING 735 SAMPLES A SECOND WILL AMOUNT
@@ -734,7 +734,7 @@ void EmulationWindow::Show(Emulator* emu) {
                 // YOU MAY HAVE TO HAVE A VARIABLE NUMBER OF SAMPLES AND USE
                 // A VECTOR TO DO THIS
                 Emulator_EmulateSample(emu);
-                stream[i] = 32767 * bus->audio_sample;
+                stream[i] = bus->audio_sample;
             } else {
                 stream[i] = 0;
             }

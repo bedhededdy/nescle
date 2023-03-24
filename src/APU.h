@@ -55,13 +55,13 @@ struct apu_sweeper {
 struct apu_pulse_channel {
     bool enable;
 
-    double sample;
-    double prev_sample;
+    float sample;
+    float prev_sample;
 
     bool halt;
     uint8_t length;
 
-    double volume;
+    float volume;
 
     int duty_sequence;
     int duty_index;
@@ -74,14 +74,14 @@ struct apu_pulse_channel {
 struct apu_triangle_channel {
     bool enable;
 
-    double sample;
-    double prev_sample;
+    float sample;
+    float prev_sample;
 
     int index;
     int length;
     uint8_t freq;
 
-    double volume;
+    float volume;
 
     bool halt;
     bool linear_counter_reload;
@@ -95,12 +95,12 @@ struct apu_triangle_channel {
 
 struct apu_noise_channel {
     bool enable;
-    double volume;
+    float volume;
     bool halt;
     uint8_t length;
 
-    double sample;
-    double prev_sample;
+    float sample;
+    float prev_sample;
 
     uint16_t shift_register;
 
@@ -126,7 +126,7 @@ struct apu {
     uint64_t clock_count;
     uint64_t frame_clock_count;
 
-    double master_volume;
+    float master_volume;
 };
 
 APU* APU_Create(void);
@@ -141,7 +141,7 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
 void APU_Clock(APU* apu);
 void APU_Reset(APU* apu);
 
-double APU_GetOutputSample(APU* apu);
+float APU_GetOutputSample(APU* apu);
 
 bool APU_SaveState(APU* apu, FILE* file);
 bool APU_LoadState(APU* apu, FILE* file);
