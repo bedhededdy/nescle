@@ -13,11 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: YOU MAY BE ABLE TO FIX SOME OF THIS BOILERPLATE CODE BY USING
-//       TEMPLATES.
 #include "Mapper.h"
-
-#include <stdlib.h>
 
 #include "mappers/Mapper000.h"
 #include "mappers/Mapper001.h"
@@ -27,8 +23,10 @@
 #include "mappers/Mapper007.h"
 #include "mappers/Mapper066.h"
 
+#include "Util.h"
+
 Mapper* Mapper_Create(uint8_t id, Cart* cart) {
-    Mapper* mapper = (Mapper*)malloc(sizeof(Mapper));
+    Mapper* mapper = (Mapper*)Util_SafeMalloc(sizeof(Mapper));
     mapper->id = id;
 
     switch (id) {
@@ -59,13 +57,18 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart) {
         break;
     }
 
+    if (mapper->mapper_class == NULL) {
+        Util_SafeFree(mapper);
+        mapper = NULL;
+    }
+
     return mapper;
 }
 
 void Mapper_Destroy(Mapper* mapper) {
     if (mapper != NULL) {
         delete static_cast<MapperBase*>(mapper->mapper_class);
-        free(mapper);
+        Util_SafeFree(mapper);
     }
 }
 
@@ -74,56 +77,18 @@ uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {
 }
 
 bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->MapCPUWrite(addr, data);
+    return static_cast<MapperBase*>
+        (mapper->mapper_class)->MapCPUWrite(addr, data);
 }
 
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->MapPPURead(addr);
+    return static_cast<MapperBase*>
+        (mapper->mapper_class)->MapPPURead(addr);
 }
 
 bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->MapPPUWrite(addr, data);
-}
-
-size_t Mapper_GetSize(uint8_t id) {
-    // TODO: MIGHT BE ABLE TO DO THIS USING TYPEOF (DECLTYPE IN C++11)
-    // TYPEOF IS GCC EXTENSION, SO WE CAN'T USE IT
-
-    size_t res;
-
-    switch (id) {
-    case 0:
-        res = sizeof(Mapper000);
-        break;
-    case 1:
-        res = sizeof(Mapper001);
-        break;
-    case 2:
-        res = sizeof(Mapper002);
-        break;
-    case 3:
-        res = sizeof(Mapper003);
-        break;
-    case 4:
-        res = sizeof(Mapper004);
-        break;
-    case 7:
-        res = sizeof(Mapper007);
-        break;
-    case 66:
-        res = sizeof(Mapper066);
-        break;
-
-    default:
-        res = 0;
-        break;
-    }
-
-    return res;
-}
-
-void Mapper_AssignCartridge(Mapper* mapper, Cart* cart) {
-    static_cast<MapperBase*>(mapper->mapper_class)->SetCart(cart);
+    return static_cast<MapperBase*>
+        (mapper->mapper_class)->MapPPUWrite(addr, data);
 }
 
 void Mapper_SaveToDisk(Mapper* mapper, FILE* file) {

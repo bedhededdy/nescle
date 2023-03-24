@@ -251,8 +251,6 @@ bool Bus_Clock(Bus* bus) {
         CPU_NMI(bus->cpu);
     }
 
-    // FIXME: YOU BETTER PRAY YOUR IRQ WORKS RIGHT
-    // FIXME: THIS NEVER TRIGGERS
     if (Mapper_IRQState(bus->cart->mapper)) {
         Mapper_IRQClear(bus->cart->mapper);
         CPU_IRQ(bus->cpu);
