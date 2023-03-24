@@ -33,6 +33,8 @@ struct mapper {
 Mapper* Mapper_Create(uint8_t id, Cart* cart);
 void Mapper_Destroy(Mapper* mapper);
 
+void Mapper_Reset(Mapper* mapper);
+
 uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr);
 bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr);
@@ -41,7 +43,6 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
 bool Mapper_SaveState(Mapper* mapper, FILE* file);
 bool Mapper_LoadState(Mapper* mapper, FILE* file);
 
-void Mapper_Reset(Mapper* mapper);
 void Mapper_CountdownScanline(Mapper* mapper);
 bool Mapper_GetIRQStatus(Mapper* mapper);
 void Mapper_ClearIRQStatus(Mapper* mapper);

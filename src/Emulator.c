@@ -33,10 +33,10 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
     // TODO: ALLOW USER TO CONFIG THIS
     // Force volume levels
     // THIS AIN'T SAFE TO DO BEFORE THE LOCK, IDIOT
-    emu->nes->apu->pulse1.volume = 1.0;
-    emu->nes->apu->pulse2.volume = 1.0;
-    emu->nes->apu->triangle.volume = 1.0;
-    emu->nes->apu->noise.volume = 1.0;
+    // emu->nes->apu->pulse1.volume = 1.0;
+    // emu->nes->apu->pulse2.volume = 1.0;
+    // emu->nes->apu->triangle.volume = 1.0;
+    // emu->nes->apu->noise.volume = 1.0;
     emu->nes->apu->master_volume = 0.5;
 
     SDL_LockMutex(emu->nes_state_lock);

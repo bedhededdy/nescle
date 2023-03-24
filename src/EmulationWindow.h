@@ -45,6 +45,7 @@ public:
     bool show_disassembler = false;
     bool show_oam = false;
     bool show_pattern = false;
+    bool show_mixer = false;
 
     // can access the window via an enumeration of their types
     enum WindowType {
@@ -52,6 +53,7 @@ public:
         OAM,
         DISASSEMBLER,
         SETTINGS,
+        MIXER,
         COUNT
     };
 

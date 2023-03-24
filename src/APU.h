@@ -114,8 +114,6 @@ struct apu_sample_channel {
     int bar;
 };
 
-
-
 struct apu {
     Bus* bus;
 
@@ -129,7 +127,6 @@ struct apu {
     uint64_t frame_clock_count;
 
     double master_volume;
-    double global_time;
 };
 
 APU* APU_Create(void);

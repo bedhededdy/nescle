@@ -72,6 +72,10 @@ void Mapper_Destroy(Mapper* mapper) {
     }
 }
 
+void Mapper_Reset(Mapper* mapper) {
+    static_cast<MapperBase*>(mapper->mapper_class)->Reset();
+}
+
 uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {
     return static_cast<MapperBase*>(mapper->mapper_class)->MapCPURead(addr);
 }
@@ -92,15 +96,11 @@ bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
 }
 
 bool Mapper_SaveState(Mapper* mapper, FILE* file) {
-    static_cast<MapperBase*>(mapper->mapper_class)->SaveState(file);
+    return static_cast<MapperBase*>(mapper->mapper_class)->SaveState(file);
 }
 
 bool Mapper_LoadState(Mapper* mapper, FILE* file) {
-    static_cast<MapperBase*>(mapper->mapper_class)->LoadState(file);
-}
-
-void Mapper_Reset(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->Reset();
+    return static_cast<MapperBase*>(mapper->mapper_class)->LoadState(file);
 }
 
 void Mapper_CountdownScanline(Mapper* mapper) {

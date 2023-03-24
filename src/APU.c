@@ -15,9 +15,8 @@
  */
 // TODO: IMPLEMENT LAST CHANNEL, BATTLETOADS PAUSE MUSIC USES IT
 #include "APU.h"
+
 #include <stdlib.h>
-#include <math.h>
-#include <stdio.h>
 #include <string.h>
 
 static const int amp_table[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
@@ -161,16 +160,9 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
     return true;
 }
 
-uint8_t APU_Read(APU *apu, uint16_t addr)
-{
+uint8_t APU_Read(APU *apu, uint16_t addr) {
     return 0;
 }
-
-//static void track_sweeper(APU_PulseChannel *pulse) {
-//    if (pulse->sweeper.enabled) {
-//        // FIXME: SHOULD
-//    }
-//}
 
 static void clock_sweeper(APU_PulseChannel* pulse) {
     // FIXME: MM2 ISSUES MAY BE CAUSED BY ME NOT SOTRING THE ORIGINAL FREQ
@@ -293,75 +285,32 @@ static void clock_triangle(APU_TriangleChannel *triangle)
 //     }
 // }
 
-static void clock_envelope_noise(APU_NoiseChannel* pulse) {
-    if (!pulse->envelope.start)
-    {
-        if (pulse->envelope.divider_count == 0)
-        {
-            pulse->envelope.divider_count = pulse->envelope.volume;
+static void clock_envelope(APU_Envelope* envelope, bool halt) {
+    if (!envelope->start) {
+        if (envelope->divider_count == 0) {
+            envelope->divider_count = envelope->volume;
 
-            if (pulse->envelope.decay_count == 0)
-            {
-                if (pulse->halt)
-                    pulse->envelope.decay_count = 15;
+            if (envelope->decay_count == 0) {
+                if (halt) {
+                    envelope->decay_count = 15;
+                }
+            } else {
+                envelope->decay_count--;
             }
-            else
-            {
-                pulse->envelope.decay_count--;
-            }
+        } else {
+            envelope->divider_count--;
         }
-        else
-        {
-            pulse->envelope.divider_count--;
-        }
-    }
-    else
-    {
-        pulse->envelope.start = false;
-        pulse->envelope.decay_count = 15;
-        pulse->envelope.divider_count = pulse->envelope.volume;
+    } else {
+        envelope->start = false;
+        envelope->decay_count = 15;
+        envelope->divider_count = envelope->volume;
     }
 
-    if (pulse->envelope.constant_volume)
-        pulse->envelope.output = pulse->envelope.volume;
-    else
-        pulse->envelope.output = pulse->envelope.decay_count;
-}
-
-static void clock_envelope(APU_PulseChannel *pulse)
-{
-    if (!pulse->envelope.start)
-    {
-        if (pulse->envelope.divider_count == 0)
-        {
-            pulse->envelope.divider_count = pulse->envelope.volume;
-
-            if (pulse->envelope.decay_count == 0)
-            {
-                if (pulse->halt)
-                    pulse->envelope.decay_count = 15;
-            }
-            else
-            {
-                pulse->envelope.decay_count--;
-            }
-        }
-        else
-        {
-            pulse->envelope.divider_count--;
-        }
+    if (envelope->constant_volume) {
+        envelope->output = envelope->volume;
+    } else {
+        envelope->output = envelope->decay_count;
     }
-    else
-    {
-        pulse->envelope.start = false;
-        pulse->envelope.decay_count = 15;
-        pulse->envelope.divider_count = pulse->envelope.volume;
-    }
-
-    if (pulse->envelope.constant_volume)
-        pulse->envelope.output = pulse->envelope.volume;
-    else
-        pulse->envelope.output = pulse->envelope.decay_count;
 }
 
 void APU_Clock(APU *apu)
@@ -372,8 +321,6 @@ void APU_Clock(APU *apu)
     // UNTIL WRITTEN THIS IS ALMOST CERTAINLY THE CASE FOR TRIANGLE WAVE
     bool quarter_frame = false;
     bool half_frame = false;
-
-    apu->global_time += (0.3333333333333 / 1789773);
 
     // APU although clocking each time with the PPU, runs at half the CPU
     // clock, which is 1/3 of the PPU clock
@@ -417,9 +364,9 @@ void APU_Clock(APU *apu)
                 apu->triangle.linear_counter_reload = false;
             }
 
-            clock_envelope(&apu->pulse1);
-            clock_envelope(&apu->pulse2);
-            clock_envelope_noise(&apu->noise);
+            clock_envelope(&apu->pulse1.envelope, apu->pulse1.halt);
+            clock_envelope(&apu->pulse2.envelope, apu->pulse2.halt);
+            clock_envelope(&apu->noise.envelope, apu->noise.halt);
         }
 
         if (half_frame)
@@ -525,6 +472,10 @@ void APU_PowerOn(APU *apu)
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
     apu->noise.shift_register = 1;
+    apu->pulse1.volume = 1.0;
+    apu->pulse2.volume = 1.0;
+    apu->triangle.volume = 1.0;
+    apu->noise.volume = 0.5;
 }
 
 void APU_Reset(APU *apu)
@@ -533,6 +484,10 @@ void APU_Reset(APU *apu)
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
     apu->noise.shift_register = 1;
+    apu->pulse1.volume = 1.0;
+    apu->pulse2.volume = 1.0;
+    apu->triangle.volume = 1.0;
+    apu->noise.volume = 0.5;
 }
 
 APU *APU_Create(void)
@@ -559,7 +514,7 @@ double APU_GetOutputSample(APU *apu)
     double p2 = apu->pulse2.sample * apu->pulse2.volume;
     // double tri = 0.0;
     double tri = apu->triangle.sample * apu->triangle.volume;
-    double noise = apu->noise.sample * apu->noise.volume / 2.0;
+    double noise = apu->noise.sample * apu->noise.volume;
     // double noise = 0.0;
 
     return 0.25 * (p1 + p2 + tri + noise) * apu->master_volume;

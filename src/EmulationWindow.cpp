@@ -48,6 +48,7 @@
 #include "Emulator.h"
 #include "APU.h"
 #include "Bus.h"
+#include "MixerWindow.h"
 #include "PatternWindow.h"
 
 // FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
@@ -119,6 +120,12 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
             } else {
                 SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                              "EmulationWindow::Show(): Unable to create VSYNC menu item");
+            }
+            if (ImGui::MenuItem("Open mixer")) {
+                show_mixer = true;
+            } else {
+                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                             "EmulationWindow::Show(): Unable to create mixer menu item");
             }
             ImGui::EndMenu();
         }
@@ -713,10 +720,10 @@ void EmulationWindow::Show(Emulator* emu) {
         int16_t stream[735];
         // this is way inaccurate, will desync fairly fast
         // int16_t stream[330];
-        emu->nes->apu->pulse1.volume = 1.0;
-        emu->nes->apu->pulse2.volume = 1.0;
-        emu->nes->apu->triangle.volume = 1.0;
-        emu->nes->apu->noise.volume = 1.0;
+        // emu->nes->apu->pulse1.volume = 1.0;
+        // emu->nes->apu->pulse2.volume = 1.0;
+        // emu->nes->apu->triangle.volume = 1.0;
+        // emu->nes->apu->noise.volume = 1.0;
         emu->nes->apu->master_volume = 0.5;
         for (size_t i = 0; i < sizeof(stream)/sizeof(int16_t); i++) {
             if (emu->run_emulation) {
@@ -742,6 +749,7 @@ void EmulationWindow::Show(Emulator* emu) {
     bool prev_showing_disassembler = show_disassembler;
     bool prev_showing_pattern = show_pattern;
     bool prev_showing_oam = show_oam;
+    bool prev_showing_mixer = show_mixer;
     render_main_gui(emu);
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
@@ -756,6 +764,10 @@ void EmulationWindow::Show(Emulator* emu) {
         SDL_Log("Call new\n");
         sub_windows[WindowType::PATTERN] =
             new PatternWindow(main_shader, main_vao, &show_pattern);
+    }
+    if (!prev_showing_mixer && show_mixer) {
+        sub_windows[WindowType::MIXER] =
+            new MixerWindow(&show_mixer);
     }
 
     // iterate over the map to show each window that exists
@@ -773,11 +785,17 @@ void EmulationWindow::Show(Emulator* emu) {
         delete sub_windows[WindowType::PATTERN];
         sub_windows[WindowType::PATTERN] = nullptr;
     }
+    // FIXME: WRONG
     if (!prev_showing_oam && show_oam) {
         //sub_windows[WindowType::OAM] = new OAMWindow(emu);
     } else if (prev_showing_oam && !show_oam) {
         //delete sub_windows[WindowType::OAM];
         //sub_windows[WindowType::OAM] = nullptr;
+    }
+
+    if (prev_showing_mixer && !show_mixer) {
+        delete sub_windows[WindowType::MIXER];
+        sub_windows[WindowType::MIXER] = nullptr;
     }
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
