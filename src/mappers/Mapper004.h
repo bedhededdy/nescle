@@ -19,8 +19,6 @@
 
 class Mapper004 : public MapperBase {
 private:
-    uint8_t sram[0x8000];
-
     // FIXME: SHOULDN'T THESE BE 8 BYTES
     uint32_t registers[8];
     uint32_t chr_banks[8];
@@ -35,6 +33,8 @@ private:
     bool irq_update = false;
     uint16_t irq_counter;
     uint16_t irq_reload;
+
+    uint8_t sram[0x8000];
 
 public:
     Mapper004(Cart* cart);

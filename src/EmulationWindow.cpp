@@ -750,11 +750,19 @@ void EmulationWindow::Show(Emulator* emu) {
     bool prev_showing_pattern = show_pattern;
     bool prev_showing_oam = show_oam;
     bool prev_showing_mixer = show_mixer;
+
+    // Show this in light
+    ImGui::StyleColorsLight();
     render_main_gui(emu);
+
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
     SDL_UnlockMutex(emulator->nes_state_lock);
+
+
+    // Rest in dark
+    ImGui::StyleColorsDark();
 
     if (!prev_showing_disassembler && show_disassembler) {
         // sub_windows[WindowType::DISASSEMBLER] = new DisassemblerWindow(emu);
