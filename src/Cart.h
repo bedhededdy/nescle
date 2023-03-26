@@ -26,7 +26,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-
 typedef enum cart_mirror_mode {
     CART_MIRRORMODE_HORZ,   // Horizontal
     CART_MIRRORMODE_VERT,   // Vertical
@@ -35,7 +34,7 @@ typedef enum cart_mirror_mode {
 } Cart_MirrorMode;
 
 // ROM file header in iNES (.nes) format
-struct cart_rom_header {
+typedef struct cart_rom_header {
     uint8_t name[4];           // Should always say NES followed by DOS EOF
     uint8_t prg_rom_size;   // One chunk = 16kb
     uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
@@ -45,7 +44,7 @@ struct cart_rom_header {
     uint8_t tv_system1;     // Apparently rarely used
     uint8_t tv_system2;     // Apparently rarely used
     uint8_t padding[5];        // Unused padding
-};
+} Cart_ROMHeader;
 
 struct cart {
     Cart_ROMHeader metadata;

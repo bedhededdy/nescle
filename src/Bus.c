@@ -289,7 +289,8 @@ void Bus_Reset(Bus* bus) {
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
     APU_Reset(bus->apu);
-    Mapper_Reset(bus->cart->mapper);
+    if (bus->cart->mapper != NULL)
+        Mapper_Reset(bus->cart->mapper);
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;
