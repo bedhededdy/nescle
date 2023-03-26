@@ -75,6 +75,16 @@ bool Cart_LoadROM(Cart* cart, const char* path);
 bool Cart_SaveState(Cart* cart, FILE* file);
 bool Cart_LoadState(Cart* cart, FILE* file);
 
+uint8_t Cart_GetPrgRomBlocks(Cart* cart);
+size_t Cart_GetPrgRomBytes(Cart* cart);
+uint8_t Cart_GetChrRomBlocks(Cart* cart);
+size_t Cart_GetChrRomBytes(Cart* cart);
+
+uint8_t Cart_ReadPrgRom(Cart* cart, size_t off);
+void Cart_WritePrgRom(Cart* cart, size_t off, uint8_t data);
+uint8_t Cart_ReadChrRom(Cart* cart, size_t off);
+void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t data);
+
 #ifdef __cplusplus
 }
 #endif

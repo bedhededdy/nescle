@@ -17,7 +17,9 @@
 // ON HEADER TYPE
 #include "Cart.h"
 
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "PPU.h"
@@ -245,4 +247,40 @@ bool Cart_LoadState(Cart* cart, FILE* file) {
 
     // Let the caller handle the mapper too
     return true;
+}
+
+uint8_t Cart_GetPrgRomBlocks(Cart* cart) {
+    return cart->metadata.prg_rom_size;
+}
+
+uint8_t Cart_GetChrRomBlocks(Cart* cart) {
+    return cart->metadata.chr_rom_size;
+}
+
+size_t Cart_GetPrgRomBytes(Cart* cart) {
+    return cart->metadata.prg_rom_size * CART_PRG_ROM_CHUNK_SIZE;
+}
+
+size_t Cart_GetChrRomBytes(Cart* cart) {
+    return cart->metadata.chr_rom_size * CART_CHR_ROM_CHUNK_SIZE;
+}
+
+uint8_t Cart_ReadPrgRom(Cart* cart, size_t off) {
+    assert(off < Cart_GetPrgRomBytes(cart));
+    return cart->prg_rom[off];
+}
+
+void Cart_WritePrgRom(Cart* cart, size_t off, uint8_t val) {
+    assert(off < Cart_GetPrgRomBytes(cart));
+    cart->prg_rom[off] = val;
+}
+
+uint8_t Cart_ReadChrRom(Cart* cart, size_t off) {
+    assert(off < Cart_GetChrRomBytes(cart));
+    return cart->chr_rom[off];
+}
+
+void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t val) {
+    assert(off < Cart_GetChrRomBytes(cart));
+    cart->chr_rom[off] = val;
 }

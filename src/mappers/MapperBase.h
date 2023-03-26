@@ -20,10 +20,10 @@
 
 class MapperBase {
 protected:
-    uint8_t id;
     Cart *cart;
 
 public:
+    MapperBase(Cart* _cart) : cart(_cart) {}
     virtual ~MapperBase() = default;
 
     virtual void Reset() {}

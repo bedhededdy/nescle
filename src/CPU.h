@@ -27,7 +27,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-
 /* Constructors/Destructors */
 CPU* CPU_Create(void);
 void CPU_Destroy(CPU* cpu);

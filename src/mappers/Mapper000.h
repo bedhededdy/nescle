@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://nesdev.org/wiki/NROM
 #pragma once
 
 #include "MapperBase.h"
 
 class Mapper000 : public MapperBase {
 public:
-    Mapper000(Cart* cart);
+    Mapper000(Cart* cart) : MapperBase(cart) {};
 
     uint8_t MapCPURead(uint16_t addr) override;
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;
