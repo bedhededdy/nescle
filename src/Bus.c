@@ -54,7 +54,7 @@ Bus* Bus_CreateNES(void) {
     bus->cart = cart;
 
     bus->apu = apu;
-    apu->bus = bus;
+    APU_LinkBus(apu, bus);
 
     bus->audio_sample = 0.0;
 

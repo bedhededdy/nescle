@@ -34,6 +34,118 @@ static const int duty_cycles[4][8] = {
 
 static const int noise_period_table[16] = {4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
 
+typedef struct apu_pulse_channel APU_PulseChannel;
+typedef struct apu_triangle_channel APU_TriangleChannel;
+typedef struct apu_noise_channel APU_NoiseChannel;
+typedef struct apu_sample_channel APU_SampleChannel;
+typedef struct apu_sequencer APU_Sequencer;
+typedef struct apu_envelope APU_Envelope;
+typedef struct apu_sweeper APU_Sweeper;
+
+struct apu_sequencer {
+    uint16_t timer;
+    uint16_t reload;
+    uint8_t output;
+};
+
+struct apu_envelope {
+    bool start;
+    bool disable;
+    uint16_t divider_count;
+    bool constant_volume;
+    uint16_t volume;
+    uint16_t output;
+    uint16_t decay_count;
+};
+
+struct apu_sweeper {
+    bool enabled;
+    bool down;
+    bool reload;
+    uint8_t shift;
+    uint8_t timer;
+    uint8_t period;
+    uint16_t change;
+    bool mute;
+};
+
+struct apu_pulse_channel {
+    bool enable;
+
+    float sample;
+    float prev_sample;
+
+    bool halt;
+    uint8_t length;
+
+    float volume;
+
+    int duty_sequence;
+    int duty_index;
+
+    APU_Sequencer sequencer;
+    APU_Envelope envelope;
+    APU_Sweeper sweeper;
+};
+
+struct apu_triangle_channel {
+    bool enable;
+
+    float sample;
+    float prev_sample;
+
+    int index;
+    int length;
+    uint8_t freq;
+
+    float volume;
+
+    bool halt;
+    bool linear_counter_reload;
+    bool control_flag;
+
+    uint16_t linear_counter;
+    uint16_t linear_counter_reload_value;
+
+    APU_Sequencer sequencer;
+};
+
+struct apu_noise_channel {
+    bool enable;
+    float volume;
+    bool halt;
+    uint8_t length;
+
+    float sample;
+    float prev_sample;
+
+    uint16_t shift_register;
+
+    uint8_t mode;
+
+    APU_Envelope envelope;
+    APU_Sequencer sequencer;
+};
+
+struct apu_sample_channel {
+    int bar;
+};
+
+struct apu {
+    Bus* bus;
+
+    APU_PulseChannel pulse1;
+    APU_PulseChannel pulse2;
+    APU_TriangleChannel triangle;
+    APU_NoiseChannel noise;
+    APU_SampleChannel sample;
+
+    uint64_t clock_count;
+    uint64_t frame_clock_count;
+
+    float master_volume;
+};
+
 bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
 {
     switch (addr)
@@ -531,4 +643,48 @@ bool APU_LoadState(APU* apu, FILE* file) {
         return false;
     apu->bus = bus;
     return true;
+}
+
+void APU_LinkBus(APU *apu, Bus *bus) {
+    apu->bus = bus;
+}
+
+void APU_SetMasterVolume(APU *apu, float volume) {
+    apu->master_volume = volume;
+}
+
+void APU_SetPulse1Volume(APU *apu, float volume) {
+    apu->pulse1.volume = volume;
+}
+
+void APU_SetPulse2Volume(APU *apu, float volume) {
+    apu->pulse2.volume = volume;
+}
+
+void APU_SetTriangleVolume(APU *apu, float volume) {
+    apu->triangle.volume = volume;
+}
+
+void APU_SetNoiseVolume(APU *apu, float volume) {
+    apu->noise.volume = volume;
+}
+
+float APU_GetMasterVolume(APU* apu) {
+    return apu->master_volume;
+}
+
+float APU_GetPulse1Volume(APU* apu) {
+    return apu->pulse1.volume;
+}
+
+float APU_GetPulse2Volume(APU* apu) {
+    return apu->pulse2.volume;
+}
+
+float APU_GetTriangleVolume(APU* apu) {
+    return apu->triangle.volume;
+}
+
+float APU_GetNoiseVolume(APU* apu) {
+    return apu->noise.volume;
 }

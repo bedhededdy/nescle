@@ -25,109 +25,6 @@ extern "C" {
 
 #include "NESCLETypes.h"
 
-struct apu_sequencer {
-    uint16_t timer;
-    uint16_t reload;
-    uint8_t output;
-};
-
-struct apu_envelope {
-    bool start;
-    bool disable;
-    uint16_t divider_count;
-    bool constant_volume;
-    uint16_t volume;
-    uint16_t output;
-    uint16_t decay_count;
-};
-
-struct apu_sweeper {
-    bool enabled;
-    bool down;
-    bool reload;
-    uint8_t shift;
-    uint8_t timer;
-    uint8_t period;
-    uint16_t change;
-    bool mute;
-};
-
-struct apu_pulse_channel {
-    bool enable;
-
-    float sample;
-    float prev_sample;
-
-    bool halt;
-    uint8_t length;
-
-    float volume;
-
-    int duty_sequence;
-    int duty_index;
-
-    APU_Sequencer sequencer;
-    APU_Envelope envelope;
-    APU_Sweeper sweeper;
-};
-
-struct apu_triangle_channel {
-    bool enable;
-
-    float sample;
-    float prev_sample;
-
-    int index;
-    int length;
-    uint8_t freq;
-
-    float volume;
-
-    bool halt;
-    bool linear_counter_reload;
-    bool control_flag;
-
-    uint16_t linear_counter;
-    uint16_t linear_counter_reload_value;
-
-    APU_Sequencer sequencer;
-};
-
-struct apu_noise_channel {
-    bool enable;
-    float volume;
-    bool halt;
-    uint8_t length;
-
-    float sample;
-    float prev_sample;
-
-    uint16_t shift_register;
-
-    uint8_t mode;
-
-    APU_Envelope envelope;
-    APU_Sequencer sequencer;
-};
-
-struct apu_sample_channel {
-    int bar;
-};
-
-struct apu {
-    Bus* bus;
-
-    APU_PulseChannel pulse1;
-    APU_PulseChannel pulse2;
-    APU_TriangleChannel triangle;
-    APU_NoiseChannel noise;
-    APU_SampleChannel sample;
-
-    uint64_t clock_count;
-    uint64_t frame_clock_count;
-
-    float master_volume;
-};
 
 APU* APU_Create(void);
 void APU_Destroy(APU* apu);
@@ -145,6 +42,21 @@ float APU_GetOutputSample(APU* apu);
 
 bool APU_SaveState(APU* apu, FILE* file);
 bool APU_LoadState(APU* apu, FILE* file);
+
+void APU_LinkBus(APU* apu, Bus* bus);
+
+float APU_GetMasterVolume(APU* apu);
+float APU_GetPulse1Volume(APU* apu);
+float APU_GetPulse2Volume(APU* apu);
+float APU_GetTriangleVolume(APU* apu);
+float APU_GetNoiseVolume(APU* apu);
+
+void APU_SetMasterVolume(APU* apu, float vol);
+void APU_SetPulse1Volume(APU* apu, float vol);
+void APU_SetPulse2Volume(APU* apu, float vol);
+void APU_SetTriangleVolume(APU* apu, float vol);
+void APU_SetNoiseVolume(APU* apu, float vol);
+
 
 #ifdef __cplusplus
 }

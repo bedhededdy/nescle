@@ -30,13 +30,6 @@ typedef struct emulator Emulator;
 typedef struct emulator_settings Emulator_Settings;
 
 typedef struct ppu_oam PPU_OAM;
-typedef struct apu_pulse_channel APU_PulseChannel;
-typedef struct apu_triangle_channel APU_TriangleChannel;
-typedef struct apu_noise_channel APU_NoiseChannel;
-typedef struct apu_sample_channel APU_SampleChannel;
-typedef struct apu_sequencer APU_Sequencer;
-typedef struct apu_envelope APU_Envelope;
-typedef struct apu_sweeper APU_Sweeper;
 
 #ifdef __cplusplus
 }
