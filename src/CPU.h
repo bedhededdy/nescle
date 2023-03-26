@@ -27,72 +27,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-/* CPU Addressing Modes */
-typedef enum cpu_addrmode {
-    CPU_ADDRMODE_ACC,  // Accumulator
-    CPU_ADDRMODE_IMM,  // Immediate
-    CPU_ADDRMODE_ABS,  // Absolute
-    CPU_ADDRMODE_ZPG,  // Zero page
-    CPU_ADDRMODE_ZPX,  // Zero page x
-    CPU_ADDRMODE_ZPY,  // Zero page y
-    CPU_ADDRMODE_ABX,  // Absolute x
-    CPU_ADDRMODE_ABY,  // Absolute y
-    CPU_ADDRMODE_IMP,  // Implied
-    CPU_ADDRMODE_REL,  // Relative
-    CPU_ADDRMODE_IDX,  // Indirect x
-    CPU_ADDRMODE_IDY,  // Indirect y
-    CPU_ADDRMODE_IND,  // Absolute indirect
-
-    CPU_ADDRMODE_INV   // Invalid
-} CPU_AddrMode;
-
-/* CPU Operations */
-typedef enum cpu_op_type {
-    CPU_OP_ADC, CPU_OP_AND, CPU_OP_ASL,
-    CPU_OP_BCC, CPU_OP_BCS, CPU_OP_BEQ, CPU_OP_BIT, CPU_OP_BMI, CPU_OP_BNE, CPU_OP_BPL, CPU_OP_BRK, CPU_OP_BVC, CPU_OP_BVS,
-    CPU_OP_CLC, CPU_OP_CLD, CPU_OP_CLI, CPU_OP_CLV, CPU_OP_CMP, CPU_OP_CPX, CPU_OP_CPY,
-    CPU_OP_DEC, CPU_OP_DEX, CPU_OP_DEY,
-    CPU_OP_EOR,
-    CPU_OP_INC, CPU_OP_INX, CPU_OP_INY,
-    CPU_OP_JMP, CPU_OP_JSR,
-    CPU_OP_LDA, CPU_OP_LDX, CPU_OP_LDY, CPU_OP_LSR,
-    CPU_OP_NOP,
-    CPU_OP_ORA,
-    CPU_OP_PHA, CPU_OP_PHP, CPU_OP_PLA, CPU_OP_PLP,
-    CPU_OP_ROL, CPU_OP_ROR, CPU_OP_RTI, CPU_OP_RTS,
-    CPU_OP_SBC, CPU_OP_SEC, CPU_OP_SED, CPU_OP_SEI, CPU_OP_STA, CPU_OP_STX, CPU_OP_STY,
-    CPU_OP_TAX, CPU_OP_TAY, CPU_OP_TSX, CPU_OP_TXA, CPU_OP_TXS, CPU_OP_TYA,
-
-    CPU_OP_INV     // Invalid operation
-} CPU_OpType;
-
-/* 6502 CPU Instruction */
-struct cpu_instr {
-    const uint8_t opcode;
-    const CPU_AddrMode addr_mode;
-    const CPU_OpType op_type;
-    const int bytes;    // How many bytes this instruction reads
-    const int cycles;   // How many cycles this instruction takes
-};
-
-/* Emulated 6502 CPU */
-struct cpu {
-    Bus* bus;
-
-    // Registers
-    uint8_t a;      // Accumulator
-    uint8_t y;      // Y
-    uint8_t x;      // X
-    uint8_t sp;     // Stack Pointer
-    uint8_t status; // Status Register
-    uint16_t pc;    // Program Counter
-
-    // Instruction
-    const CPU_Instr* instr; // Current instruction
-    uint16_t addr_eff;      // Effective address used by instr
-    int cycles_rem;         // Number of cycles remaining for instr
-    uint64_t cycles_count;  // Number of CPU clocks
-};
 
 /* Constructors/Destructors */
 CPU* CPU_Create(void);
@@ -107,7 +41,6 @@ void CPU_Reset(CPU* cpu);   // Reset
 void CPU_PowerOn(CPU* cpu); // Put NES in powerup state (not a real interrupt)
 
 /* Fetch/Decode/Execute */
-const CPU_Instr* CPU_Decode(uint8_t opcode);  // Returns CPU_Instr associated with opcode
 void CPU_SetAddrMode(CPU* cpu);               // Sets addr_eff with effective address for current instruction
 void CPU_Execute(CPU* cpu);                   // Executes current CPU instruction
 
@@ -119,6 +52,8 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu);        // Gets the starting add
 /* Savestates */
 bool CPU_SaveState(CPU* cpu, FILE* file);
 bool CPU_LoadState(CPU* cpu, FILE* file);
+
+void CPU_LinkBus(CPU* cpu, Bus* bus);
 
 /*
 // Addressing Modes

@@ -30,7 +30,6 @@ typedef struct emulator Emulator;
 typedef struct emulator_settings Emulator_Settings;
 
 typedef struct cart_rom_header Cart_ROMHeader;
-typedef struct cpu_instr CPU_Instr;
 typedef struct ppu_oam PPU_OAM;
 typedef struct apu_pulse_channel APU_PulseChannel;
 typedef struct apu_triangle_channel APU_TriangleChannel;

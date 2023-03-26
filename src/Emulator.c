@@ -25,6 +25,7 @@
 #include "Cart.h"
 #include "PPU.h"
 #include "Mapper.h"
+#include "Util.h"
 
 static void audio_callback(void* userdata, uint8_t* stream, int len) {
     Emulator* emu = (Emulator*)userdata;
@@ -47,12 +48,7 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
 }
 
 Emulator* Emulator_Create(const char* settings_path) {
-    Emulator* emu = malloc(sizeof(Emulator));
-    if (emu == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Emulator_Create: Bad alloc Emulator");
-        exit(EXIT_FAILURE);
-    }
+    Emulator* emu = Util_SafeMalloc(sizeof(Emulator));
 
     emu->nes = Bus_CreateNES();
     emu->nes_state_lock = SDL_CreateMutex();
@@ -101,7 +97,7 @@ void Emulator_Destroy(Emulator* emu) {
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
-    free(emu);
+    Util_SafeFree(emu);
 }
 
 bool Emulator_SaveState(Emulator* emu, const char* path) {

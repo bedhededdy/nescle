@@ -21,6 +21,12 @@
 // FIXME: SOME GAMES DON'T EVEN BOOT, THIS IS DEFINITELY FISHY
 #include "Mapper004.h"
 
+Mapper004::Mapper004(Cart* cart) {
+    id = 4;
+    this->cart = cart;
+    Reset();
+}
+
 void Mapper004::Reset() {
     target_register = 0;
     prg_bank_mode = false;
@@ -45,31 +51,6 @@ void Mapper004::Reset() {
     prg_banks[1] = 0x2000;
     prg_banks[2] = (cart->metadata.prg_rom_size * 2 - 2) * 0x2000;
     prg_banks[3] = (cart->metadata.prg_rom_size * 2 - 1) * 0x2000;
-}
-
-void Mapper004::CountdownScanline() {
-    if (irq_counter == 0)
-        irq_counter = irq_reload;
-    else
-        irq_counter--;
-
-    // FIXME: ORDER MAY BE DIFFERENT
-    if (irq_counter == 0 && irq_enabled)
-        irq_active = true;
-}
-
-bool Mapper004::GetIRQStatus() {
-    return irq_active;
-}
-
-void Mapper004::ClearIRQStatus() {
-    irq_active = false;
-}
-
-Mapper004::Mapper004(Cart* cart) {
-    id = 4;
-    this->cart = cart;
-    Reset();
 }
 
 uint8_t Mapper004::MapCPURead(uint16_t addr) {
@@ -100,16 +81,18 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
                 chr_banks[1] = registers[3] * 0x400;
                 chr_banks[2] = registers[4] * 0x400;
                 chr_banks[3] = registers[5] * 0x400;
+
                 chr_banks[4] = (registers[0] & 0xfe) * 0x400;
-                chr_banks[5] = registers[0] * 0x400 + 0x400;
+                chr_banks[5] = chr_banks[4] + 0x400;
                 chr_banks[6] = (registers[1] & 0xfe) * 0x400;
-                chr_banks[7] = registers[1] * 0x400 + 0x400;
+                chr_banks[7] = chr_banks[6] + 0x400;
 
             } else {
                 chr_banks[0] = (registers[0] & 0xfe) * 0x400;
-                chr_banks[1] = registers[0] * 0x400 + 0x400;
+                chr_banks[1] = chr_banks[0] + 0x400;
                 chr_banks[2] = (registers[1] & 0xfe) * 0x400;
-                chr_banks[3] = registers[1] * 0x400 + 0x400;
+                chr_banks[3] = chr_banks[2] + 0x400;
+
                 chr_banks[4] = registers[2] * 0x400;
                 chr_banks[5] = registers[3] * 0x400;
                 chr_banks[6] = registers[4] * 0x400;
@@ -211,4 +194,23 @@ bool Mapper004::LoadState(FILE* file) {
     bool b12 = fread(&irq_reload, sizeof(irq_reload), 1, file) == 1;
     bool b13 = fread(sram, sizeof(sram), 1, file) == 1;
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
+}
+
+void Mapper004::CountdownScanline() {
+    if (irq_counter == 0)
+        irq_counter = irq_reload;
+    else
+        irq_counter--;
+
+    // FIXME: ORDER MAY BE DIFFERENT
+    if (irq_counter == 0 && irq_enabled)
+        irq_active = true;
+}
+
+bool Mapper004::GetIRQStatus() {
+    return irq_active;
+}
+
+void Mapper004::ClearIRQStatus() {
+    irq_active = false;
 }

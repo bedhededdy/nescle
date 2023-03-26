@@ -21,12 +21,12 @@
 // CLEARLY IT RELIES ON A CERTAIN STARTUP STATE WHICH I DON'T HAVE
 #include "PPU.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "Bus.h"
 #include "Cart.h"
 #include "Mapper.h"
+#include "Util.h"
 
 /* Helper Functions */
 static uint8_t flip_bits(uint8_t x) {
@@ -320,14 +320,11 @@ uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
 
 /* Constructors/Destructors */
 PPU* PPU_Create(void) {
-    PPU* ppu = malloc(sizeof(PPU));
-    if (ppu == NULL)
-        return NULL;
-    return ppu;
+    return Util_SafeMalloc(sizeof(PPU));
 }
 
 void PPU_Destroy(PPU* ppu) {
-    free(ppu);
+    Util_SafeFree(ppu);
 }
 
 /* Interrupts (technically the PPU has no notion of interrupts) */

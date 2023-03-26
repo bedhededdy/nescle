@@ -18,16 +18,14 @@
 #include "Cart.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "PPU.h"
 #include "Mapper.h"
+#include "Util.h"
 
 Cart* Cart_Create(void) {
-    Cart* cart = malloc(sizeof(Cart));
-    if (cart == NULL)
-        return NULL;
+    Cart* cart = Util_SafeMalloc(sizeof(Cart));
     cart->mapper = NULL;
     cart->prg_rom = NULL;
     cart->chr_rom = NULL;
@@ -38,10 +36,11 @@ Cart* Cart_Create(void) {
 void Cart_Destroy(Cart* cart) {
     if (cart != NULL) {
         Mapper_Destroy(cart->mapper);
+        // TODO: REFACTOR ALL TO USE SAFE FREE AND MALLOC
         free(cart->rom_path);
         free(cart->prg_rom);
         free(cart->chr_rom);
-        free(cart);
+        Util_SafeFree(cart);
     }
 }
 
@@ -88,7 +87,6 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
         printf("Cart_LoadROM: invalid header\n");
         return false;
     }
-
 
     // Load trainer data if it exists
     // TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT

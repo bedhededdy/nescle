@@ -15,8 +15,6 @@
  */
 #include "Bus.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "APU.h"
@@ -24,18 +22,17 @@
 #include "Cart.h"
 #include "Mapper.h"
 #include "PPU.h"
+#include "Util.h"
+
+#include "NESCLETYPES.h"
 
 /* Constructors/Destructors */
 Bus* Bus_Create(void) {
-    Bus* bus = malloc(sizeof(Bus));
-    if (bus == NULL)
-        return NULL;
-
-    return bus;
+    return Util_SafeMalloc(sizeof(Bus));
 }
 
 void Bus_Destroy(Bus* bus) {
-    free(bus);
+    Util_SafeFree(bus);
 }
 
 Bus* Bus_CreateNES(void) {
@@ -51,7 +48,7 @@ Bus* Bus_CreateNES(void) {
     }
 
     bus->cpu = cpu;
-    cpu->bus = bus;
+    CPU_LinkBus(cpu, bus);
     bus->ppu = ppu;
     ppu->bus = bus;
     bus->cart = cart;

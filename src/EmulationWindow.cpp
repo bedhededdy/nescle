@@ -416,10 +416,10 @@ void EmulationWindow::Loop() {
                     // recall that the cpu clocks only once for every 3 bus clocks, so
                     // that is why we must have the second while loop
                     // additionally we also want to go to the next instr, not stay on the current one
-                    while (cpu->cycles_rem > 0)
-                        Bus_Clock(bus);
-                    while (cpu->cycles_rem == 0)
-                        Bus_Clock(bus);
+                    //while (cpu->cycles_rem > 0)
+                    //    Bus_Clock(bus);
+                    //while (cpu->cycles_rem == 0)
+                    //    Bus_Clock(bus);
                     break;
                 case SDLK_r:
                     Bus_Reset(bus);
