@@ -75,18 +75,7 @@ void Mapper001::Reset() {
     load = 0;
     load_reg_ct = 0;
 
-    cart->mirror_mode = CART_MIRRORMODE_HORZ;
-}
-
-Mapper001::Mapper001(Cart* cart) {
-    id = 1;
-    this->cart = cart;
-
-
-    // FIXME: THIS MAY NOT WORK, REALLY THIS IS SUPPOSED TO HAPPEN
-    // WHEN THE CONSOLE RESET IS TRIGGERED, BUT SINCE
-    // WE RECREATE THE MAPPER EACH TIME, I THINK THIS MAY WORK
-    Reset();
+    mirror_mode = MAPPER_MIRRORMODE_HORZ;
 }
 
 uint8_t Mapper001::MapCPURead(uint16_t addr) {
@@ -138,16 +127,16 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                 ctrl = load & 0x1f;
                 switch (ctrl & 3) {
                 case 0:
-                    cart->mirror_mode = CART_MIRRORMODE_OSLO;
+                    mirror_mode = MAPPER_MIRRORMODE_OSLO;
                     break;
                 case 1:
-                    cart->mirror_mode = CART_MIRRORMODE_OSHI;
+                    mirror_mode = MAPPER_MIRRORMODE_OSHI;
                     break;
                 case 2:
-                    cart->mirror_mode = CART_MIRRORMODE_VERT;
+                    mirror_mode = MAPPER_MIRRORMODE_VERT;
                     break;
                 case 3:
-                    cart->mirror_mode = CART_MIRRORMODE_HORZ;
+                    mirror_mode = MAPPER_MIRRORMODE_HORZ;
                     break;
                 }
                 // printf("changed mirror mode to %d\n", cart->mirror_mode);
@@ -220,7 +209,7 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
 // FIXME: WILL SHOW THE WRONG TILES ON RELOAD SOMETIMES
 // BECAUSE THE MIRRORING MODE IS ALWAYS RESET TO HORIZONTAL
 bool Mapper001::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
     bool b3 = fwrite(&load, sizeof(load), 1, file) == 1;
     bool b4 = fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
@@ -231,12 +220,12 @@ bool Mapper001::SaveState(FILE* file) {
     bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    printf("mirror mode: %d\n", cart->mirror_mode);
+    printf("mirror mode: %d\n", mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }
 
 bool Mapper001::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&ctrl, sizeof(ctrl), 1, file) == 1;
     bool b3 = fread(&load, sizeof(load), 1, file) == 1;
     bool b4 = fread(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
@@ -247,6 +236,6 @@ bool Mapper001::LoadState(FILE* file) {
     bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
-    printf("mirror mode: %d\n", cart->mirror_mode);
+    printf("mirror mode: %d\n", mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }

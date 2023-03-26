@@ -15,12 +15,6 @@
  */
 #include "Mapper066.h"
 
-Mapper066::Mapper066(Cart* cart) {
-    id = 66;
-    this->cart = cart;
-    bank_select = 0;
-}
-
 void Mapper066::Reset() {
     bank_select = 0;
 }
@@ -51,13 +45,13 @@ bool Mapper066::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 bool Mapper066::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }
 
 bool Mapper066::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }

@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 #include "Mapper003.h"
-#include <stdio.h>
-
-Mapper003::Mapper003(Cart* cart) {
-    id = 3;
-    this->cart = cart;
-    bank_select = 0;
-}
 
 void Mapper003::Reset() {
     bank_select = 0;
@@ -57,13 +50,13 @@ bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 bool Mapper003::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(bank_select), 1, file) == 1;
     bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }
 
 bool Mapper003::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(bank_select), 1, file) == 1;
     bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }

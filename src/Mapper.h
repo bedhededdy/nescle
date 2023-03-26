@@ -25,12 +25,19 @@ extern "C" {
 
 #include "NESCLETypes.h"
 
+typedef enum mapper_mirror_mode {
+    MAPPER_MIRRORMODE_HORZ,   // Horizontal
+    MAPPER_MIRRORMODE_VERT,   // Vertical
+    MAPPER_MIRRORMODE_OSLO,   // One-Screen lo
+    MAPPER_MIRRORMODE_OSHI    // One-Screen hi
+} Mapper_MirrorMode;
+
 struct mapper {
     uint8_t id;
     void* mapper_class;
 };
 
-Mapper* Mapper_Create(uint8_t id, Cart* cart);
+Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror);
 void Mapper_Destroy(Mapper* mapper);
 
 void Mapper_Reset(Mapper* mapper);
@@ -46,6 +53,8 @@ bool Mapper_LoadState(Mapper* mapper, FILE* file);
 void Mapper_CountdownScanline(Mapper* mapper);
 bool Mapper_GetIRQStatus(Mapper* mapper);
 void Mapper_ClearIRQStatus(Mapper* mapper);
+
+Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper);
 
 #ifdef __cplusplus
 }

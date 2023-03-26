@@ -169,14 +169,14 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     printf("mapper id: %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    cart->mirror_mode = (header->mapper1 & 1) ?
-        CART_MIRRORMODE_VERT : CART_MIRRORMODE_HORZ;
-    printf("mirror mode: %d\n", cart->mirror_mode);
+    Mapper_MirrorMode mirror_mode = (header->mapper1 & 1) ?
+        MAPPER_MIRRORMODE_VERT : MAPPER_MIRRORMODE_HORZ;
+    printf("mirror mode: %d\n", mirror_mode);
 
     // Initialize cart's mapper
     if (cart->mapper != NULL)
         Mapper_Destroy(cart->mapper);
-    cart->mapper = Mapper_Create(mapper_id, cart);
+    cart->mapper = Mapper_Create(mapper_id, cart, mirror_mode);
     if (cart->mapper == NULL) {
         printf("Cart_LoadROM: alloc mapper\n");
         return false;

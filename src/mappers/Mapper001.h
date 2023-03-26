@@ -40,7 +40,8 @@ private:
     uint8_t sram[0x8000];
 
 public:
-    Mapper001(Cart* cart);
+    Mapper001(Cart* cart, Mapper_MirrorMode mirror)
+        : MapperBase(cart, mirror) {}
 
     void Reset() override;
 

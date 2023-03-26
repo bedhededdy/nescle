@@ -21,17 +21,11 @@
 // FIXME: SOME GAMES DON'T EVEN BOOT, THIS IS DEFINITELY FISHY
 #include "Mapper004.h"
 
-Mapper004::Mapper004(Cart* cart) {
-    id = 4;
-    this->cart = cart;
-    Reset();
-}
-
 void Mapper004::Reset() {
     target_register = 0;
     prg_bank_mode = false;
     chr_inversion = false;
-    cart->mirror_mode = CART_MIRRORMODE_HORZ;
+    mirror_mode = MAPPER_MIRRORMODE_HORZ;
     irq_active = false;
     irq_enabled = false;
     irq_update = false;
@@ -115,9 +109,9 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         if (!(addr & 1)) {
             if (data & 1)
-                cart->mirror_mode = CART_MIRRORMODE_HORZ;
+                mirror_mode = MAPPER_MIRRORMODE_HORZ;
             else
-                cart->mirror_mode = CART_MIRRORMODE_VERT;
+                mirror_mode = MAPPER_MIRRORMODE_VERT;
         } else {
             // prg ram protect
             // TODO:
@@ -163,7 +157,7 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
 
 // FIXME: MIRRORING IS BUSTED
 bool Mapper004::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&registers, sizeof(registers), 1, file) == 1;
     bool b3 = fwrite(&chr_banks, sizeof(chr_banks), 1, file) == 1;
     bool b4 = fwrite(&prg_banks, sizeof(prg_banks), 1, file) == 1;
@@ -180,7 +174,7 @@ bool Mapper004::SaveState(FILE* file) {
 }
 
 bool Mapper004::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&registers, sizeof(registers), 1, file) == 1;
     bool b3 = fread(&chr_banks, sizeof(chr_banks), 1, file) == 1;
     bool b4 = fread(&prg_banks, sizeof(prg_banks), 1, file) == 1;

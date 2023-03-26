@@ -16,14 +16,18 @@
 #pragma once
 
 #include <cstdio>
+
 #include "../Cart.h"
+#include "../Mapper.h"
 
 class MapperBase {
 protected:
     Cart *cart;
+    Mapper_MirrorMode mirror_mode;
 
 public:
-    MapperBase(Cart* _cart) : cart(_cart) {}
+    MapperBase(Cart* _cart, Mapper_MirrorMode _mirror)
+        : cart(_cart), mirror_mode(_mirror) {}
     virtual ~MapperBase() = default;
 
     virtual void Reset() {}
@@ -39,4 +43,6 @@ public:
     virtual void CountdownScanline() {}
     virtual bool GetIRQStatus() { return false; }
     virtual void ClearIRQStatus() {}
+
+    Mapper_MirrorMode GetMirrorMode() { return mirror_mode; }
 };

@@ -26,13 +26,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-typedef enum cart_mirror_mode {
-    CART_MIRRORMODE_HORZ,   // Horizontal
-    CART_MIRRORMODE_VERT,   // Vertical
-    CART_MIRRORMODE_OSLO,   // One-Screen lo
-    CART_MIRRORMODE_OSHI    // One-Screen hi
-} Cart_MirrorMode;
-
 // ROM file header in iNES (.nes) format
 typedef struct cart_rom_header {
     uint8_t name[4];           // Should always say NES followed by DOS EOF
@@ -46,17 +39,19 @@ typedef struct cart_rom_header {
     uint8_t padding[5];        // Unused padding
 } Cart_ROMHeader;
 
+typedef enum cart_file_type {
+    CART_FILETYPE_INES,
+    CART_FILETYPE_NES2
+} Cart_FileType;
+
 struct cart {
     Cart_ROMHeader metadata;
 
     char* rom_path;
-    // TODO: I DON'T KNOW IF THIS IS THE BEST PLACE FOR THIS
-    Cart_MirrorMode mirror_mode;
-    // Maybe reducable to a bool that just checks for NES 2.0 or not
-    int file_type;
 
-    // TODO: MAYBE THIS SHOULD BE CHANGED TO A DIRECT HOLDING
-    // AS OPPOSED TO A POINTER
+    // Maybe reducable to a bool that just checks for NES 2.0 or not
+    Cart_FileType file_type;
+
     Mapper* mapper;
 
     uint8_t* prg_rom;

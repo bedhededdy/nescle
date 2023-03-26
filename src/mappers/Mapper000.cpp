@@ -40,9 +40,9 @@ bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 bool Mapper000::SaveState(FILE* file) {
-    return true;
+    return fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
 }
 
 bool Mapper000::LoadState(FILE* file) {
-    return true;
+    return fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
 }

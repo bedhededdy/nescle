@@ -238,7 +238,8 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     uint8_t dummy_buf[sizeof(Mapper)];
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
-    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
+    // fine to give dummy mirror_mode, since it's overwritten by LoadState
+    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart, 0);
     Mapper_LoadState(bus->cart->mapper, savestate);
 
     PPU_LoadState(bus->ppu, savestate);

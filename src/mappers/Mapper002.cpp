@@ -15,12 +15,6 @@
  */
 #include "Mapper002.h"
 
-Mapper002::Mapper002(Cart* cart) {
-    id = 2;
-    this->cart = cart;
-    bank_select = 0;
-}
-
 void Mapper002::Reset() {
     bank_select = 0;
 }
@@ -67,13 +61,13 @@ bool Mapper002::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 bool Mapper002::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }
 
 bool Mapper002::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }

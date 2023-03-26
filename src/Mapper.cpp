@@ -25,31 +25,31 @@
 
 #include "Util.h"
 
-Mapper* Mapper_Create(uint8_t id, Cart* cart) {
+Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
     Mapper* mapper = (Mapper*)Util_SafeMalloc(sizeof(Mapper));
     mapper->id = id;
 
     switch (id) {
     case 0:
-        mapper->mapper_class = new Mapper000(cart);
+        mapper->mapper_class = new Mapper000(cart, mirror);
         break;
     case 1:
-        mapper->mapper_class = new Mapper001(cart);
+        mapper->mapper_class = new Mapper001(cart, mirror);
         break;
     case 2:
-        mapper->mapper_class = new Mapper002(cart);
+        mapper->mapper_class = new Mapper002(cart, mirror);
         break;
     case 3:
-        mapper->mapper_class = new Mapper003(cart);
+        mapper->mapper_class = new Mapper003(cart, mirror);
         break;
     case 4:
-        mapper->mapper_class = new Mapper004(cart);
+        mapper->mapper_class = new Mapper004(cart, mirror);
         break;
     case 7:
-        mapper->mapper_class = new Mapper007(cart);
+        mapper->mapper_class = new Mapper007(cart, mirror);
         break;
     case 66:
-        mapper->mapper_class = new Mapper066(cart);
+        mapper->mapper_class = new Mapper066(cart, mirror);
         break;
 
     default:
@@ -113,4 +113,8 @@ bool Mapper_GetIRQStatus(Mapper* mapper) {
 
 void Mapper_ClearIRQStatus(Mapper* mapper) {
     static_cast<MapperBase*>(mapper->mapper_class)->ClearIRQStatus();
+}
+
+Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper) {
+    return static_cast<MapperBase*>(mapper->mapper_class)->GetMirrorMode();
 }

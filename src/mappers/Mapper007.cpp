@@ -15,12 +15,6 @@
  */
 #include "Mapper007.h"
 
-Mapper007::Mapper007(Cart* cart) {
-    id = 7;
-    this->cart = cart;
-    bank_select = 0;
-}
-
 void Mapper007::Reset() {
     bank_select = 0;
 }
@@ -34,8 +28,8 @@ uint8_t Mapper007::MapCPURead(uint16_t addr) {
 
 bool Mapper007::MapCPUWrite(uint16_t addr, uint8_t data) {
     bank_select = data;
-    cart->mirror_mode = (data & 0x10) ? CART_MIRRORMODE_OSHI :
-        CART_MIRRORMODE_OSLO;
+    mirror_mode = (data & 0x10) ? MAPPER_MIRRORMODE_OSHI :
+        MAPPER_MIRRORMODE_OSLO;
     return true;
 }
 
@@ -52,13 +46,13 @@ bool Mapper007::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 bool Mapper007::SaveState(FILE* file) {
-    bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }
 
 bool Mapper007::LoadState(FILE* file) {
-    bool b1 = fread(&id, sizeof(id), 1, file) == 1;
+    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
 }
