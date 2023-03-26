@@ -28,7 +28,7 @@ bool Mapper000::MapCPUWrite(uint16_t addr, uint8_t data) {
 }
 
 uint8_t Mapper000::MapPPURead(uint16_t addr) {
-    return Cart_ReadPrgRom(cart, addr);
+    return Cart_ReadChrRom(cart, addr);
 }
 
 bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {

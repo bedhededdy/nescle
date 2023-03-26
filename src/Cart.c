@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: HAVE TWO HEADER STRUCTS, AND HAVE A UNION BETWEEN THEM DEPENDING
-// ON HEADER TYPE
 #include "Cart.h"
 
 #include <assert.h>
@@ -25,6 +23,41 @@
 #include "PPU.h"
 #include "Mapper.h"
 #include "Util.h"
+
+// ROM file header in iNES (.nes) format
+typedef struct cart_rom_header {
+    uint8_t name[4];           // Should always say NES followed by DOS EOF
+    uint8_t prg_rom_size;   // One chunk = 16kb
+    uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
+    uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
+    uint8_t mapper2;        // Discerns mapper, VS/Playchoice, NES 2.0
+    uint8_t prg_ram_size;   // Apparently rarely used
+    uint8_t tv_system1;     // Apparently rarely used
+    uint8_t tv_system2;     // Apparently rarely used
+    uint8_t padding[5];        // Unused padding
+} Cart_ROMHeader;
+
+typedef enum cart_file_type {
+    CART_FILETYPE_INES = 1,
+    CART_FILETYPE_NES2
+} Cart_FileType;
+
+struct cart {
+    Cart_ROMHeader metadata;
+
+    char* rom_path;
+
+    // Maybe reducable to a bool that just checks for NES 2.0 or not
+    Cart_FileType file_type;
+
+    Mapper* mapper;
+
+    uint8_t* prg_rom;
+    uint8_t* chr_rom;
+
+    // TODO: NEED TO ADD THIS
+    // Bus* bus;
+};
 
 Cart* Cart_Create(void) {
     Cart* cart = Util_SafeMalloc(sizeof(Cart));
@@ -262,7 +295,8 @@ size_t Cart_GetPrgRomBytes(Cart* cart) {
 }
 
 size_t Cart_GetChrRomBytes(Cart* cart) {
-    return cart->metadata.chr_rom_size * CART_CHR_ROM_CHUNK_SIZE;
+    size_t sz = cart->metadata.chr_rom_size == 0 ? 1 : cart->metadata.chr_rom_size;
+    return sz * CART_CHR_ROM_CHUNK_SIZE;
 }
 
 uint8_t Cart_ReadPrgRom(Cart* cart, size_t off) {
@@ -283,4 +317,16 @@ uint8_t Cart_ReadChrRom(Cart* cart, size_t off) {
 void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t val) {
     assert(off < Cart_GetChrRomBytes(cart));
     cart->chr_rom[off] = val;
+}
+
+Mapper* Cart_GetMapper(Cart* cart) {
+    return cart->mapper;
+}
+
+const char* Cart_GetROMPath(Cart* cart) {
+    return cart->rom_path;
+}
+
+void Cart_SetMapper(Cart* cart, Mapper* mapper) {
+    cart->mapper = mapper;
 }

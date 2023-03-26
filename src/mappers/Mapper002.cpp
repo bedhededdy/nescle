@@ -34,11 +34,11 @@ uint8_t Mapper002::MapCPURead(uint16_t addr) {
         // This gives us a 14 bit address. So our seelct will use the 15th
         // to 18th bits
         addr %= 0x4000;
-        return cart->prg_rom[((uint32_t)select << 14) | addr];
+        return Cart_ReadPrgRom(cart, (uint32_t)(select << 14) | addr);
     } else {
-        uint32_t last_bank_offset = (cart->metadata.prg_rom_size - 1) * 0x4000;
+        uint32_t last_bank_offset = (Cart_GetPrgRomBlocks(cart) - 1) * 0x4000;
         addr %= 0x4000;
-        return cart->prg_rom[last_bank_offset | addr];
+        return Cart_ReadPrgRom(cart, last_bank_offset | addr);
     }
 }
 
@@ -49,12 +49,12 @@ bool Mapper002::MapCPUWrite(uint16_t addr, uint8_t data) {
 
 uint8_t Mapper002::MapPPURead(uint16_t addr) {
     // FIXME: MAY REQUIRE SPECIAL CASE INVOLVING CHR RAM
-    return cart->chr_rom[addr];
+    return Cart_ReadChrRom(cart, addr);
 }
 
 bool Mapper002::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (cart->metadata.chr_rom_size == 0) {
-        cart->chr_rom[addr] = data;
+    if (Cart_GetChrRomBlocks(cart) == 0) {
+        Cart_WriteChrRom(cart, addr, data);
         return true;
     }
     return false;

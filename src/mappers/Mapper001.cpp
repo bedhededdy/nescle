@@ -70,7 +70,7 @@ void Mapper001::Reset() {
 
     prg_select32 = 0;
     prg_select16_lo = 0;
-    prg_select16_hi = cart->metadata.prg_rom_size - 1;
+    prg_select16_hi = Cart_GetPrgRomBlocks(cart) - 1;
 
     load = 0;
     load_reg_ct = 0;
@@ -87,12 +87,12 @@ uint8_t Mapper001::MapCPURead(uint16_t addr) {
     if (ctrl & 8) {
         // 16k
         if (addr >= 0x8000 && addr < 0xc000)
-            return cart->prg_rom[prg_select16_lo * 0x4000 + (addr % 0x4000)];
+            return Cart_ReadPrgRom(cart, prg_select16_lo * 0x4000 + (addr % 0x4000));
         if (addr >= 0xc000)
-            return cart->prg_rom[prg_select16_hi * 0x4000 + (addr % 0x4000)];
+            return Cart_ReadPrgRom(cart, prg_select16_hi * 0x4000 + (addr % 0x4000));
     } else {
         // 32k
-        return cart->prg_rom[prg_select32 * 0x8000 + (addr % 0x8000)];
+        return Cart_ReadPrgRom(cart, prg_select32 * 0x8000 + (addr % 0x8000));
     }
 
     return 0;
@@ -165,7 +165,7 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     prg_select16_hi = load & 0x0f;
                 } else if (prg_mode == 3) {
                     prg_select16_lo = load & 0x0f;
-                    prg_select16_hi = cart->metadata.prg_rom_size - 1;
+                    prg_select16_hi = Cart_GetPrgRomBlocks(cart) - 1;
                 }
 
                 // printf("changed prg\n");
@@ -180,25 +180,25 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
 }
 
 uint8_t Mapper001::MapPPURead(uint16_t addr) {
-    if (cart->metadata.chr_rom_size == 0)
-        return cart->chr_rom[addr];
+    if (Cart_GetChrRomBlocks(cart) == 0)
+        return Cart_ReadChrRom(cart, addr);
 
     if (ctrl & 0x10) {
         // 4kb mode
         if (addr < 0x1000) {
-            return cart->chr_rom[chr_select4_lo * 0x1000 + (addr % 0x1000)];
+            return Cart_ReadChrRom(cart, chr_select4_lo * 0x1000 + (addr % 0x1000));
         } else {
-            return cart->chr_rom[chr_select4_hi * 0x1000 + (addr % 0x1000)];
+            return Cart_ReadChrRom(cart, chr_select4_hi * 0x1000 + (addr % 0x1000));
         }
     } else {
         // 8kb mode
-        return cart->chr_rom[chr_select8 * 0x2000 + (addr % 0x2000)];
+        return Cart_ReadChrRom(cart, chr_select8 * 0x2000 + (addr % 0x2000));
     }
 }
 
 bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (cart->metadata.chr_rom_size == 0) {
-        cart->chr_rom[addr] = data;
+    if (Cart_GetChrRomBlocks(cart) == 0) {
+        Cart_WriteChrRom(cart, addr, data);
         return true;
     }
 

@@ -26,40 +26,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-// ROM file header in iNES (.nes) format
-typedef struct cart_rom_header {
-    uint8_t name[4];           // Should always say NES followed by DOS EOF
-    uint8_t prg_rom_size;   // One chunk = 16kb
-    uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
-    uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
-    uint8_t mapper2;        // Discerns mapper, VS/Playchoice, NES 2.0
-    uint8_t prg_ram_size;   // Apparently rarely used
-    uint8_t tv_system1;     // Apparently rarely used
-    uint8_t tv_system2;     // Apparently rarely used
-    uint8_t padding[5];        // Unused padding
-} Cart_ROMHeader;
-
-typedef enum cart_file_type {
-    CART_FILETYPE_INES,
-    CART_FILETYPE_NES2
-} Cart_FileType;
-
-struct cart {
-    Cart_ROMHeader metadata;
-
-    char* rom_path;
-
-    // Maybe reducable to a bool that just checks for NES 2.0 or not
-    Cart_FileType file_type;
-
-    Mapper* mapper;
-
-    uint8_t* prg_rom;
-    uint8_t* chr_rom;
-
-    // TODO: NEED TO ADD THIS
-    // Bus* bus;
-};
 
 Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
@@ -68,6 +34,10 @@ bool Cart_LoadROM(Cart* cart, const char* path);
 
 bool Cart_SaveState(Cart* cart, FILE* file);
 bool Cart_LoadState(Cart* cart, FILE* file);
+
+void Cart_SetMapper(Cart* cart, Mapper* mapper);
+Mapper* Cart_GetMapper(Cart* cart);
+const char* Cart_GetROMPath(Cart* cart);
 
 uint8_t Cart_GetPrgRomBlocks(Cart* cart);
 size_t Cart_GetPrgRomBytes(Cart* cart);

@@ -767,7 +767,7 @@ break;
     // Properly increment the cycle and scanline
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
-            Mapper_CountdownScanline(ppu->bus->cart->mapper);
+            Mapper_CountdownScanline(Cart_GetMapper(ppu->bus->cart));
         }
     }
     ppu->cycle++;
@@ -885,14 +885,14 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->cart->mapper;
+        Mapper* mapper = Cart_GetMapper(bus->cart);
         return Mapper_MapPPURead(mapper, addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(bus->cart->mapper);
+        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(Cart_GetMapper(bus->cart));
 
         if (mirror_mode == MAPPER_MIRRORMODE_HORZ) {
             // see vertical comments for explanation
@@ -990,7 +990,7 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->cart->mapper;
+        Mapper* mapper = Cart_GetMapper(bus->cart);
         return Mapper_MapPPUWrite(mapper, addr, data);
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
@@ -998,7 +998,7 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(bus->cart->mapper);
+        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(Cart_GetMapper(bus->cart));
         //printf("writing nametable\n");
         if (mirror_mode == MAPPER_MIRRORMODE_HORZ) {
             if (addr >= 0 && addr < 0x800) {

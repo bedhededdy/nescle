@@ -117,7 +117,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        Mapper* mapper = bus->cart->mapper;
+        Mapper* mapper = Cart_GetMapper(bus->cart);
         return Mapper_MapCPURead(mapper, addr);
     }
 
@@ -170,7 +170,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        Mapper* mapper = bus->cart->mapper;
+        Mapper* mapper = Cart_GetMapper(bus->cart);
         return Mapper_MapCPUWrite(mapper, addr, data);
     }
 
@@ -250,8 +250,8 @@ bool Bus_Clock(Bus* bus) {
         CPU_NMI(bus->cpu);
     }
 
-    if (Mapper_GetIRQStatus(bus->cart->mapper)) {
-        Mapper_ClearIRQStatus(bus->cart->mapper);
+    if (Mapper_GetIRQStatus(Cart_GetMapper(bus->cart))) {
+        Mapper_ClearIRQStatus(Cart_GetMapper(bus->cart));
         CPU_IRQ(bus->cpu);
     }
 
@@ -289,8 +289,9 @@ void Bus_Reset(Bus* bus) {
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
     APU_Reset(bus->apu);
-    if (bus->cart->mapper != NULL)
-        Mapper_Reset(bus->cart->mapper);
+    Mapper* mapper = Cart_GetMapper(bus->cart);
+    if (mapper != NULL)
+        Mapper_Reset(mapper);
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;

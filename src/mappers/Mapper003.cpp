@@ -20,14 +20,11 @@ void Mapper003::Reset() {
 }
 
 uint8_t Mapper003::MapCPURead(uint16_t addr) {
-    // Same as mapper000
-    uint32_t mapped_addr = addr %
-        (cart->metadata.prg_rom_size > 1 ? 0x8000 : 0x4000);
-    return cart->prg_rom[mapped_addr];
+    addr %= Cart_GetPrgRomBlocks(cart) > 1 ? 0x8000 : 0x4000;
+    return Cart_ReadPrgRom(cart, addr);
 }
 
 bool Mapper003::MapCPUWrite(uint16_t addr, uint8_t data) {
-    // Select bank of chr_rom
     bank_select = data;
     return true;
 }
@@ -39,7 +36,7 @@ uint8_t Mapper003::MapPPURead(uint16_t addr) {
     // Without selection, we can only address from 0 to 0x1fff, which is 13
     // bits. Therefore to determine the bank, we must examine the 14th and
     // 15th bits
-    return cart->chr_rom[((uint32_t)select << 13) | addr];
+    return Cart_ReadChrRom(cart, (uint32_t)(select << 13) | addr);
 }
 
 bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {

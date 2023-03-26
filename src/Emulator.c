@@ -101,7 +101,7 @@ void Emulator_Destroy(Emulator* emu) {
 }
 
 bool Emulator_SaveState(Emulator* emu, const char* path) {
-    if (emu->nes->cart->rom_path == NULL) {
+    if (Cart_GetROMPath(emu->nes->cart) == NULL) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
@@ -123,9 +123,9 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
         printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
-    if (fwrite(bus->cart->mapper, sizeof(Mapper), 1, savestate) < 1)
+    if (fwrite(Cart_GetMapper(bus->cart), sizeof(Mapper), 1, savestate) < 1)
         printf("mapper too short");
-    Mapper_SaveState(bus->cart->mapper, savestate);
+    Mapper_SaveState(Cart_GetMapper(bus->cart), savestate);
 
     if (!PPU_SaveState(bus->ppu, savestate))
         printf("ppu too short");
@@ -227,20 +227,20 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     APU_LoadState(bus->apu, savestate);
 
     // Cart
-    Mapper* mapper_addr = bus->cart->mapper;
+    Mapper* mapper_addr = Cart_GetMapper(bus->cart);
     Cart_LoadState(bus->cart, savestate);
 
     // Mapper
-    bus->cart->mapper = mapper_addr;
-    if (bus->cart->mapper != NULL) {
-        Mapper_Destroy(bus->cart->mapper);
+    Cart_SetMapper(bus->cart, mapper_addr);
+    if (Cart_GetMapper(bus->cart) != NULL) {
+        Mapper_Destroy(Cart_GetMapper(bus->cart));
     }
     uint8_t dummy_buf[sizeof(Mapper)];
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
     // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart, 0);
-    Mapper_LoadState(bus->cart->mapper, savestate);
+    Cart_SetMapper(bus->cart, Mapper_Create(mapper_id, bus->cart, 0));
+    Mapper_LoadState(Cart_GetMapper(bus->cart), savestate);
 
     PPU_LoadState(bus->ppu, savestate);
 

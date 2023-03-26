@@ -965,7 +965,7 @@ void CPU_NMI(CPU* cpu) {
 // https://www.nesdev.org/wiki/CPU_power_up_state
 void CPU_Reset(CPU* cpu) {
     // Set internal state to hard-coded reset values
-    if (cpu->bus->cart->mapper != NULL)
+    if (Cart_GetMapper(cpu->bus->cart) != NULL)
         cpu->pc = Bus_Read16(cpu->bus, 0xfffc);
 
     /*
