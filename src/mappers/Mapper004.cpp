@@ -73,24 +73,13 @@ Mapper004::Mapper004(Cart* cart) {
 }
 
 uint8_t Mapper004::MapCPURead(uint16_t addr) {
-    if (addr < 0x8000) {
+    // TODO: ACTUALLY DO BATTERY RAM RIGHT
+    if (addr < 0x8000)
         return sram[addr % 0x2000];
-    }
-
-    if (addr >= 0x8000 && addr <= 0x9FFF) {
-        return cart->prg_rom[prg_banks[0] + (addr % 0x2000)];
-    }
-    if (addr >= 0xA000 && addr <= 0xBFFF) {
-        return cart->prg_rom[prg_banks[1] + (addr % 0x2000)];
-    }
-    if (addr >= 0xC000 && addr <= 0xDFFF) {
-        return cart->prg_rom[prg_banks[2] + (addr % 0x2000)];
-    }
-    if (addr >= 0xE000 && addr <= 0xFFFF) {
-        return cart->prg_rom[prg_banks[3] + (addr % 0x2000)];
-    }
-
-    return 0;
+    // Each bank in prg banks is 2k, so the index into it would be
+    // (addr - 0x8000) / 0x2000 and then the offset from that would be
+    // addr % 0x2000 (no subtraction needed as 0x8000 is a multiple of 0x2000)
+    return cart->prg_rom[prg_banks[(addr - 0x8000) / 0x2000] + (addr % 0x2000)];
 }
 
 bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
@@ -174,45 +163,22 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
 }
 
 uint8_t Mapper004::MapPPURead(uint16_t addr) {
-    // TODO: FIGURE OUT HOW TO MAKE THIS A ONE LINER WITH SOME BIT MANIPULATION
-    if (addr >= 0x0000 && addr <= 0x03FF) {
-        return cart->chr_rom[chr_banks[0] + (addr % 0x400)];
-    }
-    if (addr >= 0x0400 && addr <= 0x07FF) {
-        return cart->chr_rom[chr_banks[1] + (addr % 0x400)];
-    }
-    if (addr >= 0x0800 && addr <= 0x0BFF) {
-        return cart->chr_rom[chr_banks[2] + (addr % 0x400)];
-    }
-    if (addr >= 0x0C00 && addr <= 0x0FFF) {
-        return cart->chr_rom[chr_banks[3] + (addr % 0x400)];
-    }
-    if (addr >= 0x1000 && addr <= 0x13FF) {
-        return cart->chr_rom[chr_banks[4] + (addr % 0x400)];
-    }
-    if (addr >= 0x1400 && addr <= 0x17FF) {
-        return cart->chr_rom[chr_banks[5] + (addr % 0x400)];
-    }
-    if (addr >= 0x1800 && addr <= 0x1BFF) {
-        return cart->chr_rom[chr_banks[6] + (addr % 0x400)];
-    }
-    if (addr >= 0x1C00 && addr <= 0x1FFF) {
-        return cart->chr_rom[chr_banks[7] + (addr % 0x400)];
-    }
-
-    return 0;
+    // Each one of these blocks points to 1k, so addr / 0x400 is the index
+    // and addr % 0x400 is the offset
+    return cart->chr_rom[chr_banks[addr / 0x400] + (addr % 0x400)];
 }
 
 bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
-    // char ram not allowed on this mapper
     if (cart->metadata.chr_rom_size == 0) {
         cart->chr_rom[addr] = data;
         return true;
     }
+
     printf("ERR: ATTEMPT TO WRITE TO PPU RAM\n");
     return false;
 }
 
+// FIXME: MIRRORING IS BUSTED
 bool Mapper004::SaveState(FILE* file) {
     bool b1 = fwrite(&id, sizeof(id), 1, file) == 1;
     bool b2 = fwrite(&registers, sizeof(registers), 1, file) == 1;

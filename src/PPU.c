@@ -598,87 +598,6 @@ break;
                         ppu->spr_shifter_pattern_lo[i] = spr_pattern_bits_lo;
                         ppu->spr_shifter_pattern_hi[i] = spr_pattern_bits_hi;
 
-                        // Some nesting fuckup happened here, but the comments are kinda
-                        // helpful
-                        /*
-                        if (ppu->control & PPU_CTRL_SPR_HEIGHT) {
-                            // sprite is 8x16
-                            if (ppu->spr_scanline[i].attributes & (1 << 7)) {
-                                // sprite is vertically flipped
-                                if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
-                                    // top half
-                                    uint16_t tile_select = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = tile_select
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
-                                        | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                                else {
-                                    // bottom half
-                                    uint16_t tile_select = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = tile_select
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 0) << 4)
-                                        | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                            }
-                            else {
-                                // sprite is not vertically flipped
-                                if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
-                                    // top half
-
-                                    // which half of the nametable is implied by the tile_id
-                                    // idk y tho
-                                    // we ignore lo bit of tile_id since we already used it
-                                    // and since we are in top half we need to % 7 on the scanline
-                                    // diff
-                                    uint16_t tile_select = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = tile_select
-                                        | ((ppu->spr_scanline[i].tile_id & 0xfe) << 4)
-                                        | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                                else {
-                                    // bottom half
-                                    // add one to the tile_id b/c when we shift it, we get the
-                                    // tile_id in the next row
-                                    uint16_t tile_select = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = tile_select
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
-                                        | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                            }
-                        }
-                        else {
-                            // 8x8 sprite
-                            if (ppu->spr_scanline[i].attributes & (1 << 7)) {
-                                // sprite is vertically flipped
-                                uint16_t tile_select = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
-                                tile_select <<= 12;
-
-                                // same as for not flipped except we do 7 minus the offset since
-                                // we are 8 px high
-                                spr_pattern_addr_lo = tile_select
-                                    | (ppu->spr_scanline[i].tile_id << 4)
-                                    | (7 - (ppu->scanline - ppu->spr_scanline[i].y));
-                            }
-                            else {
-                                // sprite is not vertically flipped
-
-                                // Tile select really just means what half of the pattern memory
-                                uint16_t tile_select = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
-                                tile_select <<= 12;
-
-                                // Address is what half of the pattern mem shifted by 12
-                                // ored with tile_id shifted by 4 (* 16) since each tile is 16 bytes
-                                // ored with the current scanline minus our y coordinate
-                                // which gets our offset into the tile (i think)
-                                // SEE OLC COMMENTS TO UNDERSTAND THIS
-                                spr_pattern_addr_lo = tile_select
-                                    | (ppu->spr_scanline[i].tile_id << 4)
-                                    | (ppu->scanline - ppu->spr_scanline[i].y);
-                            }
-                        }
-                        */
-
-
                     }
                 }
             }
@@ -687,7 +606,6 @@ break;
         // FIXME: THIS IS CHEATING, ALL OF THE SPRITE STUFF IS SUPPOSED TO HAPPEN IN MANY CYCLES
         //        BUT FOR EASE OF CODING, WE DO IT IN ONE
         //        THIS WILL PROBABLY BREAK MANY GAMES *COUGH* BATTLETOADS *COUGH*
-
     }
     // Dummy scanline, do nothing
     else if (ppu->scanline == PPU_RESOLUTION_Y) {
@@ -850,7 +768,6 @@ break;
         PPU_GetColorFromPalette(ppu, final_palette, final_pixel));
 
     // Properly increment the cycle and scanline
-    // FIXME: OLC DOES THIS AFTER INCREMENT BUT I DO IT BEFORE
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
             Mapper_CountdownScanline(ppu->bus->cart->mapper);
