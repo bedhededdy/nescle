@@ -262,6 +262,9 @@ bool Bus_Clock(Bus* bus) {
 void Bus_PowerOn(Bus* bus) {
     // Contents of RAM are initialized at powerup
     Bus_ClearMem(bus);
+    // Mapper* mapper = Cart_GetMapper(bus->cart);
+    // if (mapper != NULL)
+    //     Mapper_Reset(mapper);
     PPU_PowerOn(bus->ppu);
     CPU_PowerOn(bus->cpu);
     APU_PowerOn(bus->apu);
@@ -282,16 +285,14 @@ void Bus_PowerOn(Bus* bus) {
     bus->audio_time = 0.0;
 }
 
-// FIXME: SHOULD PROBABLY HAVE A MAPPER RESET AS WELL AND MAYBE FOR THE
-// CART TOO?
 void Bus_Reset(Bus* bus) {
     // Contents of RAM do not clear on reset
-    PPU_Reset(bus->ppu);
-    CPU_Reset(bus->cpu);
-    APU_Reset(bus->apu);
     Mapper* mapper = Cart_GetMapper(bus->cart);
     if (mapper != NULL)
         Mapper_Reset(mapper);
+    PPU_Reset(bus->ppu);
+    CPU_Reset(bus->cpu);
+    APU_Reset(bus->apu);
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;

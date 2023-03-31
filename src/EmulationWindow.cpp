@@ -669,6 +669,9 @@ void EmulationWindow::Loop() {
         if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
             SDL_Delay(8);
     }
+
+    // Quit has been pressed so we must save our settings
+    Emulator_SaveSettings(emulator, "settings.bin");
 }
 
 EmulationWindow::~EmulationWindow() {
@@ -756,11 +759,9 @@ void EmulationWindow::Show(Emulator* emu) {
     ImGui::StyleColorsLight();
     render_main_gui(emu);
 
-
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
     SDL_UnlockMutex(emulator->nes_state_lock);
-
 
     // Rest in dark
     ImGui::StyleColorsDark();

@@ -25,7 +25,6 @@ extern "C" {
 
 #include "NESCLETypes.h"
 
-
 APU* APU_Create(void);
 void APU_Destroy(APU* apu);
 

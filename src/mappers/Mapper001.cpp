@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: REFACTORS BROKE THIS SOMEHOW
+
+
 // FIXME: WE NEED TO IMPLEMENT PROPERLY THE PRG RAM ASPECT OF THESE THINGS
 // BECAUSE AS OF NOW WE ONLY ALLOW 8K ACCESS TO THE BATTERY BACKED SRAM
 // BUT THE MAPPERS CAN HAVE 32K OF PRG RAM SO WE NEED TO FIGURE THAT OUT
 // ADDITIONALLY, THERE IS NO LOGIC FOR THE PRG RAM BANK SWITCHING
 // SO THAT NEEDS TO BE IMPLEMENTED
-// UNTIL THIS IS DONE, AND WHILE WE ARE USING VECTORS INSTEAD OF ARRAYS
-// SAVING MAPPER001 GAMES IS IMPOSSIBLE
-
 // THE WAY THIS WOULD BE DONE IS THAT BANK SELECT FOR PRG RAM
 // WOULD HAPPEN BASED
 // ON SOME BITS OF THE UPPER CHAR BANK SELECT REGISTER, SO WHEN
@@ -37,9 +37,6 @@
 // I DON'T KNOW IF THE CHR BANK SELECT BEHAVIOR CHANGES BASED ON
 // WHETHER THE SELECT IS ENABLED OR NOT
 
-// IT APPEARS THAT POSSIBLY, THE SIZE OF PRG RAM WILL NOT BE SPECIFIED TO US
-// IN THIS CASE WE WILL JUST HAVE TO HOLD A 32K ARRAY IN THE MAPPER
-
 // GETTING ENALBING AND DISABLING RIGHT, MAY NOT BE NECESSARY
 // I GUESS YOU JUST GET OPEN BUS BEHAVIRO WHEN DISABLED
 // SO MAYBE THAT MEANS WRITES FAIL BUT READS DON'T? IDK
@@ -48,18 +45,14 @@
 // MIGHT ALSO BE FAILING BECAUSE SOME GAMES USE THE PRG RAM AS
 // WORKING RAM AND NOT SAVE RAM
 
-// TODO: RUN MESEN UNDER THE VISUAL STUDIO DEBUGGER AND SEE IF
-// THE DUMMY WRITES ARE THE CAUSE OF THE ISSUE WITH ZELDA 2, KID ICARUS,
-// ETC
-
 // TODO: CHECK FOR PROPER BEHAVIOR BETWEEN TYPE OF BANK SWITCHING
 // IE, SHOULD GOING TO 8KB CHR MODE CHANGE THE HI POINTER AT ALL? OR EVEN
 // THE LO POINTER?
 #include "Mapper001.h"
 
+#include <SDL_log.h>
+
 void Mapper001::Reset() {
-    // FIXME: HAVE TO GET THIS CALLED ON RESET, NOT JUST ON
-    // CREATE
     load = 0;
     load_reg_ct = 0;
     ctrl = 0x1c;
@@ -86,16 +79,12 @@ uint8_t Mapper001::MapCPURead(uint16_t addr) {
 
     if (ctrl & 8) {
         // 16k
-        if (addr >= 0x8000 && addr < 0xc000)
-            return Cart_ReadPrgRom(cart, prg_select16_lo * 0x4000 + (addr % 0x4000));
-        if (addr >= 0xc000)
-            return Cart_ReadPrgRom(cart, prg_select16_hi * 0x4000 + (addr % 0x4000));
+        uint8_t select = addr >= 0xc000 ? prg_select16_hi : prg_select16_lo;
+        return Cart_ReadPrgRom(cart, select * 0x4000 + (addr % 0x4000));
     } else {
         // 32k
         return Cart_ReadPrgRom(cart, prg_select32 * 0x8000 + (addr % 0x8000));
     }
-
-    return 0;
 }
 
 bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
@@ -114,7 +103,6 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
         load = 0;
         load_reg_ct = 0;
         ctrl |= 0x0c;
-        return true;
     } else {
         load >>= 1;
         load |= (data & 1) << 4;
@@ -139,22 +127,17 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     mirror_mode = MAPPER_MIRRORMODE_HORZ;
                     break;
                 }
-                // printf("changed mirror mode to %d\n", cart->mirror_mode);
             } else if (target == 1) {
                 if (ctrl & 0x10) {
+                    // 4k
                     chr_select4_lo = load & 0x1f;
-                    // printf("changed chr lo to %d\n", chr_select4_lo);
                 } else {
                     // 8k
                     chr_select8 = (load & 0x1e) >> 1;
-                    // printf("changed chr 8k to %d\n", chr_select8);
                 }
             } else if (target == 2) {
-                // FIXME: NEED TO HANDLE THE SCENARIO WHERE CHR HI GETS SET
-                // TO 0 IN DOUBLE DRAGON
                 if (ctrl & 0x10)
                     chr_select4_hi = load & 0x1f;
-                // printf("changed chr hi to %d\n", chr_select4_hi);
             } else if (target == 3) {
                 uint8_t prg_mode = (ctrl >> 2) & 3;
 
@@ -167,16 +150,14 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     prg_select16_lo = load & 0x0f;
                     prg_select16_hi = Cart_GetPrgRomBlocks(cart) - 1;
                 }
-
-                // printf("changed prg\n");
             }
 
             load = 0;
             load_reg_ct = 0;
         }
-
-        return true;
     }
+
+    return true;
 }
 
 uint8_t Mapper001::MapPPURead(uint16_t addr) {
@@ -185,11 +166,8 @@ uint8_t Mapper001::MapPPURead(uint16_t addr) {
 
     if (ctrl & 0x10) {
         // 4kb mode
-        if (addr < 0x1000) {
-            return Cart_ReadChrRom(cart, chr_select4_lo * 0x1000 + (addr % 0x1000));
-        } else {
-            return Cart_ReadChrRom(cart, chr_select4_hi * 0x1000 + (addr % 0x1000));
-        }
+        uint8_t select = addr >= 0x1000 ? chr_select4_hi : chr_select4_lo;
+        Cart_ReadChrRom(cart, select * 0x1000 + (addr % 0x1000));
     } else {
         // 8kb mode
         return Cart_ReadChrRom(cart, chr_select8 * 0x2000 + (addr % 0x2000));
@@ -202,12 +180,11 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
         return true;
     }
 
-    printf("invalid write\n");
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Attempted to write to CHR ROM at %04x", addr);
     return false;
 }
 
-// FIXME: WILL SHOW THE WRONG TILES ON RELOAD SOMETIMES
-// BECAUSE THE MIRRORING MODE IS ALWAYS RESET TO HORIZONTAL
 bool Mapper001::SaveState(FILE* file) {
     bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
@@ -220,7 +197,6 @@ bool Mapper001::SaveState(FILE* file) {
     bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    printf("mirror mode: %d\n", mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }
 
@@ -236,6 +212,5 @@ bool Mapper001::LoadState(FILE* file) {
     bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
     bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
-    printf("mirror mode: %d\n", mirror_mode);
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
 }

@@ -16,8 +16,8 @@
 // TODO: IMPLEMENT LAST CHANNEL, BATTLETOADS PAUSE MUSIC USES IT
 #include "APU.h"
 
-#include <stdlib.h>
 #include <string.h>
+#include "Util.h"
 
 static const int amp_table[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
                                   1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
@@ -493,87 +493,40 @@ void APU_Clock(APU *apu)
 
             // Clock triangle length counter
             if (!apu->triangle.enable)
-            {
                 apu->triangle.length = 0;
-            }
             else if (apu->triangle.length > 0 && !apu->triangle.halt)
-            {
                 apu->triangle.length--;
-            }
 
             if (!apu->pulse1.enable)
-            {
                 apu->pulse1.length = 0;
-            }
             else if (apu->pulse1.length > 0 && !apu->pulse1.halt)
-            {
                 apu->pulse1.length--;
-            }
 
             if (!apu->pulse2.enable)
-            {
                 apu->pulse2.length = 0;
-            }
             else if (apu->pulse2.length > 0 && !apu->pulse2.halt)
-            {
                 apu->pulse2.length--;
-            }
 
             if (!apu->noise.enable)
-            {
                 apu->noise.length = 0;
-            }
             else if (apu->noise.length > 0 && !apu->noise.halt)
-            {
                 apu->noise.length--;
-            }
 
             clock_sweeper(&apu->pulse1);
             clock_sweeper(&apu->pulse2);
         }
 
-        // update sequencers
+        // FIXME: IT MAY BE THE CASE THAT THE PULSE WAVES SHOULD BE CLOCKED NO
+        // MATTER WHAT
 
-        // Pulse Wave 1 clock
-        // Checking the reload just stops high freqs
-        // FIXME: MAYBE THIS IS UNDESIRABLE
-        // FIXME: PROBABLY SHOULD STILL CLOCK IF THE VOLUME IS 0
-        // THIS JUST SOUNDS BAD, THE WAY TO GO IS TO EITHER LINEARLY
-        // INTERPOLATE BETWEEN THIS AND THE LAST SAMPLE
-        // OR TO JUST GO FULL ON WITH THE SINE WAVE APPROXIMATION
-        // FIXME: IT SEEMS THE PATH TO FIXING THIS IS A DELTA BETWEEN THE CURRENT
-        // AND PREVIOUS SAMPLES
-
-        // PROBLEM IN MY SYNTHESIZER TEST WAS AN INCONSISTENCY BETWEEN SAMPLES
-        // WHERE THE "TIME" WAS BEING RESET BETWEEN EACH BUFFER
-        // HOWEVER, I SHOULD NOT HAVE THAT PROBLEM HERE DESPITE THE
-        // EVIDENCE SHOWING ME I DO HAVE IT
-
-        // FIXME: THE THEORETICAL ANSWER TO MY PROBLEMS HERE IS TO USE THE
-        // SINE WAVE AND FIGURE OUT A WAY TO DEAL WITH THE MASSIVE
-        // JUMPS THAT HAPPEN WHEN I CHANGE THE FREQUENCY
-
-        // FIXME: POTENTIALLY USING A FADE OUT WILL ELIMINATE THE CLICKING
-        // IN GAMES LIKE MEGAMAN 2 (I HOPE)
-        // COULD ALSO USE A FADE IN AS WELL IF THE FADE OUT ISN'T ENOUGH
-        // COULD ALSO HAVE A FILTER THAT PREVENTS MASSIVE JUMPS OUT OF
-       // NOWHERE AND EITHER SMOOTHS THEM OR PREVENTS THEM ENTIRELY
-        // FREQUENCY SWEEPS MAY ELIMINATE THE ISSUE ALSO, BUT I DOUBT IT
         clock_pulse(&apu->pulse1);
         clock_pulse(&apu->pulse2);
         clock_noise(&apu->noise);
-
-
-
-        // FIXME: IT MAY BE THE CASE THAT THE PULSE WAVES SHOULD BE CLOCKED NO
-        // MATTER WHAT
     }
 
     // The triangle wave clocks at the rate of the CPU
     if (apu->clock_count % 3 == 0)
-    {
         clock_triangle(&apu->triangle);
-    }
 
     apu->clock_count++;
 }
@@ -581,34 +534,41 @@ void APU_Clock(APU *apu)
 void APU_PowerOn(APU *apu)
 {
     Bus* bus = apu->bus;
+    float prev_p1 = apu->pulse1.volume;
+    float prev_p2 = apu->pulse2.volume;
+    float prev_t = apu->triangle.volume;
+    float prev_n = apu->noise.volume;
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
     apu->noise.shift_register = 1;
-    apu->pulse1.volume = 1.0;
-    apu->pulse2.volume = 1.0;
-    apu->triangle.volume = 1.0;
-    apu->noise.volume = 0.5;
+    apu->pulse1.volume = prev_p1;
+    apu->pulse2.volume = prev_p2;
+    apu->triangle.volume = prev_t;
+    apu->noise.volume = prev_n;
 }
 
 void APU_Reset(APU *apu)
 {
     Bus* bus = apu->bus;
+    float prev_p1 = apu->pulse1.volume;
+    float prev_p2 = apu->pulse2.volume;
+    float prev_t = apu->triangle.volume;
+    float prev_n = apu->noise.volume;
     memset(apu, 0, sizeof(APU));
     apu->bus = bus;
     apu->noise.shift_register = 1;
-    apu->pulse1.volume = 1.0;
-    apu->pulse2.volume = 1.0;
-    apu->triangle.volume = 1.0;
-    apu->noise.volume = 0.5;
+    apu->pulse1.volume = prev_p1;
+    apu->pulse2.volume = prev_p2;
+    apu->triangle.volume = prev_t;
+    apu->noise.volume = prev_n;
 }
 
-APU *APU_Create(void) {
-    APU *apu = malloc(sizeof(APU));
-    return apu;
+APU* APU_Create(void) {
+    return Util_SafeMalloc(sizeof(APU));
 }
 
 void APU_Destroy(APU *apu) {
-    free(apu);
+    Util_SafeFree(apu);
 }
 
 float APU_GetOutputSample(APU *apu) {

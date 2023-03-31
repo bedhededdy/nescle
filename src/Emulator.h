@@ -32,9 +32,15 @@ typedef enum emulator_sync_type {
 } Emulator_SyncType;
 
 struct emulator_settings {
+    // video
     Emulator_SyncType sync;
-
     bool vsync;
+
+    // audio
+    float p1_vol;
+    float p2_vol;
+    float tri_vol;
+    float noise_vol;
 };
 
 // TODO: GET RID OF THE NES STATE LOCK

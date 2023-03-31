@@ -57,13 +57,19 @@ Emulator* Emulator_Create(const char* settings_path) {
             "Emulator_Create: Bad alloc SDL_Mutex");
     }
 
-    Emulator_SetDefaultSettings(emu);
+    if (!Emulator_LoadSettings(emu, "settings.bin")) {
+        Emulator_SetDefaultSettings(emu);
+        if (!Emulator_SaveSettings(emu, "settings.bin"))
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Emulator_Create: Could not save settings");
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            "Emulator_Create: Could not load settings, using defaults");
+    }
     emu->aturbo = false;
     emu->bturbo = false;
 
     SDL_AudioSpec desired_spec = { 0 };
     desired_spec.freq = 44100;
-    // desired_spec.format = AUDIO_S16SYS;
     desired_spec.format = AUDIO_F32SYS;
     desired_spec.channels = 1;
     // TODO: LET THE USER CHOOSE THIS
@@ -86,7 +92,11 @@ Emulator* Emulator_Create(const char* settings_path) {
     emu->quit = false;
     emu->run_emulation = false;
 
-    // SDL_TimerID timer = SDL_AddTimer(16, &timer_callback, emu);
+    APU_SetMasterVolume(emu->nes->apu, 0.5f);
+    APU_SetNoiseVolume(emu->nes->apu, emu->settings.noise_vol);
+    APU_SetPulse1Volume(emu->nes->apu, emu->settings.p1_vol);
+    APU_SetPulse2Volume(emu->nes->apu, emu->settings.p2_vol);
+    APU_SetTriangleVolume(emu->nes->apu, emu->settings.tri_vol);
 
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);
@@ -94,6 +104,9 @@ Emulator* Emulator_Create(const char* settings_path) {
 }
 
 void Emulator_Destroy(Emulator* emu) {
+    // Save settings for next session
+    Emulator_SaveSettings(emu, "settings.bin");
+
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
@@ -251,16 +264,31 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 }
 
 bool Emulator_SaveSettings(Emulator* emu, const char* path) {
-
+    FILE* file = fopen(path, "wb");
+    if (file == NULL)
+        return false;
+    size_t written = fwrite(&emu->settings, sizeof(Emulator_Settings), 1, file);
+    fclose(file);
+    return written == 1;
 }
 
 bool Emulator_LoadSettings(Emulator* emu, const char* path) {
-
+    FILE* file = fopen(path, "rb");
+    if (file == NULL)
+        return false;
+    size_t read = fread(&emu->settings, sizeof(Emulator_Settings), 1, file);
+    fclose(file);
+    return read == 1;
 }
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
-    emu->settings.sync = EMULATOR_SYNC_AUDIO;
-    emu->settings.vsync = false;
+    emu->settings.sync = EMULATOR_SYNC_VIDEO;
+    emu->settings.vsync = true;
+    emu->settings.p1_vol = 1.0f;
+    emu->settings.p2_vol = 1.0f;
+    emu->settings.tri_vol = 1.0f;
+    emu->settings.noise_vol = 0.75f;
+
     // emu->settings.sync = EMULATOR_SYNC_VIDEO;
     // emu->settings.vsync = true;
 }

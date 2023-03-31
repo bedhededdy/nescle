@@ -38,7 +38,7 @@ private:
 
 public:
     Mapper004(Cart* cart, Mapper_MirrorMode mirror)
-        : MapperBase(cart, mirror) {Reset();}
+        : MapperBase(cart, mirror) {}
 
     void Reset() override;
 
