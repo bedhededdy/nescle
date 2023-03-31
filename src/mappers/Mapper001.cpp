@@ -167,7 +167,7 @@ uint8_t Mapper001::MapPPURead(uint16_t addr) {
     if (ctrl & 0x10) {
         // 4kb mode
         uint8_t select = addr >= 0x1000 ? chr_select4_hi : chr_select4_lo;
-        Cart_ReadChrRom(cart, select * 0x1000 + (addr % 0x1000));
+        return Cart_ReadChrRom(cart, select * 0x1000 + (addr % 0x1000));
     } else {
         // 8kb mode
         return Cart_ReadChrRom(cart, chr_select8 * 0x2000 + (addr % 0x2000));
