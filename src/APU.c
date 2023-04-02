@@ -71,8 +71,7 @@ typedef struct apu_sweeper APU_Sweeper;
 // it harder to read and understand.
 struct apu_sequencer {
     int timer;
-    // FIXME: CHANGE TO INT BUT I'M AFRAID SWEEPERS MAY BREAK
-    uint16_t reload;
+    int reload;
 };
 
 struct apu_envelope {
@@ -315,10 +314,12 @@ static void clock_sweeper(APU_PulseChannel* pulse) {
             // AND YOU CAN MAKE THIS MORE EFFICIENT BY NOT USING IF
             // AND FIGURING OUT HOW THE MATH WORKS OUT FOR THIS STUFF
 
-            // i have no idea how this is right
             int delta = pulse->sequencer.reload >> pulse->sweeper.shift;
-            int neg = pulse->sweeper.down ? -1 : 1;
-            pulse->sequencer.reload += (uint16_t)(delta * neg);
+
+            if (pulse->sweeper.down)
+                pulse->sequencer.reload -= delta;
+            else
+                pulse->sequencer.reload += delta;
         }
     }
 
@@ -353,8 +354,8 @@ static void clock_pulse(APU_PulseChannel *pulse)
             pulse->sequencer.timer = pulse->sequencer.reload;
             pulse->duty_index = (pulse->duty_index + 1) % 8;
 
-            pulse->sample = get_duty(pulse->duty_sequence, pulse->duty_index);
-            pulse->sample *= 1.0f/15.0f * pulse->envelope.output;
+            int duty = get_duty(pulse->duty_sequence, pulse->duty_index);
+            pulse->sample = 1.0f/15.0f * (duty * pulse->envelope.output);
             pulse->prev_sample = pulse->sample;
         }
     } else {
@@ -363,26 +364,22 @@ static void clock_pulse(APU_PulseChannel *pulse)
 }
 
 static void clock_noise(APU_NoiseChannel* pulse) {
-    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7)
-    {
+    if (pulse->enable && pulse->length > 0 && pulse->sequencer.reload > 7) {
         pulse->sequencer.timer--;
 
-        if (pulse->sequencer.timer < 0)
-        {
+        if (pulse->sequencer.timer < 0) {
             pulse->sequencer.timer = pulse->sequencer.reload;
 
             int shift_amnt = pulse->mode ? 6 : 1;
             uint16_t feedback = (pulse->shift_register & 1) ^ ((pulse->shift_register >> shift_amnt) & 1);
             pulse->shift_register >>= 1;
             pulse->shift_register |= feedback << 14;
-            pulse->sample = !(pulse->shift_register & 1);
-
-            pulse->sample *= 1.0f/15.0f * pulse->envelope.output;
+            int on = !(pulse->shift_register & 1);
+            pulse->sample = 1.0f/15.0f * (on * pulse->envelope.output);
             pulse->prev_sample = pulse->sample;
         }
     }
-    else
-    {
+    else {
         // FIXME: MAYBE 0
         pulse->sample = pulse->prev_sample;
     }
