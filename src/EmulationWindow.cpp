@@ -364,8 +364,6 @@ EmulationWindow::EmulationWindow(int w, int h) {
     SDL_Log("Base path: %s\n", exe_path);
 
     Bus* bus = emulator->nes;
-    CPU* cpu = bus->cpu;
-    PPU* ppu = bus->ppu;
 
     for (size_t i = 0; i < WindowType::COUNT; i++)
         sub_windows[i] = nullptr;
@@ -440,12 +438,8 @@ EmulationWindow::EmulationWindow(int w, int h) {
 void EmulationWindow::Loop() {
     Emulator* emu = emulator;
     Bus *bus = emulator->nes;
-    CPU *cpu = bus->cpu;
-    PPU *ppu = bus->ppu;
+    PPU* ppu = bus->ppu;
 
-
-    // TODO: RUN_EMULATION SHOULD BE MOVED TO THE BUS AND
-    // PALETTE SHOULD PROBABLY BE MOVED TO THE EMULATION WINDOW
     while (!emulator->quit) {
         uint64_t t0 = SDL_GetTicks64();
 

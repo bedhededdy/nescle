@@ -1184,7 +1184,7 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
         // sets hi byte then lo byte
         if (ppu->addr_latch == 0) {
             ppu->tram_addr = (ppu->tram_addr & 0x00ff)
-                | ((uint16_t)(data & 0x3f) << 8);
+                | ((data & 0x3f) << 8);
             ppu->addr_latch = 1;
         }
         else {

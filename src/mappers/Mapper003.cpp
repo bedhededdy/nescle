@@ -36,7 +36,7 @@ uint8_t Mapper003::MapPPURead(uint16_t addr) {
     // Without selection, we can only address from 0 to 0x1fff, which is 13
     // bits. Therefore to determine the bank, we must examine the 14th and
     // 15th bits
-    return Cart_ReadChrRom(cart, (uint32_t)(select << 13) | addr);
+    return Cart_ReadChrRom(cart, (size_t)((select << 13) | addr));
 }
 
 bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {

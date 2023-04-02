@@ -22,7 +22,7 @@ void Mapper066::Reset() {
 uint8_t Mapper066::MapCPURead(uint16_t addr) {
     addr %= 0x8000;
     uint8_t select = (bank_select & 0x30) >> 4;
-    return Cart_ReadPrgRom(cart, ((uint32_t)select << 15) | addr);
+    return Cart_ReadPrgRom(cart, (size_t)((select << 15) | addr));
 }
 
 bool Mapper066::MapCPUWrite(uint16_t addr, uint8_t data) {
@@ -32,13 +32,13 @@ bool Mapper066::MapCPUWrite(uint16_t addr, uint8_t data) {
 
 uint8_t Mapper066::MapPPURead(uint16_t addr) {
     uint8_t select = bank_select & 0x03;
-    return Cart_ReadChrRom(cart, (select << 13) | addr);
+    return Cart_ReadChrRom(cart, (size_t)((select << 13) | addr));
 }
 
 bool Mapper066::MapPPUWrite(uint16_t addr, uint8_t data) {
     if (Cart_GetChrRomBlocks(cart) == 0) {
         uint8_t select = bank_select & 0x03;
-        Cart_WriteChrRom(cart, (select << 13) | addr, data);
+        Cart_WriteChrRom(cart, (size_t)((select << 13) | addr), data);
         return true;
     }
     return false;

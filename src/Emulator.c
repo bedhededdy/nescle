@@ -109,7 +109,8 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
         return false;
     }
 
-    FILE* savestate = fopen("../saves/savestate.bin", "wb");
+    FILE* savestate;
+    fopen_s(&savestate, path, "wb");
 
     Bus* bus = emu->nes;
     if (!Bus_SaveState(emu->nes, savestate))
@@ -215,8 +216,8 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 */
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
-
-    FILE* savestate = fopen("../saves/savestate.bin", "rb");
+    FILE* savestate;
+    fopen_s(&savestate, path, "rb");
 
     Bus* bus = emu->nes;
 
@@ -253,7 +254,8 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 }
 
 bool Emulator_SaveSettings(Emulator* emu, const char* path) {
-    FILE* file = fopen(path, "wb");
+    FILE* file;
+    fopen_s(&file, path, "wb");
     if (file == NULL)
         return false;
     size_t written = fwrite(&emu->settings, sizeof(Emulator_Settings), 1, file);
@@ -262,7 +264,8 @@ bool Emulator_SaveSettings(Emulator* emu, const char* path) {
 }
 
 bool Emulator_LoadSettings(Emulator* emu, const char* path) {
-    FILE* file = fopen(path, "rb");
+    FILE* file;
+    fopen_s(&file, path, "rb");
     if (file == NULL)
         return false;
     size_t read = fread(&emu->settings, sizeof(Emulator_Settings), 1, file);

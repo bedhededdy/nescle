@@ -15,11 +15,12 @@
  */
 #include "CPU.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "Bus.h"
-#include "PPU.h"
 #include "Cart.h"
+#include "PPU.h"
 #include "Util.h"
 
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
@@ -164,7 +165,7 @@ static void addrmode_abs(CPU* cpu) {
     uint8_t lsb = Bus_Read(cpu->bus, cpu->pc++);
     uint8_t msb = Bus_Read(cpu->bus, cpu->pc++);
 
-    cpu->addr_eff = ((uint16_t)msb << 8) | lsb;
+    cpu->addr_eff = (msb << 8) | lsb;
 }
 
 // addr_eff = off
@@ -194,7 +195,7 @@ static void addrmode_abx(CPU* cpu) {
     uint8_t lsb = Bus_Read(cpu->bus, cpu->pc++);
     uint8_t msb = Bus_Read(cpu->bus, cpu->pc++);
 
-    cpu->addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->x;
+    cpu->addr_eff = ((msb << 8) | lsb) + cpu->x;
 
     // Take an extra clock cycle if page changed (hi byte changed)
     // ST_  instructions do not incur the extra cycle
@@ -208,7 +209,7 @@ static void addrmode_aby(CPU* cpu) {
     uint8_t lsb = Bus_Read(cpu->bus, cpu->pc++);
     uint8_t msb = Bus_Read(cpu->bus, cpu->pc++);
 
-    cpu->addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->y;
+    cpu->addr_eff = ((msb << 8) | lsb) + cpu->y;
 
     // Take an extra clock cycle if page changed (hi byte changed)
     // ST_  instructions do not incur the extra cycle
@@ -236,7 +237,7 @@ static void addrmode_idx(CPU* cpu) {
     uint8_t lsb = Bus_Read(cpu->bus, off++);
     uint8_t msb = Bus_Read(cpu->bus, off);
 
-    cpu->addr_eff = ((uint16_t)msb << 8) | lsb;
+    cpu->addr_eff = (msb << 8) | lsb;
 }
 
 // addr_eff = ((*(off) >> 8) | (*((off + 1) % 256))) + y
@@ -248,7 +249,7 @@ static void addrmode_idy(CPU* cpu) {
     uint8_t lsb = Bus_Read(cpu->bus, off++);
     uint8_t msb = Bus_Read(cpu->bus, off);
 
-    cpu->addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->y;
+    cpu->addr_eff = ((msb << 8) | lsb) + cpu->y;
 
     // Take an extra clock cycle if page changed (hi byte changed)
     // ST_  instructions do not incur the extra cycle
@@ -265,7 +266,7 @@ static void addrmode_ind(CPU* cpu) {
     // The lsb and msb are the bytes of an address that we are pointing to.
     // In order to properly set addr_eff, we will need to read from the address
     // that this points to
-    uint16_t addr = ((uint16_t)msb << 8) | lsb;
+    uint16_t addr = (msb << 8) | lsb;
 
     /*
      * If the lsb is 0xff, that means we need to cross a page boundary to
@@ -760,7 +761,7 @@ static void op_rts(CPU* cpu) {
      * instruction we need to add one to the PC we pushed.
      */
     cpu->pc = stack_pop(cpu);
-    cpu->pc = ((uint16_t)stack_pop(cpu) << 8) | cpu->pc;
+    cpu->pc = (stack_pop(cpu) << 8) | cpu->pc;
     cpu->pc = cpu->pc + 1;
 }
 
@@ -1162,13 +1163,13 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
             sprintf(ptr, "$%02X%02X", b3, b2);
         }
         else {
-            addr_eff = ((uint16_t)b3 << 8) | b2;
+            addr_eff = (b3 << 8) | b2;
             if (addr_eff >= 0x2000 && addr_eff < 0x4000)
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
                     PPU_RegisterInspect(cpu->bus->ppu, addr_eff));
             else
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
-                    Bus_Read(cpu->bus, ((uint16_t)b3 << 8) | b2));
+                    Bus_Read(cpu->bus, (b3 << 8) | b2));
         }
         break;
     case CPU_ADDRMODE_ZPG:
@@ -1183,12 +1184,12 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
             Bus_Read(cpu->bus, (uint8_t)(b2 + cpu->y)));
         break;
     case CPU_ADDRMODE_ABX:
-        addr_eff = (((uint16_t)b3 << 8) | b2) + cpu->x;
+        addr_eff = ((b3 << 8) | b2) + cpu->x;
         sprintf(ptr, "$%02X%02X,X @ %04X = %02X", b3, b2, addr_eff,
             Bus_Read(cpu->bus, addr_eff));
         break;
     case CPU_ADDRMODE_ABY:
-        addr_eff = (((uint16_t)b3 << 8) | b2) + cpu->y;
+        addr_eff = ((b3 << 8) | b2) + cpu->y;
         sprintf(ptr, "$%02X%02X,Y @ %04X = %02X", b3, b2, addr_eff,
             Bus_Read(cpu->bus, addr_eff));
         break;
@@ -1199,7 +1200,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
         break;
     case CPU_ADDRMODE_IDX:
         addr_ptr = b2 + cpu->x;
-        addr_eff = ((uint16_t)Bus_Read(cpu->bus, (uint8_t)(addr_ptr + 1)) << 8)
+        addr_eff = (Bus_Read(cpu->bus, (uint8_t)(addr_ptr + 1)) << 8)
             | Bus_Read(cpu->bus, addr_ptr);
         sprintf(ptr, "($%02X,X) @ %02X = %04X = %02X", b2, addr_ptr, addr_eff,
             Bus_Read(cpu->bus, addr_eff));
@@ -1212,7 +1213,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
         lsb = Bus_Read(cpu->bus, off++);
         msb = Bus_Read(cpu->bus, off);
 
-        addr_eff = (((uint16_t)msb << 8) | lsb) + cpu->y;
+        addr_eff = ((msb << 8) | lsb) + cpu->y;
         // Without cast you get some weird stack corruption when the
         // addition of y causes an overflow, leading
         // to it's subtraction causing and underflow and making addr_eff
@@ -1222,7 +1223,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
             Bus_Read(cpu->bus, addr_eff));
         break;
     case CPU_ADDRMODE_IND:
-        addr_eff = ((uint16_t)b3 << 8) | b2;
+        addr_eff = (b3 << 8) | b2;
 
         if (b2 == 0xff)
             sprintf(ptr, "($%04X) = %04X", addr_eff,
@@ -1230,7 +1231,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
                 | Bus_Read(cpu->bus, addr_eff));
         else
             sprintf(ptr, "($%04X) = %04X", addr_eff,
-                ((uint16_t)Bus_Read(cpu->bus, addr_eff + 1) << 8)
+                (Bus_Read(cpu->bus, addr_eff + 1) << 8)
                 | Bus_Read(cpu->bus, addr_eff));
         break;
 

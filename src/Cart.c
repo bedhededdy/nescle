@@ -108,7 +108,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     Cart_ROMHeader* header = &cart->metadata;
 
-    if (strncmp(header->name, "NES\x1a", 4) != 0) {
+    if (strncmp((char*)header->name, "NES\x1a", 4) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid header\n");
         return false;
     }

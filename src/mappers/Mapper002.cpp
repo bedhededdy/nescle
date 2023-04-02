@@ -34,7 +34,7 @@ uint8_t Mapper002::MapCPURead(uint16_t addr) {
         // This gives us a 14 bit address. So our seelct will use the 15th
         // to 18th bits
         addr %= 0x4000;
-        return Cart_ReadPrgRom(cart, (uint32_t)(select << 14) | addr);
+        return Cart_ReadPrgRom(cart, (size_t)((select << 14) | addr));
     } else {
         uint32_t last_bank_offset = (Cart_GetPrgRomBlocks(cart) - 1) * 0x4000;
         addr %= 0x4000;

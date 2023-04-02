@@ -153,10 +153,12 @@ if (mycc STREQUAL COMPILER_CLANGCL)
    target_compile_options(imgui PRIVATE -w)
    target_compile_options(glad PRIVATE -w)
    target_compile_options(nescle PRIVATE -Wall
-   -Wextra -Wpedantic -Wold-style-cast -Wimplicit
-   -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
+   -Wextra -Wpedantic -Wimplicit
+   -Wshadow -Wimplicit-function-declaration
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference)
+   -Wwrite-strings -Wnull-dereference
+
+   -Wno-unused-parameter)
 
 elseif(mycc STREQUAL COMPILER_MSVC)
    message(STATUS "Using MSVC FLAGS NEEDED TO BE ADDED")
@@ -164,10 +166,12 @@ elseif(mycc STREQUAL COMPILER_GNU)
    target_compile_options(imgui PRIVATE -w)
    target_compile_options(glad PRIVATE -w)
    target_compile_options(nescle PRIVATE -Wall
-   -Wextra -Wpedantic -Wold-style-cast -Wimplicit
-   -Wunused -Wshadow -Wimplicit-function-declaration -Wconversion
+   -Wextra -Wpedantic -Wimplicit
+   -Wshadow -Wimplicit-function-declaration
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference)
+   -Wwrite-strings -Wnull-dereference
+
+   -Wno-unused-parameter)
 else()
    message(FATAL_ERROR "Unknown compiler")
 endif()

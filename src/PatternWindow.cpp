@@ -86,8 +86,8 @@ void PatternWindow::Show(Emulator* emu) {
     // HOWEVER, IF YOU EVENTUALLY ALLOW WRITES TO THE PATTERN MEMORY FROM A
     // TILE EDITOR, YOU GOTTA LOCK HERE
     // FIXME: ALLOW CHANGING PALETTE
-    PPU_GetPatternTable(bus->ppu, 0, palette);
-    PPU_GetPatternTable(bus->ppu, 1, palette);
+    PPU_GetPatternTable(bus->ppu, 0, (uint8_t)palette);
+    PPU_GetPatternTable(bus->ppu, 1, (uint8_t)palette);
 
     // to do this showing the palettes basically make the 1 texture bigger
     // then draw the palette colors, then the pattern table and change the
@@ -104,7 +104,9 @@ void PatternWindow::Show(Emulator* emu) {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     ImGui::Begin("Pattern Memory", show);
-    ImGui::Image((ImTextureID)(intptr_t)palette_texture, ImVec2(256 * 2, 128 * 2),
+    auto uintptr_tex = static_cast<uintptr_t>(palette_texture);
+    auto imguiptr_tex = reinterpret_cast<ImTextureID>(uintptr_tex);
+    ImGui::Image(imguiptr_tex, ImVec2(256 * 2, 128 * 2),
         ImVec2(0, 1), ImVec2(1, 0));
     ImGui::End();
 }

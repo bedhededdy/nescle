@@ -24,7 +24,7 @@
 #include "PPU.h"
 #include "Util.h"
 
-#include "NESCLETYPES.h"
+#include "NESCLETypes.h"
 
 /* Constructors/Destructors */
 Bus* Bus_Create(void) {
@@ -177,7 +177,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
 }
 
 uint16_t Bus_Read16(Bus* bus, uint16_t addr) {
-    return ((uint16_t)Bus_Read(bus, addr + 1) << 8) | Bus_Read(bus, addr);
+    return (Bus_Read(bus, addr + 1) << 8) | Bus_Read(bus, addr);
 }
 
 bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data) {
@@ -207,7 +207,7 @@ bool Bus_Clock(Bus* bus) {
                 // Read on even cycles, write on odd cycles
                 if (bus->clocks_count % 2 == 0) {
                     bus->dma_data = Bus_Read(bus,
-                        ((uint16_t)bus->dma_page << 8) | bus->dma_addr);
+                        (bus->dma_page << 8) | bus->dma_addr);
                 }
                 else {
                     // DMA transfers 256 bytes to the OAM at once,
