@@ -15,8 +15,9 @@
  */
 #include "Cart.h"
 
+#include <SDL_log.h>
+
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,7 +27,7 @@
 
 // ROM file header in iNES (.nes) format
 typedef struct cart_rom_header {
-    uint8_t name[4];           // Should always say NES followed by DOS EOF
+    uint8_t name[4];        // Should always say NES followed by DOS EOF
     uint8_t prg_rom_size;   // One chunk = 16kb
     uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
     uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
@@ -34,7 +35,7 @@ typedef struct cart_rom_header {
     uint8_t prg_ram_size;   // Apparently rarely used
     uint8_t tv_system1;     // Apparently rarely used
     uint8_t tv_system2;     // Apparently rarely used
-    uint8_t padding[5];        // Unused padding
+    uint8_t padding[5];     // Unused padding
 } Cart_ROMHeader;
 
 typedef enum cart_file_type {
@@ -44,11 +45,8 @@ typedef enum cart_file_type {
 
 struct cart {
     Cart_ROMHeader metadata;
-
-    char* rom_path;
-
-    // Maybe reducable to a bool that just checks for NES 2.0 or not
     Cart_FileType file_type;
+    char* rom_path;
 
     Mapper* mapper;
 
@@ -71,7 +69,6 @@ Cart* Cart_Create(void) {
 void Cart_Destroy(Cart* cart) {
     if (cart != NULL) {
         Mapper_Destroy(cart->mapper);
-        // TODO: REFACTOR ALL TO USE SAFE FREE AND MALLOC
         free(cart->rom_path);
         free(cart->prg_rom);
         free(cart->chr_rom);
@@ -80,117 +77,91 @@ void Cart_Destroy(Cart* cart) {
 }
 
 bool Cart_LoadROM(Cart* cart, const char* path) {
-    // Check for null path or path.equals("")
+    // Check for NULL path or empty string
     if (path == NULL || path[0] == '\0') {
-        printf("Cart_LoadROM: invalid path\n");
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid path\n");
         return false;
     }
 
     // Check that file is a .nes file
     const char* ext = strrchr(path, '.');
     if (strcmp(ext, ".nes") != 0) {
-        printf("Cart_LoadROM: invalid file type\n");
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: file must have extension .nes\n");
         return false;
     }
 
     // Open ROM file in read-binary mode
-    FILE* rom = fopen(path, "rb");
-
-    // Failure to open file
-    if (rom == NULL) {
-        printf("Cart_LoadROM: ROM not found\n");
+    FILE* rom;
+    if (fopen_s(&rom, path, "rb") != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: Unable to open file %s\n", path);
         return false;
     }
 
-    // Buffer capable of loading 4kb from rom at once
-    uint8_t buf[4096];
-
-    // Load header data (16 bytes) into the buffer
-    if (fread(buf, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom)
-        < sizeof(Cart_ROMHeader)) {
-        printf("Cart_LoadROM: header\n");
+    if (fread(&cart->metadata, sizeof(uint8_t), sizeof(Cart_ROMHeader), rom)
+        != sizeof(Cart_ROMHeader)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: invalid header\n");
         return false;
     }
-
-    // Copy data into header struct and allow the cart to reference it
-    memcpy(&cart->metadata, buf, sizeof(Cart_ROMHeader));    // THIS IS RISKY, BUT WORKS
 
     Cart_ROMHeader* header = &cart->metadata;
-    // Can't use strcmp to compare because header->name is not null terminated
-    if (header->name[0] != 'N' || header->name[1] != 'E'
-        || header->name[2] != 'S' || header->name[3] != 0x1a) {
-        printf("Cart_LoadROM: invalid header\n");
+
+    if (strncmp(header->name, "NES\x1a", 4) != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid header\n");
         return false;
     }
 
-    // Load trainer data if it exists
-    // TODO: CURRENLTY LOADS BUT DOES NOTHING WITH IT
+    // Skip trainer data if present
     if (header->mapper1 & 0x04) {
-        if (fread(buf, sizeof(uint8_t), 512, rom) < 512) {
-            printf("Cart_LoadROM: trainer\n");
+        if (fseek(rom, 512, SEEK_CUR) != 0) {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                "Cart_LoadROM: error parsing trainer data\n");
             return false;
         }
     }
 
-    int file_type;
-    file_type = (header->mapper2 & 0x0c) == 0x08 ? 2 : 1;
-    printf("Header type: %d\n", file_type);
+    cart->file_type = (header->mapper2 & 0x0c) == 0x08 ? CART_FILETYPE_NES2
+        : CART_FILETYPE_INES;
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: file type %d\n", cart->file_type);
 
     // TODO: HAVE DIFFERENT LOGIC BASED ON THE HEADER TYPE
+    // CURRENTLY THIS WILL ONLY WORK WITH iNES AND NES2.0 FILES THAT DO NOT
+    // USE ANY OF THE EXTENDED FEATURES
 
-    // FIXME: THIS HAS COMPLETELY NON DETERMINISTIC VALUES, INDICATING A
-    // BUFFER OVERFLOW SOMEWHERE
-    // THIS COULD ALSO SEEM TO EXPLAIN WHY MARIO RANDOMLY PAUSES
-    // SOMEGTIMES WHERE MY ISSUE WAS NOT GOING FULLY RIGHT ON A MEMCPY
-    // printf("PRG RAM size: %d\n", cart->metadata->prg_ram_size);
-    // Now that we know the program rom size, we can allocate memory for it
-    const size_t prg_rom_nbytes = sizeof(uint8_t)
-        * CART_PRG_ROM_CHUNK_SIZE * header->prg_rom_size;
+    // We use normal realloc here, as it is not a critical failure if it fails
+    // Recall that Util_Safe* is just a wrapper around stdlib functions that
+    // will exit the program if the allocation fails
+    const size_t prg_rom_nbytes = Cart_GetPrgRomBytes(cart);
     cart->prg_rom = realloc(cart->prg_rom, prg_rom_nbytes);
-
     if (cart->prg_rom == NULL) {
-        printf("Cart_LoadROM: alloc prg_rom\n");
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: failed alloc\n");
+        return false;
+    }
+    if (fread(cart->prg_rom, sizeof(uint8_t), prg_rom_nbytes, rom)
+        != prg_rom_nbytes) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: failed reading prg_rom\n");
         return false;
     }
 
-    // Read program rom and copy it to the prg_rom section of the cart
-    for (size_t i = 0; i < prg_rom_nbytes/sizeof(buf); i++) {
-        if (fread(buf, sizeof(uint8_t), sizeof(buf), rom) < sizeof(buf)) {
-            printf("Cart_LoadROM: read prg_rom\n");
-            return false;
-        }
-
-        memcpy(&cart->prg_rom[i * sizeof(buf)], buf, sizeof(buf));
+    // If we have 0 chr_rom blocks, we actually have 1 block of chr_rom that
+    // is used as RAM. GetChrRomBytes will return 8kb in this case, so we
+    // must use GetChrRomBlocks to check if there is RAM or not
+    const size_t chr_rom_nbytes = Cart_GetChrRomBytes(cart);
+    cart->chr_rom = realloc(cart->chr_rom, chr_rom_nbytes);
+    if (cart->chr_rom == NULL) {
+        printf("Cart_LoadROM: alloc chr_ram\n");
+        return false;
     }
-
-    const size_t chr_rom_nbytes = sizeof(uint8_t)
-        * CART_CHR_ROM_CHUNK_SIZE * header->chr_rom_size;
-    if (chr_rom_nbytes > 0) {
-        // Load char rom if exists
-        // similar logic to program rom, but with 8kb instead of 16
-        cart->chr_rom = realloc(cart->chr_rom, chr_rom_nbytes);
-
-        if (cart->chr_rom == NULL) {
-            printf("Cart_LoadROM: alloc chr_rom\n");
-            return false;
-        }
-
-        for (size_t i = 0; i < chr_rom_nbytes/sizeof(buf); i++) {
-            if (fread(buf, sizeof(uint8_t), sizeof(buf), rom) < sizeof(buf)) {
-                printf("Cart_LoadROM: read chr_rom\n");
-                return false;
-            }
-
-            memcpy(&cart->chr_rom[i * sizeof(buf)], buf, sizeof(buf));
-        }
-    }
-    else {
-        // If the file type is 1, we still give it 0x2000 bytes
-        // but those bytes will be used as RAM instead of ROM
-        cart->chr_rom = realloc(cart->chr_rom, CART_CHR_ROM_CHUNK_SIZE * sizeof(uint8_t));
-
-        if (cart->chr_rom == NULL) {
-            printf("Cart_LoadROM: alloc chr_ram\n");
+    if (Cart_GetChrRomBlocks(cart) > 0) {
+        if (fread(cart->chr_rom, sizeof(uint8_t), chr_rom_nbytes, rom)
+            != chr_rom_nbytes) {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                "Cart_LoadROM: failed reading chr_rom\n");
             return false;
         }
     }
@@ -199,93 +170,103 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // mapper_id hi 4 bits is the 4 hi bits of mapper 2 and the lo 4 bits
     // are the hi bits of mapper1
     uint8_t mapper_id = (header->mapper2 & 0xf0) | (header->mapper1 >> 4);
-    printf("mapper id: %d\n", mapper_id);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: mapper id %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
     Mapper_MirrorMode mirror_mode = (header->mapper1 & 1) ?
         MAPPER_MIRRORMODE_VERT : MAPPER_MIRRORMODE_HORZ;
-    printf("mirror mode: %d\n", mirror_mode);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: mirror mode %d\n", mirror_mode);
 
-    // Initialize cart's mapper
-    if (cart->mapper != NULL)
-        Mapper_Destroy(cart->mapper);
+    // Initialize cart's mapper (mapper destroy is safe to pass NULL to)
+    // We must check NULL return from Mapper_Create, as failing to allocate
+    // the mapper is not a critical error
+    Mapper_Destroy(cart->mapper);
     cart->mapper = Mapper_Create(mapper_id, cart, mirror_mode);
     if (cart->mapper == NULL) {
-        printf("Cart_LoadROM: alloc mapper\n");
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadROM: failed to create mapper\n");
         return false;
     }
 
-    // Fill in some fields
-    cart->file_type = file_type;
-
-    // Free previous path if it exists
+    // Free previous path if it exists and copy it into the cart
     size_t path_len = strlen(path) + 1;
     cart->rom_path = realloc(cart->rom_path, path_len);
     if (cart->rom_path == NULL) {
         printf("Cart_LoadROM: alloc rom_path\n");
         return false;
     }
-
-    // Copy path into cart
     memcpy(cart->rom_path, path, path_len);
 
-    printf("prg_ram_size: %d\n", cart->metadata.prg_ram_size);
-    printf("prg_rom_size: %d\n", cart->metadata.prg_rom_size);
-    printf("chr_rom_size: %d\n", cart->metadata.chr_rom_size);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: prg_ram_size %d\n", cart->metadata.prg_ram_size);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: prg_rom_size %d\n", cart->metadata.prg_rom_size);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Cart_LoadROM: chr_rom_size %d\n", cart->metadata.chr_rom_size);
 
-    // Don't forget to close the file and return true
     fclose(rom);
     return true;
 }
 
 bool Cart_SaveState(Cart* cart, FILE* file) {
-    // FIXME: THIS DOES NOT ACCOUNT FOR A NULL CART
-    fwrite(cart, sizeof(Cart), 1, file);
+    // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
+    // SCENARIO WHERE THERE IS NO ROM LOADED
+    bool b1 = fwrite(cart, sizeof(Cart), 1, file) == 1;
     size_t rom_path_len = strlen(cart->rom_path) + 1;
-    fwrite(&rom_path_len, sizeof(size_t), 1, file);
-
-    fwrite(cart->rom_path, sizeof(char), rom_path_len, file);
-    fwrite(cart->prg_rom, sizeof(uint8_t)
-        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size, 1, file);
-    size_t chr_rom_chunks = cart->metadata.chr_rom_size;
-    if (chr_rom_chunks == 0) chr_rom_chunks = 1;
-    fwrite(cart->chr_rom, sizeof(uint8_t)
-        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks, 1, file);
-    return true;
+    bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
+    bool b3 = fwrite(cart->rom_path, sizeof(char), rom_path_len, file) == 1;
+    bool b4 = fwrite(cart->prg_rom, Cart_GetPrgRomBytes(cart), 1, file) == 1;
+    bool b5 = fwrite(cart->chr_rom, Cart_GetChrRomBytes(cart), 1, file) == 1;
+    return b1 && b2 && b3 && b4 && b5;
 }
 
 bool Cart_LoadState(Cart* cart, FILE* file) {
-    // free the old addresses
+    // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
+    // SCENARIO WHERE THERE IS NO ROM LOADED
+
+    // Free the old addresses
     free(cart->rom_path);
     free(cart->prg_rom);
     free(cart->chr_rom);
 
-    fread(cart, sizeof(Cart), 1, file);
+    bool b1 = fread(cart, sizeof(Cart), 1, file) == 1;
     size_t rom_path_len;
-    fread(&rom_path_len, sizeof(size_t), 1, file);
+    bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
 
     cart->rom_path = malloc(sizeof(char) * rom_path_len);
-    fread(cart->rom_path, sizeof(char), rom_path_len, file);
+    if (cart->rom_path == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadState: alloc rom_path\n");
+        return false;
+    }
+    bool b3 = fread(cart->rom_path, sizeof(char), rom_path_len, file) == 1;
 
-    cart->prg_rom = malloc(sizeof(uint8_t)
-        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size);
-    fread(cart->prg_rom, sizeof(uint8_t)
-        * CART_PRG_ROM_CHUNK_SIZE * cart->metadata.prg_rom_size, 1, file);
-    size_t chr_rom_chunks = cart->metadata.chr_rom_size;
-    if (chr_rom_chunks == 0) chr_rom_chunks = 1;
-    cart->chr_rom = malloc(sizeof(uint8_t)
-        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks);
-    fread(cart->chr_rom, sizeof(uint8_t)
-        * CART_CHR_ROM_CHUNK_SIZE * chr_rom_chunks, 1, file);
+    cart->prg_rom = malloc(Cart_GetPrgRomBytes(cart));
+    if (cart->prg_rom == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadState: alloc prg_rom\n");
+        return false;
+    }
+    bool b4 = fread(cart->prg_rom, Cart_GetPrgRomBytes(cart), 1, file) == 1;
+    cart->chr_rom = malloc(Cart_GetChrRomBytes(cart));
+    if (cart->chr_rom == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Cart_LoadState: alloc chr_rom\n");
+        return false;
+    }
+    bool b5 = fread(cart->chr_rom, Cart_GetChrRomBytes(cart), 1, file) == 1;
 
     // Let the caller handle the mapper too
-    return true;
+    return b1 && b2 && b3 && b4 && b5;
 }
 
 uint8_t Cart_GetPrgRomBlocks(Cart* cart) {
     return cart->metadata.prg_rom_size;
 }
 
+// This will return 0 if the cart has no CHR ROM
 uint8_t Cart_GetChrRomBlocks(Cart* cart) {
     return cart->metadata.chr_rom_size;
 }
@@ -294,8 +275,10 @@ size_t Cart_GetPrgRomBytes(Cart* cart) {
     return cart->metadata.prg_rom_size * CART_PRG_ROM_CHUNK_SIZE;
 }
 
+// This will return 8kb if the cart has no CHR ROM
 size_t Cart_GetChrRomBytes(Cart* cart) {
-    size_t sz = cart->metadata.chr_rom_size == 0 ? 1 : cart->metadata.chr_rom_size;
+    size_t sz = cart->metadata.chr_rom_size == 0
+        ? 1 : cart->metadata.chr_rom_size;
     return sz * CART_CHR_ROM_CHUNK_SIZE;
 }
 

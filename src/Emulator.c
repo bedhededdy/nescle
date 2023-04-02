@@ -289,8 +289,8 @@ void Emulator_SetDefaultSettings(Emulator* emu) {
     emu->settings.tri_vol = 1.0f;
     emu->settings.noise_vol = 0.75f;
 
-    // emu->settings.sync = EMULATOR_SYNC_VIDEO;
-    // emu->settings.vsync = true;
+    // emu->settings.sync = EMULATOR_SYNC_AUDIO;
+    // emu->settings.vsync = false;
 }
 
 void Emulator_EmulateSample(Emulator* emu) {

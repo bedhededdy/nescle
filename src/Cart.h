@@ -26,7 +26,6 @@ extern "C" {
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
-
 Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
 
@@ -37,6 +36,7 @@ bool Cart_LoadState(Cart* cart, FILE* file);
 
 void Cart_SetMapper(Cart* cart, Mapper* mapper);
 Mapper* Cart_GetMapper(Cart* cart);
+
 const char* Cart_GetROMPath(Cart* cart);
 
 uint8_t Cart_GetPrgRomBlocks(Cart* cart);

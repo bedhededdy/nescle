@@ -297,6 +297,16 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
+    // FIXME: FOR WHATEVER REASON THIS LINE BREAKS IMGUI
+    // Set logging level based on debug mode
+    // #ifdef _DEBUG
+    //    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+    // #else
+    //    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+    // #endif
+
+    // TODO: CHANGE SDL LOGGING FUNCTION TO A CUSTOM FUNCTION
+
     emulator = Emulator_Create("");
 
     // NOTE: EVEN IF YOU DON'T FREE THIS, SDL DOES NOT SHOW A MEMORY LEAK
@@ -373,7 +383,6 @@ EmulationWindow::EmulationWindow(int w, int h) {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     setup_main_frame();
-    // setup_palette_frame();
 }
 
 void EmulationWindow::Loop() {

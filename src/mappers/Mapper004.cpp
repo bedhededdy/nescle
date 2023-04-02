@@ -37,10 +37,6 @@ void Mapper004::Reset() {
         chr_banks[i] = 0;
     }
 
-    for (int i = 0; i < 4; i++) {
-        prg_banks[i] = 0;
-    }
-
     prg_banks[0] = 0;
     prg_banks[1] = 0x2000;
     prg_banks[2] = (Cart_GetPrgRomBlocks(cart) * 2 - 2) * 0x2000;

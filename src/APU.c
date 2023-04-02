@@ -19,20 +19,40 @@
 #include <string.h>
 #include "Util.h"
 
-static const int amp_table[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
-                                  1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+static int get_amp(int index)
+{
+    static const int amp_table[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4,
+        3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+    };
+    return amp_table[index];
+}
 
-static const int length_table[32] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10,
-                                     14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
+static int get_noise_period(int index)
+{
+    static const int noise_period_table[16] = {4, 8, 16, 32, 64, 96, 128, 160,
+        202, 254, 380, 508, 762, 1016, 2034, 4068
+    };
+    return noise_period_table[index];
+}
 
-static const int duty_cycles[4][8] = {
-    {0, 0, 0, 0, 0, 0, 0, 1},
-    {0, 0, 0, 0, 0, 0, 1, 1},
-    {0, 0, 0, 0, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 0, 0}
-};
+static uint8_t get_length(int index)
+{
+    static const uint8_t length_table[32] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8,
+        60, 10, 14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72,
+        26, 16, 28, 32, 30
+    };
+    return length_table[index];
+}
 
-static const int noise_period_table[16] = {4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
+static int get_duty(int seq, int off) {
+    static const int duty_cycles[4][8] = {
+        {0, 0, 0, 0, 0, 0, 0, 1},
+        {0, 0, 0, 0, 0, 0, 1, 1},
+        {0, 0, 0, 0, 1, 1, 1, 1},
+        {1, 1, 1, 1, 1, 1, 0, 0}
+    };
+    return duty_cycles[seq][off];
+}
 
 typedef struct apu_pulse_channel APU_PulseChannel;
 typedef struct apu_triangle_channel APU_TriangleChannel;
@@ -42,31 +62,37 @@ typedef struct apu_sequencer APU_Sequencer;
 typedef struct apu_envelope APU_Envelope;
 typedef struct apu_sweeper APU_Sweeper;
 
+// Contrary to many of the other structures, the elements of the APU are
+// either not explicitly marked as being part of a register or if they are,
+// the register is of a bizarre bit-length. Therefore, as much as possible,
+// we use bools for flags and ints for counters regardless of the actual
+// bit length for simplicity. We could of course store these values in
+// "registers", but it would be a pointless refactor of the code that makes
+// it harder to read and understand.
 struct apu_sequencer {
-    uint16_t timer;
+    int timer;
+    // FIXME: CHANGE TO INT BUT I'M AFRAID SWEEPERS MAY BREAK
     uint16_t reload;
-    uint8_t output;
 };
 
 struct apu_envelope {
     bool start;
     bool disable;
-    uint16_t divider_count;
     bool constant_volume;
-    uint16_t volume;
-    uint16_t output;
-    uint16_t decay_count;
+    int volume;
+    int output;
+    int divider_count;
+    int decay_count;
 };
 
 struct apu_sweeper {
     bool enabled;
     bool down;
     bool reload;
-    uint8_t shift;
-    uint8_t timer;
-    uint8_t period;
-    uint16_t change;
     bool mute;
+    int shift;
+    int timer;
+    int period;
 };
 
 struct apu_pulse_channel {
@@ -95,32 +121,36 @@ struct apu_triangle_channel {
     float prev_sample;
 
     int index;
-    int length;
-    uint8_t freq;
+
+    bool halt;
+    uint8_t length;
 
     float volume;
 
-    bool halt;
     bool linear_counter_reload;
     bool control_flag;
 
-    uint16_t linear_counter;
-    uint16_t linear_counter_reload_value;
+    int linear_counter;
+    int linear_counter_reload_value;
 
     APU_Sequencer sequencer;
 };
 
 struct apu_noise_channel {
     bool enable;
-    float volume;
+
     bool halt;
     uint8_t length;
 
     float sample;
     float prev_sample;
 
+    float volume;
+
+    // FIXME: CHANGE TO INT BUT I'M AFRAID OF BREAKING THINGS
     uint16_t shift_register;
 
+    // FIXME: PROBABLY SHOULD BE A BOOL
     uint8_t mode;
 
     APU_Envelope envelope;
@@ -143,13 +173,13 @@ struct apu {
     uint64_t clock_count;
     uint64_t frame_clock_count;
 
+    // FIXME: MOVE TO THE EMULATOR
     float master_volume;
 };
 
 bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
 {
-    switch (addr)
-    {
+    switch (addr) {
     case 0x4000:
         apu->pulse1.duty_sequence = data >> 6;
 
@@ -177,7 +207,7 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->pulse1.sequencer.timer = apu->pulse1.sequencer.reload;
         // We do reset the duty index here since we are changing the frequency
         apu->pulse1.duty_index = 0;
-        apu->pulse1.length = length_table[data >> 3];
+        apu->pulse1.length = get_length(data >> 3);
         apu->pulse1.envelope.start = true;
         break;
 
@@ -201,7 +231,7 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->pulse2.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->pulse2.sequencer.reload & 0x00ff);
         apu->pulse2.sequencer.timer = apu->pulse2.sequencer.reload;
         apu->pulse2.duty_index = 0;
-        apu->pulse2.length = length_table[data >> 3];
+        apu->pulse2.length = get_length(data >> 3);
         apu->pulse2.envelope.start = true;
         break;
 
@@ -221,7 +251,7 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->triangle.sequencer.reload = (uint16_t)((data & 7)) << 8 | (apu->triangle.sequencer.reload & 0x00ff);
         apu->triangle.sequencer.timer = apu->triangle.sequencer.reload;
         apu->triangle.linear_counter_reload = true;
-        apu->triangle.length = length_table[data >> 3];
+        apu->triangle.length = get_length(data >> 3);
         // FIXME: NEED TO APPROPRIATELY SET THE LENGTH
         break;
 
@@ -233,7 +263,7 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
 
     case 0x400e:
         apu->noise.mode = data & 0x80;
-        apu->noise.sequencer.reload = noise_period_table[data & 0xf];
+        apu->noise.sequencer.reload = get_noise_period(data & 0xf);
         break;
 
     case 0x400f:
@@ -241,7 +271,7 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
     //    //apu->pulse1.envelope.start = true;
     //    //apu->pulse2.envelope.start = true;
        apu->noise.envelope.start = true;
-       apu->noise.length = length_table[data >> 3];
+       apu->noise.length = get_length(data >> 3);
        break;
 
     case 0x4015:
@@ -250,9 +280,6 @@ bool APU_Write(APU *apu, uint16_t addr, uint8_t data)
         apu->triangle.enable = data & 4;
         apu->noise.enable = data & 8;
 
-        // FIXME: MAYBE REMOVE THIS
-        // THIS APPEARS TO HAVE FIXED THE HANGOVER ISSUES
-        // IT MAY NOT WORK THE SAME FOR THE PULSE WAVES THO
         if (!apu->triangle.enable)
             apu->triangle.length = 0;
         if (!apu->pulse1.enable)
@@ -322,11 +349,11 @@ static void clock_pulse(APU_PulseChannel *pulse)
         && pulse->sequencer.reload > 7 && pulse->sequencer.reload < 0x7ff) {
         pulse->sequencer.timer--;
 
-        if (pulse->sequencer.timer == 0xffff) {
+        if (pulse->sequencer.timer < 0) {
             pulse->sequencer.timer = pulse->sequencer.reload;
             pulse->duty_index = (pulse->duty_index + 1) % 8;
 
-            pulse->sample = duty_cycles[pulse->duty_sequence][pulse->duty_index];
+            pulse->sample = get_duty(pulse->duty_sequence, pulse->duty_index);
             pulse->sample *= 1.0f/15.0f * pulse->envelope.output;
             pulse->prev_sample = pulse->sample;
         }
@@ -340,7 +367,7 @@ static void clock_noise(APU_NoiseChannel* pulse) {
     {
         pulse->sequencer.timer--;
 
-        if (pulse->sequencer.timer == 0xffff)
+        if (pulse->sequencer.timer < 0)
         {
             pulse->sequencer.timer = pulse->sequencer.reload;
 
@@ -363,39 +390,22 @@ static void clock_noise(APU_NoiseChannel* pulse) {
 
 static void clock_triangle(APU_TriangleChannel *triangle)
 {
-    if (triangle->linear_counter > 0 && triangle->length > 0)
-    {
+    if (triangle->linear_counter > 0 && triangle->length > 0 && triangle->enable
+        && triangle->sequencer.reload > 1) {
         // Clock the sequencer
-        if (triangle->enable && triangle->sequencer.reload > 1)
+        triangle->sequencer.timer--;
+        if (triangle->sequencer.timer < 0)
         {
-            triangle->sequencer.timer--;
-            if (triangle->sequencer.timer == 0xffff)
-            {
-                triangle->sequencer.timer = triangle->sequencer.reload;
-                triangle->index = (triangle->index + 1) % 32;
-                triangle->sequencer.output = amp_table[triangle->index];
-            }
-
-            triangle->sample = 1.0f/15.0f * triangle->sequencer.output;
+            triangle->sequencer.timer = triangle->sequencer.reload;
+            triangle->index = (triangle->index + 1) % 32;
+            int output = get_amp(triangle->index);
+            triangle->sample = 1.0f/15.0f * output;
             triangle->prev_sample = triangle->sample;
         }
-
-        else
-        {
-            triangle->sample = triangle->prev_sample;
-        }
-    }
-    else
-    {
+    } else {
         triangle->sample = triangle->prev_sample;
     }
 }
-
-// static void clock_length_counter(APU_LengthCounter* length_counter) {
-//     if (length_counter->enable && length_counter->length > 0) {
-//         length_counter->length--;
-//     }
-// }
 
 static void clock_envelope(APU_Envelope* envelope, bool halt) {
     if (!envelope->start) {
@@ -418,26 +428,20 @@ static void clock_envelope(APU_Envelope* envelope, bool halt) {
         envelope->divider_count = envelope->volume;
     }
 
-    if (envelope->constant_volume) {
+    if (envelope->constant_volume)
         envelope->output = envelope->volume;
-    } else {
+    else
         envelope->output = envelope->decay_count;
-    }
 }
 
 void APU_Clock(APU *apu)
 {
-    // FIXME: SOMETIMES THE STUFF DOESN'T SILENCE
-    // I THINK THIS IS BECAUSE WHEN YOU WRITE TO THE HALT IT ACTUALLY
-    // CLEARS THE LENGTH COUNTER AND IT DOESN'T BECOME NON-ZERO AGAIN
-    // UNTIL WRITTEN THIS IS ALMOST CERTAINLY THE CASE FOR TRIANGLE WAVE
     bool quarter_frame = false;
     bool half_frame = false;
 
     // APU although clocking each time with the PPU, runs at half the CPU
     // clock, which is 1/3 of the PPU clock
-    if (apu->clock_count % 6 == 0)
-    {
+    if (apu->clock_count % 6 == 0) {
         apu->frame_clock_count++;
 
         // 4-Step Sequence mode
@@ -447,78 +451,45 @@ void APU_Clock(APU *apu)
             quarter_frame = half_frame = true;
         if (apu->frame_clock_count == 11186)
             quarter_frame = true;
-        if (apu->frame_clock_count == 14916)
-        {
-            quarter_frame = true;
-            half_frame = true;
+        if (apu->frame_clock_count == 14916) {
+            quarter_frame = half_frame = true;
             apu->frame_clock_count = 0;
         }
 
         // TODO: IMPLEMENT 5-Step Sequence mode
-        if (quarter_frame)
-        {
-            // FIXME: THIS MAY BE AFFECTED BY THE HALT AND OUR HALT MAY
-            // ALSO BE REVERSED
-            // "beats" adjust the volume envelope
+
+        if (quarter_frame) {
+            // Clock envelopes and triangle channel linear counter
             if (apu->triangle.linear_counter_reload)
-            {
                 apu->triangle.linear_counter =
                     apu->triangle.linear_counter_reload_value;
-                // printf("happening\n");
-            }
             else if (apu->triangle.linear_counter > 0)
-            {
                 apu->triangle.linear_counter--;
-            }
 
             if (!apu->triangle.control_flag)
-            {
                 apu->triangle.linear_counter_reload = false;
-            }
 
             clock_envelope(&apu->pulse1.envelope, apu->pulse1.halt);
             clock_envelope(&apu->pulse2.envelope, apu->pulse2.halt);
             clock_envelope(&apu->noise.envelope, apu->noise.halt);
         }
 
-        if (half_frame)
-        {
-            // adjust note length and frequency sweepers
-            // TODO: PUT TRIANGLE LINEAR LENGTH AND LENGTH COUNTER
-            // HERE
-            // THEN ALL WE NEED TO DO IS CHECK IF BOTH LENGTHS ARE > 0
-            // AND THE CHANNEL IS ENABLED TO THEORETICALY GET THE RIGHT LENGTHS
-            // ALSO DON'T FORGET IN THE APU_WRITE TO SETUP THE PROPER
-            // RESET BEHAVIOR OF CERTAIN REGISTERS ON WRITE
-
-            // Clock triangle length counter
-            if (!apu->triangle.enable)
-                apu->triangle.length = 0;
-            else if (apu->triangle.length > 0 && !apu->triangle.halt)
+        if (half_frame) {
+            // Clock the length counters and frequency sweepers
+            if (apu->triangle.length > 0 && !apu->triangle.halt)
                 apu->triangle.length--;
-
-            if (!apu->pulse1.enable)
-                apu->pulse1.length = 0;
-            else if (apu->pulse1.length > 0 && !apu->pulse1.halt)
+            if (apu->pulse1.length > 0 && !apu->pulse1.halt)
                 apu->pulse1.length--;
-
-            if (!apu->pulse2.enable)
-                apu->pulse2.length = 0;
-            else if (apu->pulse2.length > 0 && !apu->pulse2.halt)
+            if (apu->pulse2.length > 0 && !apu->pulse2.halt)
                 apu->pulse2.length--;
-
-            if (!apu->noise.enable)
-                apu->noise.length = 0;
-            else if (apu->noise.length > 0 && !apu->noise.halt)
+            if (apu->noise.length > 0 && !apu->noise.halt)
                 apu->noise.length--;
 
             clock_sweeper(&apu->pulse1);
             clock_sweeper(&apu->pulse2);
         }
 
-        // FIXME: IT MAY BE THE CASE THAT THE PULSE WAVES SHOULD BE CLOCKED NO
-        // MATTER WHAT
-
+        // Clock the sequencers for non-triangle channels
         clock_pulse(&apu->pulse1);
         clock_pulse(&apu->pulse2);
         clock_noise(&apu->noise);

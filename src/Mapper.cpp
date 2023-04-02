@@ -15,6 +15,8 @@
  */
 #include "Mapper.h"
 
+#include <cstdlib>
+
 #include "mappers/Mapper000.h"
 #include "mappers/Mapper001.h"
 #include "mappers/Mapper002.h"
@@ -23,10 +25,8 @@
 #include "mappers/Mapper007.h"
 #include "mappers/Mapper066.h"
 
-#include "Util.h"
-
 Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
-    Mapper* mapper = (Mapper*)Util_SafeMalloc(sizeof(Mapper));
+    Mapper* mapper = (Mapper*)malloc(sizeof(Mapper));
     mapper->id = id;
 
     switch (id) {
@@ -58,7 +58,7 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
     }
 
     if (mapper->mapper_class == NULL) {
-        Util_SafeFree(mapper);
+        free(mapper);
         mapper = NULL;
     }
 
@@ -68,7 +68,7 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
 void Mapper_Destroy(Mapper* mapper) {
     if (mapper != NULL) {
         delete static_cast<MapperBase*>(mapper->mapper_class);
-        Util_SafeFree(mapper);
+        free(mapper);
     }
 }
 
