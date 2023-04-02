@@ -287,6 +287,8 @@ bool Emulator_LoadSettings(Emulator* emu, const char* path) {
 }
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
+    // FIXME: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
+    // YOU WILL BREAK, SO YOU HAVE TO CHANGE ONLY THE NEXT SYNC TYPE
     emu->settings.sync = EMULATOR_SYNC_VIDEO;
     emu->settings.next_sync = EMULATOR_SYNC_VIDEO;
     emu->settings.vsync = true;
