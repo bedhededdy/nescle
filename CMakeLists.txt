@@ -124,7 +124,7 @@ set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
 set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.c
       EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
-      DisassemblerWindow.cpp OAMWindow.cpp MixerWindow.cpp Util.c)
+      DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp MixerWindow.cpp Util.c)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper004.cpp Mapper007.cpp Mapper066.cpp)
 

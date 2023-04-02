@@ -46,6 +46,7 @@ public:
     bool show_oam = false;
     bool show_pattern = false;
     bool show_mixer = false;
+    bool show_options = false;
 
     // can access the window via an enumeration of their types
     enum WindowType {

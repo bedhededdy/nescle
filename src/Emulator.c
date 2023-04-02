@@ -277,12 +277,18 @@ bool Emulator_LoadSettings(Emulator* emu, const char* path) {
     if (file == NULL)
         return false;
     size_t read = fread(&emu->settings, sizeof(Emulator_Settings), 1, file);
+
+    // Since changes don't take effect on changing sync type on restart
+    // we must set sync to next_sync
+    emu->settings.sync = emu->settings.next_sync;
+
     fclose(file);
     return read == 1;
 }
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
     emu->settings.sync = EMULATOR_SYNC_VIDEO;
+    emu->settings.next_sync = EMULATOR_SYNC_VIDEO;
     emu->settings.vsync = true;
     emu->settings.p1_vol = 1.0f;
     emu->settings.p2_vol = 1.0f;

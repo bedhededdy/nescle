@@ -34,6 +34,7 @@ typedef enum emulator_sync_type {
 struct emulator_settings {
     // video
     Emulator_SyncType sync;
+    Emulator_SyncType next_sync;
     bool vsync;
 
     // audio

@@ -48,8 +48,10 @@
 #include "Emulator.h"
 #include "APU.h"
 #include "Bus.h"
+
 #include "MixerWindow.h"
 #include "PatternWindow.h"
+#include "SettingsWindow.h"
 
 // FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
 void EmulationWindow::render_main_gui(Emulator* emu) {
@@ -108,24 +110,23 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                          "EmulationWindow::Show(): Unable to create Debug menu");
         }
         if (ImGui::BeginMenu("Config")) {
-            if (ImGui::MenuItem("Toggle VSYNC")) {
-                emulator->settings.vsync = !emulator->settings.vsync;
-                SDL_Log("VSYNC: %s\n", emulator->settings.vsync ? "ON" : "OFF");
-
-                if (emulator->settings.vsync) {
-                    SDL_GL_SetSwapInterval(1);
-                } else {
-                    SDL_GL_SetSwapInterval(0);
-                }
+            if (ImGui::MenuItem("Options")) {
+                show_options = true;
             } else {
                 SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                             "EmulationWindow::Show(): Unable to create VSYNC menu item");
+                             "EmulationWindow::Show(): Unable to create options menu item");
             }
             if (ImGui::MenuItem("Open mixer")) {
                 show_mixer = true;
             } else {
                 SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                              "EmulationWindow::Show(): Unable to create mixer menu item");
+            }
+            if (ImGui::MenuItem("Reset defaults")) {
+                Emulator_SetDefaultSettings(emu);
+            } else {
+                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                             "EmulationWindow::Show(): Unable to create reset menu item");
             }
             ImGui::EndMenu();
         }
@@ -345,9 +346,14 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // IF ADAPTIVE SYNC FAILS THEN WE TRY THE OTHER OPTIONS
     // IT MAY BE POSSIBLE THAT ADAPTIVE SYNC KICKS IN WITHOUT ME TELLING IT
     // YOU CAN CHECK THIS BY SETTING THE GSYNC INDICATOR IN NVCP
+
+    // FIXME: BUG, SOMEHOW VSYNC IS GETTING DISABLED BEFORE WE GET HERE
+    // REGARDLESS OF THE SETTING
     if (emulator->settings.vsync) {
+        SDL_Log("Vsync enabled\n");
         SDL_GL_SetSwapInterval(1);
     } else {
+        SDL_Log("Vsync disabled\n");
         SDL_GL_SetSwapInterval(0);
     }
 
@@ -659,11 +665,6 @@ void EmulationWindow::Loop() {
         // SO PROBABLY THE BEST BET IS TO RELEASE AFTER DRAWING THE MAIN MENU
         // AND THEN HAVE EVERYONE LOCK, MEMCPY, AND UNLOCK AS THEY GO ALONG
 
-        // uint32_t frametime = (uint32_t)(SDL_GetTicks64() - t0);
-        // if (frametime < 16)
-        //     SDL_Delay(16 - frametime);
-        // else
-        //     SDL_Log("LONG FRAMETIME\n");
 
         // POLL APPROXIMATELY 120 TIMES A SECOND FOR EVENTS
         // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
@@ -675,8 +676,11 @@ void EmulationWindow::Loop() {
         // HOLDING  THE LOCK 100% OF THE TIME
         // SO YOU CAN GET AWAY WITH NO SLEEP ON A SYSTEM THAT HAS A
         // LOW RES CLOCK THAT WOULD END UP FUCKING US OVER
-        if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
+        // if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
+        if (emulator->settings.vsync == false)
             SDL_Delay(8);
+
+        // SDL_Log("frametime: %d\n", (uint32_t)(SDL_GetTicks64() - t0));
     }
 
     // Quit has been pressed so we must save our settings
@@ -763,6 +767,7 @@ void EmulationWindow::Show(Emulator* emu) {
     bool prev_showing_pattern = show_pattern;
     bool prev_showing_oam = show_oam;
     bool prev_showing_mixer = show_mixer;
+    bool prev_showing_options = show_options;
 
     // Show this in light
     ImGui::StyleColorsLight();
@@ -785,8 +790,10 @@ void EmulationWindow::Show(Emulator* emu) {
             new PatternWindow(main_shader, main_vao, &show_pattern);
     }
     if (!prev_showing_mixer && show_mixer) {
-        sub_windows[WindowType::MIXER] =
-            new MixerWindow(&show_mixer);
+        sub_windows[WindowType::MIXER] = new MixerWindow(&show_mixer);
+    }
+    if (!prev_showing_options && show_options) {
+        sub_windows[WindowType::SETTINGS] = new SettingsWindow(&show_options);
     }
 
     // iterate over the map to show each window that exists
@@ -815,6 +822,10 @@ void EmulationWindow::Show(Emulator* emu) {
     if (prev_showing_mixer && !show_mixer) {
         delete sub_windows[WindowType::MIXER];
         sub_windows[WindowType::MIXER] = nullptr;
+    }
+    if (prev_showing_options && !show_options) {
+        delete sub_windows[WindowType::SETTINGS];
+        sub_windows[WindowType::SETTINGS] = nullptr;
     }
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
