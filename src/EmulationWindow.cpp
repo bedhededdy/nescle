@@ -13,6 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: THERE IS A FOR SURE ISSUE GOING ON WITH CHANGING VSYNC AFTER BOOT
+
+// FIXME: THERE IS SOME MASSIVE BUG THAT RANDOMLY MAKES THIS RUN AS FAST
+// AS IT CAN AND IT ABSOLUTELY EATS CPU CYCLES
+// I THINK ITS A DISCREPANCY RELATED TO THE VSYNC BOOLEAN AND THE VSYNC
+// STATUS
+
+// FIXME: IT APPEARS THAT HAVING MULTIPLE WINDOWS OPEN FUCKS WITH THE VSYNC
+// AND COMPLETELY ELIMINATES THE TIMING
+// FIXME: NEVERMIND IT SEEMS LIKE THAT'A  BUG WITH RTSS
+
+// FIXME: SOMETHING IS FOR SURE WRONG WTIH THE WAY THINGS HAPPEN WITH
+// VSYNC ON
+// IT USES MUCH MORE CPU FOR NO REASON
+
+// FIXME: OK IT SOMETIMES IGNORES THE VSYNC BY GIVING 0 FRAMETIME EVEN WHEN
+// IT IS ENABLED
+// CLEARLY THE VSYNC IS NOT BLOCKING AND THAT IS WHY ISSUES ARE HAPPENING
+// SOMETIMES IT CHOOSES TO WAIT 16MS, OTHER TIMES IT DOESN'T
+
+// FIXME: OK IT WOULD APPEAR THAT SETTING SWAP INTERVAL TO 0 MAKES IT SYNC
+// BUT SETTING IT TO 1 MAKES IT NOT SYNC, WHICH IS THE COMPLETE WRONG WAY
+
+// IT APPEARS THE BUG ONLY GETS FIXED WHEN STARTING ON VIDEO WITH VSYNC ON
+// IF STARTED WITH VSYNC OFF IT ENVER GETS FIXED
+
+// AT THIS POINT BEHAVIOR SEEMS COMPLETELY NON-DETERMINISTIC
+
+// FIXME: VSYNC ONLY GETS ACTIVE WHEN THE SETTINGS WINDOW IS OPEN
+
 // FIXME: THIS DROPS INPUTS BECAUSE IF IT SEES START PRESSED TWICE WITHIN
 // 8MS, IT WILL NOT PAUSE AND UNPAUSE THE GAME
 // FIXME: ADD BACK THE SLEEPS
@@ -96,6 +126,18 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                          "EmulationWindow::Show(): Unable to create File menu");
         }
+        if (ImGui::BeginMenu("NES")) {
+           if (ImGui::MenuItem("Reset", "Ctrl+R")) {
+               Bus_Reset(bus);
+           }
+           if (ImGui::MenuItem("Play/Pause", "Ctrl+P")) {
+               emu->run_emulation = !emu->run_emulation;
+           }
+           ImGui::EndMenu();
+        } else {
+           SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                        "EmulationWindow::Show(): Unable to create NES menu");
+        }
         if (ImGui::BeginMenu("Debug")) {
             if (ImGui::MenuItem("Show Disassembler", "Ctrl+D"))
                 show_disassembler = true;
@@ -153,7 +195,11 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
         ImGui::Text("Unable to load ROM");
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            if (Cart_GetROMPath(bus->cart) != NULL)
+                emu->run_emulation = true;
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     } else {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -735,27 +781,23 @@ void EmulationWindow::Show(Emulator* emu) {
         // WE WOULD ADD 2 SAMPLES EVERY 3 FRAMES
         float stream[735];
         // this is way inaccurate, will desync fairly fast
-        // int16_t stream[330];
-        // emu->nes->apu->pulse1.volume = 1.0;
-        // emu->nes->apu->pulse2.volume = 1.0;
-        // emu->nes->apu->triangle.volume = 1.0;
-        // emu->nes->apu->noise.volume = 1.0;
 
-        APU_SetMasterVolume(emu->nes->apu, 0.5f);
-        for (size_t i = 0; i < sizeof(stream)/sizeof(float); i++) {
-            if (emu->run_emulation) {
-                // THERE IS A SORT OF FLAW IN REASONING HERE
-                // THIS REASONS THAT GETTING 735 SAMPLES A SECOND WILL AMOUNT
-                // TO EXACTLY 1 FRAME'S WORTH OF EMULATION
-                // THIS MAY NOT NECESSARILY HAPPEN THIS WAY
-                // YOU MAY HAVE TO HAVE A VARIABLE NUMBER OF SAMPLES AND USE
-                // A VECTOR TO DO THIS
-                Emulator_EmulateSample(emu);
-                stream[i] = bus->audio_sample;
-            } else {
-                stream[i] = 0;
-            }
-        }
+        // for (size_t i = 0; i < sizeof(stream)/sizeof(float); i++) {
+        //     if (emu->run_emulation) {
+        //         // THERE IS A SORT OF FLAW IN REASONING HERE
+        //         // THIS REASONS THAT GETTING 735 SAMPLES A SECOND WILL AMOUNT
+        //         // TO EXACTLY 1 FRAME'S WORTH OF EMULATION
+        //         // THIS MAY NOT NECESSARILY HAPPEN THIS WAY
+        //         // YOU MAY HAVE TO HAVE A VARIABLE NUMBER OF SAMPLES AND USE
+        //         // A VECTOR TO DO THIS
+        //         stream[i] = Emulator_EmulateSample(emu);
+        //     } else {
+        //         stream[i] = 0;
+        //     }
+        // }
+
+        Emulator_AudioCallback(emu, reinterpret_cast<uint8_t*>(stream),
+            sizeof(stream));
 
         if (SDL_QueueAudio(emu->audio_device, stream, sizeof(stream)) < 0)
             SDL_Log("SDL_QueueAudio failed: %s", SDL_GetError());

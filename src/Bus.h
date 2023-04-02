@@ -53,8 +53,7 @@ struct bus {
     Cart* cart;
     APU* apu;
 
-    // What is the current audio output
-    float audio_sample;
+    // Audio info
     double time_per_sample;
     double time_per_clock;
     double audio_time;

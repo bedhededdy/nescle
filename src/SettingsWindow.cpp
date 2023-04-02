@@ -51,15 +51,24 @@ void SettingsWindow::Show(Emulator* emu) {
         ImGui::End();
     }
 
-    if (show_popup)
+    if (show_popup) {
         ImGui::OpenPopup("Sync Changed");
+        emu->run_emulation = false;
+    }
 
     if (ImGui::BeginPopupModal("Sync Changed", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Sync type changed. Changes will take effect on restart.");
         ImGui::Separator();
 
         // FIXME: CENTER THE BUTTON
-        if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        // NOTE: THIS ISN'T FULLY CORRECT BECAUSE IT DOESN'T TAKE INTO
+        // ACCOUNT ITEM SPACING, FRAMEPADDING, ETC. BUT IT'S CLOSE ENOUGH
+        float x_space = ImGui::GetContentRegionAvail().x;
+        ImGui::SetCursorPosX(x_space / 2.0f - 60.0f);
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            emu->run_emulation = true;
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

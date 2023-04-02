@@ -27,22 +27,16 @@
 #include "Mapper.h"
 #include "Util.h"
 
-static void audio_callback(void* userdata, uint8_t* stream, int len) {
+void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len) {
     Emulator* emu = (Emulator*)userdata;
     float* streamF32 = (float*)stream;
 
-    // Force volume levels
-    // THIS AIN'T SAFE TO DO BEFORE THE LOCK, IDIOT
-    APU_SetMasterVolume(emu->nes->apu, 0.5f);
-
     SDL_LockMutex(emu->nes_state_lock);
-    for (size_t i = 0; i < len/sizeof(float); i++) {
-        if (emu->run_emulation) {
-            Emulator_EmulateSample(emu);
-            streamF32[i] = emu->nes->audio_sample;
-        } else {
-            streamF32[i] = 0;
-        }
+    for (size_t i = 0; i < (size_t)len/sizeof(float); i++) {
+        float sample = 0.0f;
+        if (emu->run_emulation)
+            sample = Emulator_EmulateSample(emu);
+        streamF32[i] = sample;
     }
     SDL_UnlockMutex(emu->nes_state_lock);
 }
@@ -59,6 +53,7 @@ Emulator* Emulator_Create(const char* settings_path) {
 
     if (!Emulator_LoadSettings(emu, "settings.bin")) {
         Emulator_SetDefaultSettings(emu);
+        emu->settings.sync = EMULATOR_SYNC_VIDEO;
         if (!Emulator_SaveSettings(emu, "settings.bin"))
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "Emulator_Create: Could not save settings");
@@ -76,7 +71,7 @@ Emulator* Emulator_Create(const char* settings_path) {
     desired_spec.samples = 512;
 
     if (emu->settings.sync == EMULATOR_SYNC_AUDIO) {
-        desired_spec.callback = &audio_callback;
+        desired_spec.callback = &Emulator_AudioCallback;
         desired_spec.userdata = emu;
     }
 
@@ -91,12 +86,6 @@ Emulator* Emulator_Create(const char* settings_path) {
 
     emu->quit = false;
     emu->run_emulation = false;
-
-    APU_SetMasterVolume(emu->nes->apu, 0.5f);
-    APU_SetNoiseVolume(emu->nes->apu, emu->settings.noise_vol);
-    APU_SetPulse1Volume(emu->nes->apu, emu->settings.p1_vol);
-    APU_SetPulse2Volume(emu->nes->apu, emu->settings.p2_vol);
-    APU_SetTriangleVolume(emu->nes->apu, emu->settings.tri_vol);
 
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);
@@ -287,25 +276,29 @@ bool Emulator_LoadSettings(Emulator* emu, const char* path) {
 }
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
-    // FIXME: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
+    // NOTE: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
     // YOU WILL BREAK, SO YOU HAVE TO CHANGE ONLY THE NEXT SYNC TYPE
-    emu->settings.sync = EMULATOR_SYNC_VIDEO;
+    // emu->settings.sync = EMULATOR_SYNC_VIDEO;
     emu->settings.next_sync = EMULATOR_SYNC_VIDEO;
     emu->settings.vsync = true;
     emu->settings.p1_vol = 1.0f;
     emu->settings.p2_vol = 1.0f;
     emu->settings.tri_vol = 1.0f;
     emu->settings.noise_vol = 0.75f;
+    emu->settings.master_vol = 0.5f;
 
     // emu->settings.sync = EMULATOR_SYNC_AUDIO;
     // emu->settings.vsync = false;
 }
 
-void Emulator_EmulateSample(Emulator* emu) {
+float Emulator_EmulateSample(Emulator* emu) {
     while (!Bus_Clock(emu->nes)) {
         if (emu->nes->ppu->frame_complete) {
             emu->nes->ppu->frame_complete = false;
 
+            // After we emulate a sample, we will check to see if a frame has been rendered
+            // if it has and we are pressing the turbo button, we will flip the state
+            // of the bit that corresponds to that turbo button
             if (emu->aturbo) {
                 if (emu->nes->controller1 & BUS_CONTROLLER_A)
                     emu->nes->controller1 &= ~BUS_CONTROLLER_A;
@@ -320,4 +313,12 @@ void Emulator_EmulateSample(Emulator* emu) {
             }
         }
     }
+
+    float p1 = APU_GetPulse1Sample(emu->nes->apu) * emu->settings.p1_vol;
+    float p2 = APU_GetPulse2Sample(emu->nes->apu) * emu->settings.p2_vol;
+    float tri = APU_GetTriangleSample(emu->nes->apu) * emu->settings.tri_vol;
+    float noise = APU_GetNoiseSample(emu->nes->apu) * emu->settings.noise_vol;
+
+    // FIXME: REPLACE WITH MASTER VOLUME MULTIPLIER
+    return 0.25f * (p1 + p2 + tri + noise) * emu->settings.master_vol;
 }

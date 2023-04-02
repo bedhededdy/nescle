@@ -56,8 +56,6 @@ Bus* Bus_CreateNES(void) {
     bus->apu = apu;
     APU_LinkBus(apu, bus);
 
-    bus->audio_sample = 0.0;
-
     return bus;
 }
 
@@ -237,8 +235,6 @@ bool Bus_Clock(Bus* bus) {
     // it may get less accurate over time due to floating point errors
     if (bus->audio_time >= bus->time_per_sample) {
         bus->audio_time -= bus->time_per_sample;
-        bus->audio_sample = APU_GetOutputSample(bus->apu);
-
         audio_ready = true;
     }
 
@@ -280,7 +276,6 @@ void Bus_PowerOn(Bus* bus) {
     bus->clocks_count = 0;
 
     bus->time_per_sample = 0.0;
-    bus->audio_sample = 0.0;
     bus->time_per_clock = 0.0;
     bus->audio_time = 0.0;
 }

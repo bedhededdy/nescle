@@ -42,6 +42,7 @@ struct emulator_settings {
     float p2_vol;
     float tri_vol;
     float noise_vol;
+    float master_vol;
 };
 
 // TODO: GET RID OF THE NES STATE LOCK
@@ -75,10 +76,8 @@ void Emulator_SetDefaultSettings(Emulator* emu);
 void Emulator_PowerOn(Emulator* emu);
 void Emulator_Reset(Emulator* emu);
 
-// After we emulate a sample, we will check to see if a frame has been rendered
-// if it has and we are pressing the turbo button, we will flip the state
-// of the bit that corresponds to that turbo button
-void Emulator_EmulateSample(Emulator* emu);
+float Emulator_EmulateSample(Emulator* emu);
+void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len);
 
 #ifdef __cplusplus
 }

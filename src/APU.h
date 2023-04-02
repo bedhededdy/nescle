@@ -37,25 +37,15 @@ bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
 void APU_Clock(APU* apu);
 void APU_Reset(APU* apu);
 
-float APU_GetOutputSample(APU* apu);
-
 bool APU_SaveState(APU* apu, FILE* file);
 bool APU_LoadState(APU* apu, FILE* file);
 
 void APU_LinkBus(APU* apu, Bus* bus);
 
-float APU_GetMasterVolume(APU* apu);
-float APU_GetPulse1Volume(APU* apu);
-float APU_GetPulse2Volume(APU* apu);
-float APU_GetTriangleVolume(APU* apu);
-float APU_GetNoiseVolume(APU* apu);
-
-void APU_SetMasterVolume(APU* apu, float vol);
-void APU_SetPulse1Volume(APU* apu, float vol);
-void APU_SetPulse2Volume(APU* apu, float vol);
-void APU_SetTriangleVolume(APU* apu, float vol);
-void APU_SetNoiseVolume(APU* apu, float vol);
-
+float APU_GetPulse1Sample(APU* apu);
+float APU_GetPulse2Sample(APU* apu);
+float APU_GetTriangleSample(APU* apu);
+float APU_GetNoiseSample(APU* apu);
 
 #ifdef __cplusplus
 }

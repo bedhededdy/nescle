@@ -542,20 +542,6 @@ void APU_Destroy(APU *apu) {
     Util_SafeFree(apu);
 }
 
-float APU_GetOutputSample(APU *apu) {
-    // TODO: SEE APU MIXER ARTICLE ON NESDEV
-
-    // For now, we will just trivially mix the channels
-    // We have 4 channels, meaning each one is potentially allowed to
-    // take up 1/4 of the output sample
-    float p1 = apu->pulse1.sample * apu->pulse1.volume;
-    float p2 = apu->pulse2.sample * apu->pulse2.volume;
-    float tri = apu->triangle.sample * apu->triangle.volume;
-    float noise = apu->noise.sample * apu->noise.volume;
-
-    return 0.25f * (p1 + p2 + tri + noise) * apu->master_volume;
-}
-
 bool APU_SaveState(APU* apu, FILE* file) {
     return fwrite(apu, sizeof(APU), 1, file) == 1;
 }
@@ -580,42 +566,18 @@ void APU_LinkBus(APU *apu, Bus *bus) {
     apu->bus = bus;
 }
 
-void APU_SetMasterVolume(APU *apu, float volume) {
-    apu->master_volume = volume;
+float APU_GetPulse1Sample(APU* apu) {
+    return apu->pulse1.sample;
 }
 
-void APU_SetPulse1Volume(APU *apu, float volume) {
-    apu->pulse1.volume = volume;
+float APU_GetPulse2Sample(APU* apu) {
+    return apu->pulse2.sample;
 }
 
-void APU_SetPulse2Volume(APU *apu, float volume) {
-    apu->pulse2.volume = volume;
+float APU_GetTriangleSample(APU* apu) {
+    return apu->triangle.sample;
 }
 
-void APU_SetTriangleVolume(APU *apu, float volume) {
-    apu->triangle.volume = volume;
-}
-
-void APU_SetNoiseVolume(APU *apu, float volume) {
-    apu->noise.volume = volume;
-}
-
-float APU_GetMasterVolume(APU* apu) {
-    return apu->master_volume;
-}
-
-float APU_GetPulse1Volume(APU* apu) {
-    return apu->pulse1.volume;
-}
-
-float APU_GetPulse2Volume(APU* apu) {
-    return apu->pulse2.volume;
-}
-
-float APU_GetTriangleVolume(APU* apu) {
-    return apu->triangle.volume;
-}
-
-float APU_GetNoiseVolume(APU* apu) {
-    return apu->noise.volume;
+float APU_GetNoiseSample(APU* apu) {
+    return apu->noise.sample;
 }
