@@ -34,6 +34,87 @@
 #include "Mapper.h"
 #include "Util.h"
 
+// Sprite (OAM) information container
+struct ppu_oam {
+    uint8_t y;
+    uint8_t tile_id;
+    uint8_t attributes;
+    uint8_t x;
+};
+
+struct ppu {
+    Bus* bus;
+
+    // Current screen and last complete frame
+    // We represent them as 1D arrays instead of 2D, because
+    // when we want to copy the frame buffer to an SDL_Texture
+    // it expects the pixels as linear arrays
+    uint32_t screen[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
+    uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
+
+    uint8_t nametbl[2][PPU_NAMETBL_SIZE];   // nes supported 2, 1kb nametables
+    // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
+    //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
+    uint8_t palette[PPU_PALETTE_SIZE];     // color palette information
+
+    // Sprite internal info
+    PPU_OAM oam[64];
+    // For accessing OAM as a sequence of bytes
+    uint8_t* oam_ptr;
+
+    uint8_t oam_addr;
+
+    // Sprite rendering info
+    PPU_OAM spr_scanline[PPU_SPR_PER_LINE];
+    int spr_count;
+    // Shifters for each sprite in the row
+    uint8_t spr_shifter_pattern_lo[PPU_SPR_PER_LINE];
+    uint8_t spr_shifter_pattern_hi[PPU_SPR_PER_LINE];
+
+    // Sprite 0
+    bool spr0_can_hit;
+    bool spr0_rendering;
+
+    // 8x8px per tile x 256 tiles per half
+    // representation of the pattern table as rgb values
+    uint32_t sprpatterntbl[2][PPU_TILE_X * PPU_TILE_NBYTES][PPU_TILE_Y * PPU_TILE_NBYTES];
+
+    int scanline;   // which row of the screen we are on
+    int cycle;      // what col of the screen we are on (1 pixel per cycle)
+
+    // Registers
+    uint8_t status;
+    uint8_t mask;
+    uint8_t control;
+
+    // Loopy registers
+    uint16_t vram_addr;
+    uint16_t tram_addr;
+
+    uint8_t fine_x;
+
+    uint8_t addr_latch;     // indicates whether I'm writing the lo or hi byte of the address
+    uint8_t data_buffer;    // r/w buffer, since most r/w is delayed by a cycle
+
+    // Background rendering
+    uint8_t bg_next_tile_id;
+    uint8_t bg_next_tile_attr;
+    uint8_t bg_next_tile_lsb;
+    uint8_t bg_next_tile_msb;
+
+    // Used for pixel offset into palette based on tile_id
+    uint16_t bg_shifter_pattern_lo;
+    uint16_t bg_shifter_pattern_hi;
+
+    // Used to determine palette based on tile_attr (palette used for 8 pixels in a row,
+    // so we pad these out to work like the other shifters)
+    uint16_t bg_shifter_attr_lo;
+    uint16_t bg_shifter_attr_hi;
+
+    bool frame_complete;
+    bool nmi;
+};
+
 /* Helper Functions */
 static uint8_t flip_bits(uint8_t x) {
     // The trivial algorithm is to say if the ith position is set,
@@ -292,7 +373,7 @@ static uint32_t map_color(int idx) {
     return color_map[idx];
 }
 
-void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
+uint32_t* PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
     int x = 0;
     int y = 0;
     for (int tile = 0; tile < 256; tile++) {
@@ -303,6 +384,9 @@ void PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
             y += 8;
         }
     }
+
+    // matrix will be interpreted as a linear array
+    return (uint32_t*)ppu->sprpatterntbl[idx];
 }
 
 uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
@@ -1265,4 +1349,32 @@ bool PPU_LoadState(PPU* ppu, FILE* file) {
     ppu->bus = bus;
     ppu->oam_ptr = (uint8_t*)ppu->oam;
     return true;
+}
+
+void PPU_LinkBus(PPU* ppu, Bus* bus) {
+    ppu->bus = bus;
+}
+
+bool PPU_GetNMIStatus(PPU* ppu) {
+    return ppu->nmi;
+}
+
+void PPU_ClearNMIStatus(PPU* ppu) {
+    ppu->nmi = false;
+}
+
+void PPU_WriteOAM(PPU* ppu, uint8_t addr, uint8_t data) {
+    ppu->oam_ptr[addr] = data;
+}
+
+bool PPU_GetFrameComplete(PPU* ppu) {
+    return ppu->frame_complete;
+}
+
+void PPU_ClearFrameComplete(PPU* ppu) {
+    ppu->frame_complete = false;
+}
+
+uint32_t* PPU_GetFramebuffer(PPU* ppu) {
+    return ppu->frame_buffer;
 }

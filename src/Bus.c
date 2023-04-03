@@ -50,7 +50,7 @@ Bus* Bus_CreateNES(void) {
     bus->cpu = cpu;
     CPU_LinkBus(cpu, bus);
     bus->ppu = ppu;
-    ppu->bus = bus;
+    PPU_LinkBus(ppu, bus);
     bus->cart = cart;
 
     bus->apu = apu;
@@ -212,7 +212,9 @@ bool Bus_Clock(Bus* bus) {
                 else {
                     // DMA transfers 256 bytes to the OAM at once,
                     // so we auto-increment the address
-                    bus->ppu->oam_ptr[bus->dma_addr++] = bus->dma_data;
+                    // TODO: TRY PUTTING THE ++ IN THE FUNC CALL
+                    PPU_WriteOAM(bus->ppu, bus->dma_addr, bus->dma_data);
+                    bus->dma_addr++;
 
                     // If we overflow, we know that the transfer is done
                     if (bus->dma_addr == 0) {
@@ -241,8 +243,8 @@ bool Bus_Clock(Bus* bus) {
 
     // PPU can optionally emit a NMI to the CPU upon entering the vertical
     // blank state
-    if (bus->ppu->nmi) {
-        bus->ppu->nmi = false;
+    if (PPU_GetNMIStatus(bus->ppu)) {
+        PPU_ClearNMIStatus(bus->ppu);
         CPU_NMI(bus->cpu);
     }
 

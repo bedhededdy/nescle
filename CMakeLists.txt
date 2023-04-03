@@ -124,7 +124,8 @@ set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
 set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.c
       EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
-      DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp MixerWindow.cpp Util.c)
+      DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
+      MixerWindow.cpp Util.c NESCLENotification.cpp)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper004.cpp Mapper007.cpp Mapper066.cpp)
 
@@ -155,8 +156,9 @@ if (mycc STREQUAL COMPILER_CLANGCL)
    target_compile_options(nescle PRIVATE -Wall
    -Wextra -Wpedantic -Wimplicit
    -Wshadow -Wimplicit-function-declaration
-   -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference
+   -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2
+   -Wwrite-strings -Wnull-dereference -Wformat-security
+   -Wcstring-format-directive
 
    -Wno-unused-parameter)
 
@@ -169,7 +171,8 @@ elseif(mycc STREQUAL COMPILER_GNU)
    -Wextra -Wpedantic -Wimplicit
    -Wshadow -Wimplicit-function-declaration
    -Wnarrowing -Wdeprecated-declarations -Wcast-qual -Wformat=2 -Wformat-signedness
-   -Wwrite-strings -Wnull-dereference
+   -Wwrite-strings -Wnull-dereference -Wformat-overflow -Wformat-security
+   -Wcstring-format-directive
 
    -Wno-unused-parameter)
 else()

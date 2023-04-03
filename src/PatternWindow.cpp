@@ -86,17 +86,17 @@ void PatternWindow::Show(Emulator* emu) {
     // HOWEVER, IF YOU EVENTUALLY ALLOW WRITES TO THE PATTERN MEMORY FROM A
     // TILE EDITOR, YOU GOTTA LOCK HERE
     // FIXME: ALLOW CHANGING PALETTE
-    PPU_GetPatternTable(bus->ppu, 0, (uint8_t)palette);
-    PPU_GetPatternTable(bus->ppu, 1, (uint8_t)palette);
+    uint32_t* tbl1 = PPU_GetPatternTable(bus->ppu, 0, (uint8_t)palette);
+    uint32_t* tbl2 = PPU_GetPatternTable(bus->ppu, 1, (uint8_t)palette);
 
     // to do this showing the palettes basically make the 1 texture bigger
     // then draw the palette colors, then the pattern table and change the
     // coordinates given to subimage
 
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128,
-       GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[0]);
+       GL_BGRA, GL_UNSIGNED_BYTE, tbl1);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 128, 0, 128, 128,
-        GL_BGRA, GL_UNSIGNED_BYTE, &bus->ppu->sprpatterntbl[1]);
+        GL_BGRA, GL_UNSIGNED_BYTE, tbl2);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);

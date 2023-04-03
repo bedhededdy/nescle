@@ -296,8 +296,8 @@ void Emulator_SetDefaultSettings(Emulator* emu) {
 
 float Emulator_EmulateSample(Emulator* emu) {
     while (!Bus_Clock(emu->nes)) {
-        if (emu->nes->ppu->frame_complete) {
-            emu->nes->ppu->frame_complete = false;
+        if (PPU_GetFrameComplete(emu->nes->ppu)) {
+            PPU_ClearFrameComplete(emu->nes->ppu);
 
             // After we emulate a sample, we will check to see if a frame has been rendered
             // if it has and we are pressing the turbo button, we will flip the state

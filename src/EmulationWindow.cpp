@@ -13,6 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: SYNCING TO VIDEO WITH MULTIPLE WINDOWS OPEN CAN LEAD TO IT TAKING
+// TOO MUCH TIME AND ENDING UP DROPPING AUDIO SAMPLES
+// THIS DOES NOT HAPPEN WHEN SYNCING TO AUDIO, SO THE REASON FOR THIS IS UNCLEAR
+// TURNING OFF VSYNC WHEN SYNCING TO VIDEO CAN ALSO CAUSE THIS
+// THE ISSUE MAY BE FIXABLE BY THE CIRCULAR BUFFER APPROACH, BUT I THINK
+// THIS IS JUST A CASE OF PURE STARVATION
+// IT APPEARS TO ME THAT WITH VSYNC OFF ON RELEASE MODE I GET FRAMETIMES OF
+// ABOUT 12MS, CONSIDERING THAT I SLEEP FOR 8MS THAT MEANS IT TAKES ABT 4MS
+// TO RENDER WITHOUT EMULATING
+// WITH EMULATING, I CAN GET FRAMETIMES THAT EXCEED 18MS, WHICH LEADS TO THE
+// STARVATION
+
 // FIXME: THERE IS A FOR SURE ISSUE GOING ON WITH CHANGING VSYNC AFTER BOOT
 
 // FIXME: THERE IS SOME MASSIVE BUG THAT RANDOMLY MAKES THIS RUN AS FAST
@@ -95,17 +107,20 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
                 nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
                 nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
 
+                bool cancelled = false;
+
                 if (result == NFD_OKAY) {
                 } else if (result == NFD_CANCEL) {
                     rom = NULL;
+                    cancelled = true;
                 } else {
                     rom = NULL;
                     SDL_Log("Error opening file: %s\n", NFD_GetError());
                 }
 
                 if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
-                    emu->run_emulation = false;
-                    show_popup = true;
+                    emu->run_emulation = cancelled;
+                    show_popup = !cancelled;
                 } else {
                     emu->run_emulation = true;
                     Bus_Reset(bus);
@@ -447,6 +462,8 @@ void EmulationWindow::Loop() {
         bool opressed = false;
         bool spressed = false;
         bool lpressed = false;
+        bool rpressed = false;
+        bool ppressed = false;
 
         // TODO: SHOULD ONLY CALL THIS ONCE AT THE BEGINNING OF THE APP
         // AND STORE IT SO WE DON'T HAVE TO CONTINUOUSLY DO IT
@@ -477,20 +494,21 @@ void EmulationWindow::Loop() {
                     //    Bus_Clock(bus);
                     break;
                 case SDLK_r:
-                    Bus_Reset(bus);
+                    rpressed = true;
+                    // Bus_Reset(bus);
                     break;
                 case SDLK_f:
                     // FIXME: may wanna do a do while
-                    while (!ppu->frame_complete)
+                    while (!PPU_GetFrameComplete(ppu))
                         Bus_Clock(bus);
-                    ppu->frame_complete = false;
+                    PPU_ClearFrameComplete(ppu);
                     break;
                 case SDLK_p:
-                    IncrementPalette();
+                    // IncrementPalette();
+                    ppressed = true;
                     break;
-                case SDLK_SPACE:
-                    // FIXME: THIS SHOULD HAVE A LOCK ON IT/BE ATOMIC
-                    emulator->run_emulation = !emulator->run_emulation;
+                case SDLK_y:
+                    IncrementPalette();
                     break;
                 case SDLK_o:
                     opressed = true;
@@ -550,16 +568,19 @@ void EmulationWindow::Loop() {
                 nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
                 nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
 
+                bool cancelled = false;
+
                 if (result == NFD_OKAY) {
                 } else if (result == NFD_CANCEL) {
                     rom = NULL;
+                    cancelled = true;
                 } else {
                     rom = NULL;
                     SDL_Log("Error opening file: %s\n", NFD_GetError());
                 }
 
                 if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
-                    emu->run_emulation = false;
+                    emu->run_emulation = cancelled;
                     // FIXEME: AVOID SHOWING THIS FOR NOW BUT FIX LATER
                     // show_popup = true;
                 } else {
@@ -574,6 +595,10 @@ void EmulationWindow::Loop() {
                 Emulator_LoadState(emu, NULL);
             } else if (spressed) {
                 Emulator_SaveState(emu, NULL);
+            } else if (ppressed) {
+                emu->run_emulation = !emu->run_emulation;
+            } else if (rpressed) {
+                Bus_Reset(bus);
             }
 
         } else {
@@ -899,7 +924,7 @@ void EmulationWindow::Show(Emulator* emu) {
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
     uint32_t* ppu_framebuffer = new uint32_t[PPU_RESOLUTION_X * PPU_RESOLUTION_Y];
-    memcpy(ppu_framebuffer, bus->ppu->frame_buffer, PPU_RESOLUTION_X * PPU_RESOLUTION_Y * sizeof(uint32_t));
+    memcpy(ppu_framebuffer, PPU_GetFramebuffer(bus->ppu), PPU_RESOLUTION_X * PPU_RESOLUTION_Y * sizeof(uint32_t));
 
     // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
     // should 0 out the first 8 pixels of each scanline
