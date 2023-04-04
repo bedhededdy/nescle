@@ -13,6 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: YEAH SO MULTIPLE WINDOWS AND VERTICAL SYNC DON'T MIX
+// SO EVEN THOUGH MY MAIN WINDOW DISABLES THE SYNC, THAT DOESN'T APPLY TO
+// THE OTHER WINDOWS WHICH IS A MASSIVE PROBLEM
+
+// FIXME: DISABLING FRAMERATE CAP IN NVCP RESOLVES THE ISSUE
+
+// FIXME: MAYBE NEED MULTIPLE GL CONTEXTS, BECAUSE AS IT STANDS IT WOULD APPEAR
+// THAT HAVING MULTIPLE WINDOWS OPEN MAKES REALTIME EMULATION IMPOSSIBLE
+
+// FIXME: PERFORMANCE BUG IS ALLEVIATED BY TURNING OFF MULTIVIEWPORTS
+
+// FIXME: ISSUE IS NOT REALLY AN ISSUE IN AUDIO SYNC MODE, SINCE THERE
+// THE EMULATION RUNS ON ITS OWN THREAD
+
+// FIXME: PERFORMANCE BUG IS COMPLETELY CAUSED BY RUNNING TOO MANY WINDOWS AT
+// THE SAME TIME. I CAN GET FRAMETIMES OF UP TO 10MS WITH NO DELAYS WITH
+// ONLY A FEW WINDOWS OPEN AND NO EMULATION RUNNING
+
+// FIXME: VSYNC SWITCHING DURING RUNNING SEEMS BUGGED OUT (OFF TO ON WORKS
+// BUT ON TO OFF DOESN'T)
+
 // FIXME: SYNCING TO VIDEO WITH MULTIPLE WINDOWS OPEN CAN LEAD TO IT TAKING
 // TOO MUCH TIME AND ENDING UP DROPPING AUDIO SAMPLES
 // THIS DOES NOT HAPPEN WHEN SYNCING TO AUDIO, SO THE REASON FOR THIS IS UNCLEAR
@@ -71,6 +92,11 @@
 // FOR INSTANCE IF LOADING A ROM, THERE SHOULD BE AN EMULATOR FUNCTION THAT
 // WRAPS CART_LOADROM AND THEN CALLS BUS_RESET INSTEAD OF THIS DIRECTLY
 // INTERFACING WITH THE CART
+
+// FIXME: BEST WAY TO DO EVERYTHING IS TO HAVE THE EMULATOR STORE A COPY
+// OF THE BUTTONS PRESSED THIS FRAME AND THEN EACH WINDOW CAN HANDLE ITS
+// OWN INPUTS IN THAT WAY, SINCE IT WILL BE ABLE TO CHECK WHETHER TO DO
+// SOMETHING BASED ON IF IT HAS THE FOCUS
 #include "EmulationWindow.h"
 
 #include <glad/glad.h>
@@ -78,135 +104,81 @@
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
+// #include <imgui_internal.h>
 
 #include <nfd.h>
 
 #include <SDL.h>
 
-#include "CPU.h"
-#include "PPU.h"
-#include "Cart.h"
-#include "Mapper.h"
-#include "Emulator.h"
 #include "APU.h"
 #include "Bus.h"
+#include "CPU.h"
+#include "Cart.h"
+#include "Emulator.h"
+#include "Mapper.h"
+#include "PPU.h"
 
+#include "ControllerWindow.h"
 #include "MixerWindow.h"
 #include "PatternWindow.h"
 #include "SettingsWindow.h"
 
-// FIXME: WILL REQUIRE AN EMULATOR INSTEAD OF A BUS
-void EmulationWindow::render_main_gui(Emulator* emu) {
+void EmulationWindow::RenderMainGUI(Emulator* emu) {
+    // ImGui::Shortcut()
     Bus* bus = emu->nes;
 
     bool show_popup = false;
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open ROM", "Ctrl+O")) {
-                nfdchar_t *rom;
-                nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
-                nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
-
-                bool cancelled = false;
-
-                if (result == NFD_OKAY) {
-                } else if (result == NFD_CANCEL) {
-                    rom = NULL;
-                    cancelled = true;
-                } else {
-                    rom = NULL;
-                    SDL_Log("Error opening file: %s\n", NFD_GetError());
-                }
-
-                if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
-                    emu->run_emulation = cancelled;
-                    show_popup = !cancelled;
-                } else {
-                    emu->run_emulation = true;
-                    Bus_Reset(bus);
-                }
-
-                if (rom != NULL)
-                    NFD_FreePath(rom);
+                nfdresult_t res = Emulator_LoadROM(emu);
+                show_popup = res == NFD_ERROR;
             }
-            if (ImGui::MenuItem("Save state", "Ctrl+S")) {
+            if (ImGui::MenuItem("Save state", "Ctrl+S"))
                 Emulator_SaveState(emu, NULL);
-            }
-            if (ImGui::MenuItem("Load state", "Ctrl+L")) {
+            if (ImGui::MenuItem("Load state", "Ctrl+L"))
                 Emulator_LoadState(emu, NULL);
-            }
+
             ImGui::EndMenu();
-        }
-        else {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                         "EmulationWindow::Show(): Unable to create File menu");
         }
         if (ImGui::BeginMenu("NES")) {
-           if (ImGui::MenuItem("Reset", "Ctrl+R")) {
+           if (ImGui::MenuItem("Reset", "Ctrl+R"))
                Bus_Reset(bus);
-           }
-           if (ImGui::MenuItem("Play/Pause", "Ctrl+P")) {
+           if (ImGui::MenuItem("Play/Pause", "Ctrl+P"))
                emu->run_emulation = !emu->run_emulation;
-           }
+
            ImGui::EndMenu();
-        } else {
-           SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                        "EmulationWindow::Show(): Unable to create NES menu");
         }
         if (ImGui::BeginMenu("Debug")) {
-            if (ImGui::MenuItem("Show Disassembler", "Ctrl+D"))
-                show_disassembler = true;
-            if (ImGui::MenuItem("Show Pattern Mem", "Ctrl+P"))
-                show_pattern = true;
-            if (ImGui::MenuItem("Show OAM"))
-                show_oam = true;
+            ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler);
+            ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern);
+            ImGui::MenuItem("Show OAM", nullptr, &show_oam);
+            ImGui::MenuItem("Show Frametime", "Ctrl+F", &show_frametime);
+
             ImGui::EndMenu();
-        }
-        else {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                         "EmulationWindow::Show(): Unable to create Debug menu");
         }
         if (ImGui::BeginMenu("Config")) {
-            if (ImGui::MenuItem("Options")) {
+            if (ImGui::MenuItem("Options"))
                 show_options = true;
-            } else {
-                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                             "EmulationWindow::Show(): Unable to create options menu item");
-            }
-            if (ImGui::MenuItem("Open mixer")) {
+            if (ImGui::MenuItem("Open mixer"))
                 show_mixer = true;
-            } else {
-                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                             "EmulationWindow::Show(): Unable to create mixer menu item");
-            }
-            if (ImGui::MenuItem("Reset defaults")) {
+            if (ImGui::MenuItem("Edit controls"))
+                show_controller = true;
+            if (ImGui::MenuItem("Reset defaults"))
                 Emulator_SetDefaultSettings(emu);
-            } else {
-                SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                             "EmulationWindow::Show(): Unable to create reset menu item");
-            }
+
             ImGui::EndMenu();
         }
-        else {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                         "EmulationWindow::Show(): Unable to create Config menu");
-        }
+
         ImGui::EndMainMenuBar();
-    }
-    else
-    {
+    } else {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                      "EmulationWindow::Show(): unable to create MainMenuBar");
     }
 
-    if (show_popup) {
-        SDL_Log("showing popup\n");
+    if (show_popup)
         ImGui::OpenPopup("Error");
-    }
-    // FIXME: THIS DOESN'T SHOW UP
-    // MAYBE HAVE TO JUST SET A FLAG AND THEN SHOW IT OUTSIDE OF THE MENU CREATION
-    if (ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-    {
+    if (ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Unable to load ROM");
         ImGui::Separator();
 
@@ -216,13 +188,10 @@ void EmulationWindow::render_main_gui(Emulator* emu) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
-    } else {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                     "EmulationWindow::Show(): Unable to create Error popup");
     }
 }
 
-void EmulationWindow::set_gl_options() {
+void EmulationWindow::SetGLOptions() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -230,14 +199,14 @@ void EmulationWindow::set_gl_options() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 }
 
-void EmulationWindow::render_disassembler() {
+void EmulationWindow::RenderDisassembler() {
     // TODO: LOCK AND RELEASE
     ImGui::Begin("Disassembler", &show_disassembler);
     ImGui::Text("This is the disassembler");
     ImGui::End();
 }
 
-void EmulationWindow::render_oam() {
+void EmulationWindow::RenderOAM() {
     // TODO: LOCK AND RELEASE
     ImGui::Begin("OAM", &show_oam);
     ImGui::Text("This is the OAM");
@@ -250,7 +219,7 @@ void EmulationWindow::IncrementPalette() {
             ->IncrementPalette();
 }
 
-void EmulationWindow::setup_main_frame() {
+void EmulationWindow::SetupMainFrame() {
     glGenTextures(1, &main_texture);
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
@@ -359,13 +328,11 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
-    // FIXME: FOR WHATEVER REASON THIS LINE BREAKS IMGUI
-    // Set logging level based on debug mode
-    // #ifdef _DEBUG
-    //    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
-    // #else
-    //    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-    // #endif
+    #ifdef _DEBUG
+       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+    #else
+       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+    #endif
 
     // TODO: CHANGE SDL LOGGING FUNCTION TO A CUSTOM FUNCTION
 
@@ -393,7 +360,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL |
         SDL_WINDOW_ALLOW_HIGHDPI);
 
-    set_gl_options();
+    SetGLOptions();
     gl_context = SDL_GL_CreateContext(window);
     gladLoadGLLoader(SDL_GL_GetProcAddress);
 
@@ -447,7 +414,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     const char* glsl_version = "#version 130";
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    setup_main_frame();
+    SetupMainFrame();
 }
 
 void EmulationWindow::Loop() {
@@ -464,15 +431,6 @@ void EmulationWindow::Loop() {
         bool lpressed = false;
         bool rpressed = false;
         bool ppressed = false;
-
-        // TODO: SHOULD ONLY CALL THIS ONCE AT THE BEGINNING OF THE APP
-        // AND STORE IT SO WE DON'T HAVE TO CONTINUOUSLY DO IT
-        int numkeys;
-        SDL_GetKeyboardState(&numkeys);
-
-        // TODO: THIS SHOULD BE STORED BY THE EMULATORWINDOW AND BE ON THE HEAP
-        // C++ DOESN'T ALLOW VARIABLE SIZED ARRAYS ????
-        // uint8_t keys[numkeys] = {0};
 
         SDL_LockMutex(emulator->nes_state_lock);
         while (SDL_PollEvent(&event)) {
@@ -532,6 +490,18 @@ void EmulationWindow::Loop() {
                     if (event.window.windowID == GetWindowID())
                         emulator->quit = true;
                     break;
+                case SDL_WINDOWEVENT_FOCUS_LOST:
+                    // FIXME: WOULD NEED TO CHECK IF RUN EMULATION WAS
+                    // SILENCED BY THIS OR NOT
+                    // ALSO WOULD NEED TO CHECK THE WINDOW ID THAT IT IS
+                    // THE MAIN WINDOW
+                    // CUZ IF IT WAS WE SHOULD RESUME ON FOCUS_GAINED
+                    // emulator->run_emulation = false;
+                    break;
+                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                    // if (focus_lost_triggered && cart is inserted)
+                    //    emulator->run_emulation = true;
+                    break;
                 }
                 break;
 
@@ -554,6 +524,7 @@ void EmulationWindow::Loop() {
         uint8_t prev_controller1 = bus->controller1;
         bus->controller1 = 0;
         const uint8_t* keyboard_state = SDL_GetKeyboardState(NULL);
+        emu->keys = keyboard_state;
 
         bool ctrl = keyboard_state[SDL_SCANCODE_LCTRL]
             || keyboard_state[SDL_SCANCODE_RCTRL];
@@ -564,32 +535,8 @@ void EmulationWindow::Loop() {
         if (ctrl) {
             // only process one of these if multiple are pressed
             if (opressed) {
-                nfdchar_t *rom;
-                nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
-                nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
-
-                bool cancelled = false;
-
-                if (result == NFD_OKAY) {
-                } else if (result == NFD_CANCEL) {
-                    rom = NULL;
-                    cancelled = true;
-                } else {
-                    rom = NULL;
-                    SDL_Log("Error opening file: %s\n", NFD_GetError());
-                }
-
-                if (!Cart_LoadROM(bus->cart, static_cast<const char*>(rom))) {
-                    emu->run_emulation = cancelled;
-                    // FIXEME: AVOID SHOWING THIS FOR NOW BUT FIX LATER
-                    // show_popup = true;
-                } else {
-                    emu->run_emulation = true;
-                    Bus_Reset(bus);
-                }
-
-                if (rom != NULL)
-                    NFD_FreePath(rom);
+                Emulator_LoadROM(emu);
+                // TODO: SHOW POPUP
             }
             else if (lpressed) {
                 Emulator_LoadState(emu, NULL);
@@ -607,26 +554,72 @@ void EmulationWindow::Loop() {
             // WE WOULD NEED TO DO IT WITH THE EVENT LOOP THAT FIXES THIS
             // AND THE TURBOS WE WOULD HAVE A BOOL FOR WHICH WOULD
             // TOGGLE THE BIT ON EACH FRAME
-            if (emu->aturbo)
-                bus->controller1 |= prev_controller1 & BUS_CONTROLLER_A;
-            if (emu->bturbo)
-                bus->controller1 |= prev_controller1 & BUS_CONTROLLER_B;
-            if (keyboard_state[SDL_SCANCODE_W])
-                bus->controller1 |= BUS_CONTROLLER_UP;
-            if (keyboard_state[SDL_SCANCODE_A])
-                bus->controller1 |= BUS_CONTROLLER_LEFT;
-            if (keyboard_state[SDL_SCANCODE_S])
-                bus->controller1 |= BUS_CONTROLLER_DOWN;
-            if (keyboard_state[SDL_SCANCODE_D])
-                bus->controller1 |= BUS_CONTROLLER_RIGHT;
-            if (keyboard_state[SDL_SCANCODE_J])
-                bus->controller1 |= BUS_CONTROLLER_B;
-            if (keyboard_state[SDL_SCANCODE_K])
-                bus->controller1 |= BUS_CONTROLLER_A;
-            if (keyboard_state[SDL_SCANCODE_BACKSPACE])
-                bus->controller1 |= BUS_CONTROLLER_SELECT;
-            if (keyboard_state[SDL_SCANCODE_RETURN])
-                bus->controller1 |= BUS_CONTROLLER_START;
+
+            // TODO: NEED TO CHECK WHAT WINDOW IS ACTIVE
+
+            // FIXME: IMGUI WILL ALLOW THE MAIN WINDOW TO BE FOCUSED
+            // AT THE SAME TIME AS THE OTHER WINDOWS
+            // SO IF WE GET THAT THE MAIN WINDOW IS FOCUSED, ALL OTHER
+            // WINDOW FOCUSES MUST BE CLEARED
+
+            // THIS IS HARD TO DO SINCE THE WINDOW IS CREATED IN THE SHOW
+            // FUNCTION
+            // SO IDK HOW WE WOULD HANDLE THIS OTHER THAN SAYING IF THE MAIN
+            // IS FOCUSED DO AN ELSE IF TO AVOID FALLTHROUGH CASES
+
+            // THIS SCENARIO OCCURS WHEN THE TITLE BAR OF THE MAIN WINDOW IS
+            // CLICKED. IT WILL NOT CLEAR THE IMGUI WINDOW'S FOCUS
+
+            // TODO: CHANGE THIS TO LOOP, MEANING THAT WE WILL JUST LOOP OVER
+            // EVERY WINDOW AND FIGURE OUT WHICH ONE IS FOCUSED
+            // OBVIOUSLY THIS IS NOT SUPER EFFICIENT, BUT THE # OF WINDOWS
+            // IS SMALL SO IT IS FINE TO DO THIS INSTEAD OF REFACTORING
+
+
+            // FIXME: BIG ISSUE HERE, IMGUI WIN CAN HAVE FOCUS WHILE HOST
+            // IS FOCUSED. SO REALLY WHAT WE HAVE TO DO IS DEAL WITH THE IMGUI
+            // BUG FOR NOW, BUT JUST SAY IF ANY IMGUI HAS FOCUS, IGNORE
+            // THE HOST
+            bool controller_window_focused = false;
+            int ct = 0;
+            for (int i = 0; i < WindowType::COUNT; i++) {
+                if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
+                    ct++;
+            }
+            if (sub_windows[WindowType::CONTROLLER] != nullptr) {
+                if (sub_windows[WindowType::CONTROLLER]->IsFocused())
+                    controller_window_focused = true;
+            }
+
+            assert(ct <= 1);
+
+            uint32_t window_flags = SDL_GetWindowFlags(window);
+            bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
+            if (emulation_window_active) {
+                if (emu->aturbo)
+                    bus->controller1 |= prev_controller1 & BUS_CONTROLLER_A;
+                if (emu->bturbo)
+                    bus->controller1 |= prev_controller1 & BUS_CONTROLLER_B;
+                if (keyboard_state[SDL_SCANCODE_W])
+                    bus->controller1 |= BUS_CONTROLLER_UP;
+                if (keyboard_state[SDL_SCANCODE_A])
+                    bus->controller1 |= BUS_CONTROLLER_LEFT;
+                if (keyboard_state[SDL_SCANCODE_S])
+                    bus->controller1 |= BUS_CONTROLLER_DOWN;
+                if (keyboard_state[SDL_SCANCODE_D])
+                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
+                if (keyboard_state[SDL_SCANCODE_J])
+                    bus->controller1 |= BUS_CONTROLLER_B;
+                if (keyboard_state[SDL_SCANCODE_K])
+                    bus->controller1 |= BUS_CONTROLLER_A;
+                if (keyboard_state[SDL_SCANCODE_BACKSPACE])
+                    bus->controller1 |= BUS_CONTROLLER_SELECT;
+                if (keyboard_state[SDL_SCANCODE_RETURN])
+                    bus->controller1 |= BUS_CONTROLLER_START;
+            } else if (controller_window_focused) {
+                if (keyboard_state[SDL_SCANCODE_W])
+                    SDL_Log("W");
+            }
         }
 
 
@@ -737,15 +730,18 @@ void EmulationWindow::Loop() {
         // AS OF RIGHT NOW FOR USERS THAT CHOOSE TO USE GSYNC OR FREESYNC
 
 
+        memcpy(emu->prev_keys, emu->keys, emu->nkeys);
+
         // TODO: THIS IS NO LONGER TRULY NECESSARY AS WE NOW ARE NOT
         // HOLDING  THE LOCK 100% OF THE TIME
         // SO YOU CAN GET AWAY WITH NO SLEEP ON A SYSTEM THAT HAS A
         // LOW RES CLOCK THAT WOULD END UP FUCKING US OVER
         // if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
-        if (emulator->settings.vsync == false)
+        if (emulator->settings.vsync == false && emulator->settings.sync == EMULATOR_SYNC_AUDIO)
             SDL_Delay(8);
 
-        // SDL_Log("frametime: %d\n", (uint32_t)(SDL_GetTicks64() - t0));
+        if (show_frametime)
+            SDL_Log("frametime: %d\n", (uint32_t)(SDL_GetTicks64() - t0));
     }
 
     // Quit has been pressed so we must save our settings
@@ -829,10 +825,11 @@ void EmulationWindow::Show(Emulator* emu) {
     bool prev_showing_oam = show_oam;
     bool prev_showing_mixer = show_mixer;
     bool prev_showing_options = show_options;
+    bool prev_showing_controller = show_controller;
 
     // Show this in light
     ImGui::StyleColorsLight();
-    render_main_gui(emu);
+    RenderMainGUI(emu);
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
@@ -843,6 +840,10 @@ void EmulationWindow::Show(Emulator* emu) {
 
     if (!prev_showing_disassembler && show_disassembler) {
         // sub_windows[WindowType::DISASSEMBLER] = new DisassemblerWindow(emu);
+    }
+    if (!prev_showing_controller && show_controller) {
+        sub_windows[WindowType::CONTROLLER] =
+            new ControllerWindow(&show_controller);
     }
 
     if (!prev_showing_pattern && show_pattern) {
@@ -887,6 +888,10 @@ void EmulationWindow::Show(Emulator* emu) {
     if (prev_showing_options && !show_options) {
         delete sub_windows[WindowType::SETTINGS];
         sub_windows[WindowType::SETTINGS] = nullptr;
+    }
+    if (prev_showing_controller && !show_controller) {
+        delete sub_windows[WindowType::CONTROLLER];
+        sub_windows[WindowType::CONTROLLER] = nullptr;
     }
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

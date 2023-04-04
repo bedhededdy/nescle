@@ -15,11 +15,15 @@
  */
 #pragma once
 
+#include <SDL_keyboard.h>
+#include "Emulator.h"
 #include "NESCLEWindow.h"
 
 class ControllerWindow : public NESCLEWindow {
 private:
     bool* show;
+
+    bool ShowKeySetWindow(Emulator* emu, Emulator_ControllerButton btn);
 
 public:
     ControllerWindow(bool* _show) : show(_show) {}

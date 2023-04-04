@@ -77,6 +77,14 @@ void Cart_Destroy(Cart* cart) {
 }
 
 bool Cart_LoadROM(Cart* cart, const char* path) {
+    // FIXME: THIS WILL LEAK MEMORY IN FAILURE SCENARIOS
+
+    // FIXME: THIS WON'T SET ROM PATH TO NULL ON FAILURE, MEANING
+    // THAT WHEN WE CHECK FOR NULL ROM PATH AS AN INDICATOR THAT THE CART
+    // WAS INSERTED, WE WILL GET A FALSE POSITIVE
+    // SOLUTION COULD BE TO JUST ADD A BOOL TO THE EMULATOR THAT SAYS
+    // CART INSERTED
+
     // Check for NULL path or empty string
     if (path == NULL || path[0] == '\0') {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid path\n");

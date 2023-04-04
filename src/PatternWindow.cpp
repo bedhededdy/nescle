@@ -104,6 +104,7 @@ void PatternWindow::Show(Emulator* emu) {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     ImGui::Begin("Pattern Memory", show);
+    focused = ImGui::IsWindowFocused();
     auto uintptr_tex = static_cast<uintptr_t>(palette_texture);
     auto imguiptr_tex = reinterpret_cast<ImTextureID>(uintptr_tex);
     ImGui::Image(imguiptr_tex, ImVec2(256 * 2, 128 * 2),

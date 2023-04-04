@@ -58,6 +58,7 @@
 #endif
 
 #include "EmulationWindow.h"
+#include <SDL.h>
 
 // FIXME: MAKE THE RENDER FUNCTIONS USE APPROPRIATE CONSTANTS INSTEAD
 //        OF HARD-CODING IT

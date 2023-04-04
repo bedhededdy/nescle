@@ -26,7 +26,7 @@ class EmulationWindow {
 private:
     SDL_Window* window;
     SDL_GLContext gl_context;
-public:
+
     Emulator* emulator;
     // ImGuiIO& io;
 
@@ -49,6 +49,8 @@ public:
     bool show_options = false;
     bool show_controller = false;
 
+    bool show_frametime = false;
+
     // can access the window via an enumeration of their types
     enum WindowType {
         PATTERN,
@@ -62,21 +64,14 @@ public:
 
     NESCLEWindow* sub_windows[WindowType::COUNT];
 
-    void set_gl_options();
+    void SetGLOptions();
 
-    // TODO: EXAMINE HAVING A DIFFERENT OBJECT FOR EACH VIEWPORT
-    // BEST WAY OF DOING THIS IS TO HAVE A STD::VECTOR OF SOME WRAPPER
-    // CLASS I HAVE FOR THE WINDOWS AND THEN BASICALLY HAVE A FUNCTION
-    // THAT SAYS, HEY WHEN YOU CLICK THIS ADD THIS TO THE VECTOR
-    // AND WHEN IT'S ADDED TO THE VECTOR IT CALLS NEW AND WHEN IT
-    // IS REMOVED IT CALLS DELETE
-    void render_disassembler();
-    void render_oam();
-    void render_pattern(Bus* bus);
-    void render_main_gui(Emulator* emu);
+    void RenderDisassembler();
+    void RenderOAM();
+    void RenderMainGUI(Emulator* emu);
+    void SetupMainFrame();
 
-    void setup_main_frame();
-    void setup_palette_frame();
+    void IncrementPalette();
 
 public:
     EmulationWindow(int w, int h);
@@ -84,7 +79,7 @@ public:
 
     void Loop();
 
+    // FIXME: THESE ARE NOT REALLY PUBLICS
     void Show(Emulator* emu);
-    void IncrementPalette();
     uint32_t GetWindowID();
 };

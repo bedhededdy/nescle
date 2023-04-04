@@ -15,15 +15,18 @@
  */
 #pragma once
 
-// literally every one of these is gonna use imgui
+// Literally every one of these is going to use imgui
 #include <imgui.h>
 #include "NESCLETypes.h"
 
 class NESCLEWindow {
-private:
+protected:
+    bool focused = false;
     // Maybe I want an imgui window id or soemthing??
 
 public:
     virtual ~NESCLEWindow() = default;
     virtual void Show(Emulator* emu) = 0;
+
+    bool IsFocused() { return focused; }
 };

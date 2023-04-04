@@ -87,6 +87,13 @@ Emulator* Emulator_Create(const char* settings_path) {
     emu->quit = false;
     emu->run_emulation = false;
 
+    const uint8_t* state = SDL_GetKeyboardState(&emu->nkeys);
+    const size_t sz = emu->nkeys * sizeof(uint8_t);
+    emu->prev_keys = Util_SafeMalloc(sz);
+    // Should be the equivalent of just memsetting 0, but on the off chance
+    // that it isn't we will do this
+    memcpy(emu->prev_keys, state, sz);
+
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);
     return emu;
@@ -99,6 +106,7 @@ void Emulator_Destroy(Emulator* emu) {
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
+    Util_SafeFree(emu->prev_keys);
     Util_SafeFree(emu);
 }
 
@@ -299,9 +307,10 @@ float Emulator_EmulateSample(Emulator* emu) {
         if (PPU_GetFrameComplete(emu->nes->ppu)) {
             PPU_ClearFrameComplete(emu->nes->ppu);
 
-            // After we emulate a sample, we will check to see if a frame has been rendered
-            // if it has and we are pressing the turbo button, we will flip the state
-            // of the bit that corresponds to that turbo button
+            // After we emulate a sample, we will check to see
+            // if a frame has been rendered
+            // if it has and we are pressing the turbo button, we will
+            // flip the state of the bit that corresponds to that turbo button
             if (emu->aturbo) {
                 if (emu->nes->controller1 & BUS_CONTROLLER_A)
                     emu->nes->controller1 &= ~BUS_CONTROLLER_A;
@@ -322,6 +331,40 @@ float Emulator_EmulateSample(Emulator* emu) {
     float tri = APU_GetTriangleSample(emu->nes->apu) * emu->settings.tri_vol;
     float noise = APU_GetNoiseSample(emu->nes->apu) * emu->settings.noise_vol;
 
-    // FIXME: REPLACE WITH MASTER VOLUME MULTIPLIER
     return 0.25f * (p1 + p2 + tri + noise) * emu->settings.master_vol;
+}
+
+nfdresult_t Emulator_LoadROM(Emulator* emu) {
+    Bus* bus = emu->nes;
+
+    nfdchar_t *rom;
+    nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
+    nfdresult_t result = NFD_OpenDialog(&rom, filter, 1, NULL);
+
+    bool cancelled = false;
+
+    if (result == NFD_OKAY) {
+    } else if (result == NFD_CANCEL) {
+        rom = NULL;
+        cancelled = true;
+    } else {
+        rom = NULL;
+        SDL_Log("Error opening file: %s\n", NFD_GetError());
+    }
+
+    if (!Cart_LoadROM(bus->cart, (const char*)rom)) {
+        emu->run_emulation = cancelled;
+        if (Cart_GetROMPath(bus->cart) == NULL)
+            emu->run_emulation = false;
+        if (!cancelled)
+            result = NFD_ERROR;
+    } else {
+        emu->run_emulation = true;
+        Bus_Reset(bus);
+    }
+
+    if (rom != NULL)
+        NFD_FreePath(rom);
+
+    return result;
 }
