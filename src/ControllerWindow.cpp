@@ -13,88 +13,98 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <SDL_log.h>
 #include "ControllerWindow.h"
 
-// FIXME: IMGUI SAYS THIS SHOULD CLOSE ON ESC PRESSED BUT IT DOESN'T
-bool ControllerWindow::ShowKeySetWindow(Emulator* emu, Emulator_ControllerButton btn) {
-    if (ImGui::BeginPopup("Set Key")) {
-        ImGui::Text("Press a key to map button");
-        ImGui::Text("Press ESC to close");
-        // should wrk for windows??
-        // ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
-    }
+#include <SDL_log.h>
 
-    return true;
+// FIXME: IMGUI SAYS THIS SHOULD CLOSE ON ESC PRESSED BUT IT DOESN'T
+// THIS COULD BREAK THE LOGIC REGARDING PRESSING ESC TO SAVE
+// MAYBE SHOULD HAVE A BTN TO SAVE ON THE POPUP
+void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
+    // FIXME: HAVE TO HAVE A CHECK FOR INVALID BTN
+    if (ImGui::BeginPopup("Set Key")) {
+        // FIXME: THERE WILL BE PROBLEMS IF USER TRIES TO MAP ESC TO SOMETHING
+        if (ImGui::IsWindowFocused()) {
+            if (emu->most_recent_key_this_frame != SDLK_ESCAPE &&
+                emu->most_recent_key_this_frame != SDLK_UNKNOWN)
+                last_keypress = emu->most_recent_key_this_frame;
+        }
+        if (last_keypress == SDLK_UNKNOWN)
+            ImGui::Text("Press a key to map button");
+        else
+            ImGui::Text("Key pressed: %s", SDL_GetKeyName(last_keypress));
+        ImGui::Text("Press ESC to save, DEL to clear");
+        if (ImGui::IsWindowFocused()) {
+            if (Emulator_KeyPushed(emu, SDLK_DELETE))
+                last_keypress = SDLK_UNKNOWN;
+            if (Emulator_KeyPushed(emu, SDLK_ESCAPE)) {
+                // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
+                // CONTROLLER BUTTON
+                Emulator_MapButton(emu, btn, last_keypress);
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::EndPopup();
+    } else {
+        last_keypress = SDLK_UNKNOWN;
+        btn = EMULATOR_CONTROLLER_INVALID;
+    }
 }
 
 void ControllerWindow::Show(Emulator* emu) {
-    // FIXME: NEED A WAY OF GETTING WHAT KEY WAS PRESSED, IF ANY
-    int btn = -1;
     bool open_popup = false;
     if (ImGui::Begin("Controller", show)) {
         if (ImGui::Button("Up")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_UP;
         }
         ImGui::SameLine();
         if (ImGui::Button("Turbo A")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_ATURBO;
         }
         ImGui::SameLine();
         if (ImGui::Button("Turbo B")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_BTURBO;
         }
         if (ImGui::Button("Left")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_LEFT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Right")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_RIGHT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Select")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_SELECT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Start")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_START;
         }
         ImGui::SameLine();
         if (ImGui::Button("A")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_A;
         }
         ImGui::SameLine();
         if (ImGui::Button("B")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_B;
         }
         if (ImGui::Button("Down")) {
-            // ImGui::OpenPopup("Set Key");
             open_popup = true;
             btn = EMULATOR_CONTROLLER_DOWN;
         }
         ImGui::End();
     }
-    if (open_popup) {
+
+    if (open_popup)
         ImGui::OpenPopup("Set Key");
-    }
-    ShowKeySetWindow(emu, (Emulator_ControllerButton)btn);
+    ShowKeySetWindow(emu);
 }

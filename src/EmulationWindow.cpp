@@ -425,14 +425,12 @@ void EmulationWindow::Loop() {
     while (!emulator->quit) {
         uint64_t t0 = SDL_GetTicks64();
 
+        emu->most_recent_key_this_frame = SDLK_UNKNOWN;
         SDL_Event event;
-        bool opressed = false;
-        bool spressed = false;
-        bool lpressed = false;
-        bool rpressed = false;
-        bool ppressed = false;
-
-        SDL_LockMutex(emulator->nes_state_lock);
+        if (SDL_LockMutex(emulator->nes_state_lock) < 0) {
+            SDL_Log("Failed to lock mutex\n");
+            continue;
+        }
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
 
@@ -440,49 +438,9 @@ void EmulationWindow::Loop() {
             case SDL_QUIT:
                 emulator->quit = true;
                 break;
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                case SDLK_c:
-                    // recall that the cpu clocks only once for every 3 bus clocks, so
-                    // that is why we must have the second while loop
-                    // additionally we also want to go to the next instr, not stay on the current one
-                    //while (cpu->cycles_rem > 0)
-                    //    Bus_Clock(bus);
-                    //while (cpu->cycles_rem == 0)
-                    //    Bus_Clock(bus);
-                    break;
-                case SDLK_r:
-                    rpressed = true;
-                    // Bus_Reset(bus);
-                    break;
-                case SDLK_f:
-                    // FIXME: may wanna do a do while
-                    while (!PPU_GetFrameComplete(ppu))
-                        Bus_Clock(bus);
-                    PPU_ClearFrameComplete(ppu);
-                    break;
-                case SDLK_p:
-                    // IncrementPalette();
-                    ppressed = true;
-                    break;
-                case SDLK_y:
-                    IncrementPalette();
-                    break;
-                case SDLK_o:
-                    opressed = true;
-                    break;
-                case SDLK_s:
-                    spressed = true;
-                    break;
-                case SDLK_l:
-                    lpressed = true;
-                    break;
-
-                default:
-                    break;
-                }
-                break;
-
+            case SDL_KEYDOWN:
+                emu->most_recent_key_this_frame =
+                    static_cast<SDL_KeyCode>(event.key.keysym.sym);
             case SDL_WINDOWEVENT:
                 switch (event.window.event)
                 {
@@ -510,233 +468,79 @@ void EmulationWindow::Loop() {
             }
         }
 
-        // TODO: TO IMPLEMENT TURBO BUTTONS YOU WILL NEED TO
-        // ALTERNATE THE VALUES THAT GET SENT TO THE EMULATOR ON EACH FRAME
-        // FOR NON-60FPS THIS MAY BE BUGGY, BUT I THINK THAT IF WE DO IT
-        // BASED ON THE BUS->PPU->FRAME_COMPLETE AS OPPOSED TO USING OUR
-        // REAL FRAMERATE, IT SHOULD POLL PROPERLY
-        // WE WOULD NEED TO KEEP TRACK OF THE PREVIOUS STATE OF THE BUTTON
-        // AND THEN SAY IF WE ARE TURBOING, FLIP THE STATE
-        // Use keyboard state functions
-        // Has to be called after event
-        // polling since the event polling
-        // populated this
         uint8_t prev_controller1 = bus->controller1;
         bus->controller1 = 0;
-        const uint8_t* keyboard_state = SDL_GetKeyboardState(NULL);
-        emu->keys = keyboard_state;
+        emu->keys = SDL_GetKeyboardState(NULL);
 
-        bool ctrl = keyboard_state[SDL_SCANCODE_LCTRL]
-            || keyboard_state[SDL_SCANCODE_RCTRL];
-        emu->aturbo = keyboard_state[SDL_SCANCODE_I];
-        emu->bturbo = keyboard_state[SDL_SCANCODE_U];
+        uint32_t window_flags = SDL_GetWindowFlags(window);
+        bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
 
-        // TODO: AVOID DUPLICATING CODE BY USING A FUNCTION
-        if (ctrl) {
-            // only process one of these if multiple are pressed
-            if (opressed) {
-                Emulator_LoadROM(emu);
-                // TODO: SHOW POPUP
-            }
-            else if (lpressed) {
-                Emulator_LoadState(emu, NULL);
-            } else if (spressed) {
-                Emulator_SaveState(emu, NULL);
-            } else if (ppressed) {
-                emu->run_emulation = !emu->run_emulation;
-            } else if (rpressed) {
-                Bus_Reset(bus);
-            }
+        // not exactly elegant, but the total number of possible windows is
+        // small, so this is fine
+        bool imgui_inactive = true;
+        for (int i = 0; i < WindowType::COUNT; i++)
+            if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
+                imgui_inactive = false;
 
-        } else {
-            // FIXME: THIS IS NOT CONDUCIVE TO TURBO SINCE WE RESET THE STATE
-            // EACH TIME
-            // WE WOULD NEED TO DO IT WITH THE EVENT LOOP THAT FIXES THIS
-            // AND THE TURBOS WE WOULD HAVE A BOOL FOR WHICH WOULD
-            // TOGGLE THE BIT ON EACH FRAME
+        emu->aturbo = emu->bturbo = false;
+        if (emulation_window_active && imgui_inactive) {
+            if (Emulator_KeyHeld(emu, SDLK_LCTRL) || Emulator_KeyHeld(emu, SDLK_RCTRL)) {
+                // only process one of these if multiple are pressed
+                if (Emulator_KeyPushed(emu, SDLK_o)) {
+                    Emulator_LoadROM(emu);
+                    // TODO: SHOW POPUP
+                }
+                else if (Emulator_KeyPushed(emu, SDLK_l)) {
+                    Emulator_LoadState(emu, NULL);
+                } else if (Emulator_KeyPushed(emu, SDLK_s)) {
+                    Emulator_SaveState(emu, NULL);
+                } else if (Emulator_KeyPushed(emu, SDLK_p)) {
+                    emu->run_emulation = !emu->run_emulation;
+                } else if (Emulator_KeyPushed(emu, SDLK_r)) {
+                    Bus_Reset(bus);
+                } else if (Emulator_KeyPushed(emu, SDLK_f)) {
+                    show_frametime = !show_frametime;
+                }
+            } else {
+                const Emulator_Controller* btn_map = &emu->settings.controller1;
 
-            // TODO: NEED TO CHECK WHAT WINDOW IS ACTIVE
-
-            // FIXME: IMGUI WILL ALLOW THE MAIN WINDOW TO BE FOCUSED
-            // AT THE SAME TIME AS THE OTHER WINDOWS
-            // SO IF WE GET THAT THE MAIN WINDOW IS FOCUSED, ALL OTHER
-            // WINDOW FOCUSES MUST BE CLEARED
-
-            // THIS IS HARD TO DO SINCE THE WINDOW IS CREATED IN THE SHOW
-            // FUNCTION
-            // SO IDK HOW WE WOULD HANDLE THIS OTHER THAN SAYING IF THE MAIN
-            // IS FOCUSED DO AN ELSE IF TO AVOID FALLTHROUGH CASES
-
-            // THIS SCENARIO OCCURS WHEN THE TITLE BAR OF THE MAIN WINDOW IS
-            // CLICKED. IT WILL NOT CLEAR THE IMGUI WINDOW'S FOCUS
-
-            // TODO: CHANGE THIS TO LOOP, MEANING THAT WE WILL JUST LOOP OVER
-            // EVERY WINDOW AND FIGURE OUT WHICH ONE IS FOCUSED
-            // OBVIOUSLY THIS IS NOT SUPER EFFICIENT, BUT THE # OF WINDOWS
-            // IS SMALL SO IT IS FINE TO DO THIS INSTEAD OF REFACTORING
-
-
-            // FIXME: BIG ISSUE HERE, IMGUI WIN CAN HAVE FOCUS WHILE HOST
-            // IS FOCUSED. SO REALLY WHAT WE HAVE TO DO IS DEAL WITH THE IMGUI
-            // BUG FOR NOW, BUT JUST SAY IF ANY IMGUI HAS FOCUS, IGNORE
-            // THE HOST
-            bool controller_window_focused = false;
-            int ct = 0;
-            for (int i = 0; i < WindowType::COUNT; i++) {
-                if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
-                    ct++;
-            }
-            if (sub_windows[WindowType::CONTROLLER] != nullptr) {
-                if (sub_windows[WindowType::CONTROLLER]->IsFocused())
-                    controller_window_focused = true;
-            }
-
-            assert(ct <= 1);
-
-            uint32_t window_flags = SDL_GetWindowFlags(window);
-            bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
-            if (emulation_window_active) {
+                emu->aturbo = Emulator_KeyHeld(emu, btn_map->aturbo);
+                emu->bturbo = Emulator_KeyHeld(emu, btn_map->bturbo);
                 if (emu->aturbo)
                     bus->controller1 |= prev_controller1 & BUS_CONTROLLER_A;
                 if (emu->bturbo)
                     bus->controller1 |= prev_controller1 & BUS_CONTROLLER_B;
-                if (keyboard_state[SDL_SCANCODE_W])
+
+                if (Emulator_KeyHeld(emu, btn_map->up))
                     bus->controller1 |= BUS_CONTROLLER_UP;
-                if (keyboard_state[SDL_SCANCODE_A])
+                if (Emulator_KeyHeld(emu, btn_map->left))
                     bus->controller1 |= BUS_CONTROLLER_LEFT;
-                if (keyboard_state[SDL_SCANCODE_S])
+                if (Emulator_KeyHeld(emu, btn_map->down))
                     bus->controller1 |= BUS_CONTROLLER_DOWN;
-                if (keyboard_state[SDL_SCANCODE_D])
+                if (Emulator_KeyHeld(emu, btn_map->right))
                     bus->controller1 |= BUS_CONTROLLER_RIGHT;
-                if (keyboard_state[SDL_SCANCODE_J])
+                if (Emulator_KeyHeld(emu, btn_map->b))
                     bus->controller1 |= BUS_CONTROLLER_B;
-                if (keyboard_state[SDL_SCANCODE_K])
+                if (Emulator_KeyHeld(emu, btn_map->a))
                     bus->controller1 |= BUS_CONTROLLER_A;
-                if (keyboard_state[SDL_SCANCODE_BACKSPACE])
+                if (Emulator_KeyHeld(emu, btn_map->select))
                     bus->controller1 |= BUS_CONTROLLER_SELECT;
-                if (keyboard_state[SDL_SCANCODE_RETURN])
+                if (Emulator_KeyHeld(emu, btn_map->start))
                     bus->controller1 |= BUS_CONTROLLER_START;
-            } else if (controller_window_focused) {
-                if (keyboard_state[SDL_SCANCODE_W])
-                    SDL_Log("W");
             }
         }
-
 
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,
         // but we will not show the updates visually
+        // FIXME: THIS MAY NOT BE TRUE, SINCE THIS FUNCTION RELEASES THE LOCK
+        // THE AUDIO THREAD MAY BE SPINNING WAITING FOR THE LOCK
         Show(emulator);
-        // FIXME: THIS SHOULDN'T WORK BUT SOMEHOW IT DOES
-        // THE LOCK IS HELD BY THE EMULATOR FOR 16ms - delay
-        // WHEN VSYNC IS ENABLED
-        // EVEN THOUGH THE CALLBACK SHOULD RUN EVERY 11ms
-        // SO IF I DELAY FOR 1MS, THE CALLBACK COULD ONLY FEED SAMPLES EVERY 15MS
-        // THIS LEADS TO THE EMULATION RUNNING BELOW FULL SPEED, AS IT IS
-        // TIED TO THE SPEED OF THE CALLBACK
-        // THE SOLUTION TO THIS IS THAT THE SHOW FUNCTION HAS TO UNLOCK
-        // BEFORE THE FIRST BLOCKING CALL
-        // HOWEVER, THIS POSES ANOTHER ISSUE
-        // STUFF LIKE THE PALETTE WINDOW WILL EITHER HAVE TO MEMCPY THE PALETTE
-        // WHILE THE LOCK IS ACTIVE, OR THE PALETTE WILL HAVE TO HAVE OUT OF
-        // DATE INFO, OR IT WILL HAVE TO LOCK AGAIN SO THAT IT CAN GET THE
-        // CURRENT STATE
-        // HAVING OUT OF DATE INFO IS NOT SO BAD FOR THIS, EXCEPT FOR THE FACT
-        // THAT I MAY ADD THE ABILITY OF SOME OF THESE WINDOWS TO WRITE TO THE
-        // BUS. FOR INSTANCE, LET'S SAY I WANT TO BE ABLE TO WRITE TO THE BUS
-        // RAM TO CHANGE A CPU INSTRUCTION. THIS WOULD HAVE TO BE LOCKED, OR
-        // ELSE THE EMULATION COULD END UP WITH HALF OF MY INSTRUCTION AND HALF
-        // THE OLD ONE, WHICH OBVIOUSLY IS AN ISSUE
-        // I WOULD NEED TO HAVE SOME STUFF BE DRAWN SO THE USER CAN CLICK, BUT
-        // ITS FINE IF THAT LAGS A BIT
-        // BUT IMGUI WINDOWS NEED ALL THEIR SHIT BEFORE I CALL END ON IT
-        // BASICALLY THE WINDOW CANNOT BE COMPLETED UNTIL I HAVE DRAWN TO IT
-        // WHICH WILL BE BLOCKING
-        // SO SUPPOSE I HAVE A BUTTON THAT CHANGES THE STATE OF
-        // THE CPU. THE BUTTON HAS TO BE DRAWN TO BE PRESSED
-        // BUT SUPPOSE I HAVE SOMETHING THAT SHOWS THE CPU STATE BEFOREHAND
-        // WHICH IS A BLOCKING CALL TO GL
-        // I WOULD EITHER HAVE TO RELEASE THE LOCK BEFORE THE DRAW, AND
-        // RECLAIM IT ONCE I AM DONE DRAWING, OR I WOULD HAVE TO HOLD IT THROUGH
-        // THE WHOLE DRAW CALL
-        // I WOULD HAVE TO HANDLE THE BUTTON PRESS (LOCK TO CHANGE THE CPU STATE)
-        // UNLOCK AND THEN DRAW THE OUTPUT
-        // SO CONSIDER THE WHOLE LOOP HERE
-        // I NEED TO LOCK BEFORE EVENT POLLING, AS EVENTS CAN CHANGE THE
-        // STATE
-        // THEN IN THE SHOW FUNCTION I KNOW I HAVE STUFF IN THE MAIN MENU
-        // THAT CAN CHANGE THE STATE, BUT THANKFULLY NO GL CALLS SO I CAN HOLD
-        // THE LOCK THROUGH THAT
-        // HOWEVER, ALL WINDOWS AFTER THAT HAVE THE POTENTIAL TO CALL GL
-        // SO I NEED TO RELEASE THE LOCK AFTER DRAWING THE MAIN MENU
-        // AND THEN EACH WINDOW WILL HAVE TO RELOCK BEFORE ACCESSING
-        // THE BUS STATE AND UNLOCK BEFORE DRAWING TO AVOID HOLDING THE LOCK
-        // THROUGH THE VSYNC INTERVAL
-        // THE AUDIO CALLBACK ON LAPTOP TAKES BETWEEN 3-5ms TO EMULATE 512
-        // SAMPLES OF AUDIO (11MS worth of sound),
-        // SO GETTING A FULL FRAME OF VIDEO IN UNDER 16ms
-        // SHOUDL BE POSSIBLE, EVEN HAVING TO KEEP RELOCKING
-        // BASICALLY WHAT I'M SAYING IS THAT
-        // THE SUM OF THE TIME BEFORE THE FIRST BLOCKING CALL AND
-        // THE TIME AFTER THE FIRST BLOCKING CALL (SINCE OTHER BLOCKING CALLS
-        // WILL NO LONGER BLOCK AS I HAVE NOT CALLED SDL_GL_SWAPWINDOW)
-        // HAS TO FINISH IN APPROXIMATELY 6-8ms
-        // SINCE THE AUDIO THREAD RUNS EVERY 11ms AND IT TAKES 3-5ms TO EMULATE
-        // THIS SHOULD BE DOABLE
-        // OBVIOUSLY, THOUGH, THE IDEAL IS THAT PEOPLE ARE NOT SYNCING TO AUDIO
-        // AND THAT I CAN JUST RUN EVERYTHING ON THE SAME THREAD IN WHICH CASE
-        // ALL THAT MATTERS IS THAT EVERYTHING IS DONE IN UNDER 16MS AND LOCKING
-        // BECOMES A COMPLETE NON-ISSUE
-        // EVEN IF I CALL THE LOCKS, THERE WILL BE NO CONTENTION, SO
-        // ACQUIRING THE LOCKS WILL BE CHEAP
-        // BUT WHAT IF I NEED TO SHOW UPDATED INFO, AS IN THE CASE OF THE
-        // PPU FRAMEBUFFER. WELL I COULD EITHER HAVE A SEPARATE MUTEX JUST
-        // FOR THAT TO ENSURE I DON'T READ IT AS IT'S WRITTEN, OR I CAN MEMCPY
-        // IT UNDER A LOCK AND THEN RELEASE IT BEFORE DRAWING
-        // BECAUSE THERE IS A CASE WHERE I NEED TO READ THE STATE AND THEN DRAW
-        // AND IT COULD BE THE FIRST DRAW (THAT CASE BEING THE EMULATION WINDOW
-        // IS THE ONLY WINDOW OPEN) SO IN THIS CASE I SHOULD NOT HOLD THE LOCK
-        // THROUGH THE DRAW
-        // SO THE ONLY OPTION IS EITHER GETTING THE LOCK AND MEMCPYING OR
-        // HAVING A FRAMEBUFFER MUTEX. I CAN'T READ WITHOUT LOCKING
-        // OR I WILL HAVE FRAMES THAT ARE HALF OLD AND HALF NEW
-        // THIS GOES FOR ANYTHING THAT READS FROM THE BUS BTW
-        // EITHER YOU HAVE TO LOCK AND MEMCPY OR YOU HAVE TO HAVE TO HAVE
-        // A SEPARATE MUTEX
-        // SEPARATE MUTEX IS MUCH MORE COMPLICATED SO I WOULD SAY THE APPROACH
-        // SHOULD BE EITHER TO BE OKAY WITH SLIGHTLY OUTDATED DATA (FINE
-        // FOR THINGS LIKE PALETTE MEMORY) OR TO MEMCPY UNDER A LOCK
-        // IF ALL WE DO IS READ, WE ARE PROBABLY BETTER OFF MEMCPYING EVERYTHING
-        // BEFORE WE INITIALLY RELEASE THE LOCK AND THEN
-        // NEVER REACQUIRING IT (WHICH IS THE SIMPLEST WAY TO DO THINGS),
-        // BUT FOR THINGS THAT WRITE
-        // IN THE MIDDLE OF AN IMGUI WINDOW (SUCH AS A BUTTON PRESS)
-        // WE NEED TO LOCK AGAIN SO MAYBE IT MIGHT BE BETTER TO HAVE
-        // EVERYONE GET THE LOCK AND THEN MEMCPY EVERYTHING AS THEY GO ALONG
-        // INSTEAD OF ALL AT ONCE
-        // THE ALTERNATIVE IS TO DO ALL THE MEMCPYS AT THE BEGINNING FOR THE
-        // READ ONLYS AND THEN HAVE ALL THE WRITERS RELOCK
-        // BUT DOING THIS CAN LEAD TO A SCENARIO WHERE WE GET A NEW PPU
-        // FRAME AFTER WE'VE DONE THE INITIAL LOCK AND BEFORE THE DRAW
-        // SO WE WOULD HAVE AN OLD FRAME DISPLAYED TO THE USER WHICH IS
-        // NOT IDEAL
-        // SO PROBABLY THE BEST BET IS TO RELEASE AFTER DRAWING THE MAIN MENU
-        // AND THEN HAVE EVERYONE LOCK, MEMCPY, AND UNLOCK AS THEY GO ALONG
 
+        memcpy(emu->prev_keys, emu->keys, sizeof(uint8_t) * emu->nkeys);
 
-        // POLL APPROXIMATELY 120 TIMES A SECOND FOR EVENTS
-        // IF WE DO 60 TIMES THE VIDEO BECOMES TOO CHOPPY
-        // WE COULD ALSO SYNC TO VSYNC, BUT I DON'T WISH TO FORCE THAT
-        // AS OF RIGHT NOW FOR USERS THAT CHOOSE TO USE GSYNC OR FREESYNC
-
-
-        memcpy(emu->prev_keys, emu->keys, emu->nkeys);
-
-        // TODO: THIS IS NO LONGER TRULY NECESSARY AS WE NOW ARE NOT
-        // HOLDING  THE LOCK 100% OF THE TIME
-        // SO YOU CAN GET AWAY WITH NO SLEEP ON A SYSTEM THAT HAS A
-        // LOW RES CLOCK THAT WOULD END UP FUCKING US OVER
-        // if (emulator->settings.sync == EMULATOR_SYNC_AUDIO)
+        // Need to sleep (8ms is good because it ensures we will see new frame)
+        // to avoid starving the audio thread
         if (emulator->settings.vsync == false && emulator->settings.sync == EMULATOR_SYNC_AUDIO)
             SDL_Delay(8);
 
@@ -847,7 +651,6 @@ void EmulationWindow::Show(Emulator* emu) {
     }
 
     if (!prev_showing_pattern && show_pattern) {
-        SDL_Log("Call new\n");
         sub_windows[WindowType::PATTERN] =
             new PatternWindow(main_shader, main_vao, &show_pattern);
     }
@@ -856,6 +659,9 @@ void EmulationWindow::Show(Emulator* emu) {
     }
     if (!prev_showing_options && show_options) {
         sub_windows[WindowType::SETTINGS] = new SettingsWindow(&show_options);
+    }
+    if (!prev_showing_oam && show_oam) {
+        //sub_windows[WindowType::OAM] = new OAMWindow(emu);
     }
 
     // iterate over the map to show each window that exists
@@ -869,14 +675,10 @@ void EmulationWindow::Show(Emulator* emu) {
         // sub_windows[WindowType::DISASSEMBLER] = nullptr;
     }
     if (prev_showing_pattern && !show_pattern) {
-        SDL_Log("Call delete\n");
         delete sub_windows[WindowType::PATTERN];
         sub_windows[WindowType::PATTERN] = nullptr;
     }
-    // FIXME: WRONG
-    if (!prev_showing_oam && show_oam) {
-        //sub_windows[WindowType::OAM] = new OAMWindow(emu);
-    } else if (prev_showing_oam && !show_oam) {
+    if (prev_showing_oam && !show_oam) {
         //delete sub_windows[WindowType::OAM];
         //sub_windows[WindowType::OAM] = nullptr;
     }

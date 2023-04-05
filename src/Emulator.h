@@ -35,7 +35,7 @@ typedef enum emulator_sync_type {
     EMULATOR_SYNC_VIDEO
 } Emulator_SyncType;
 
-// FIXME: REORDER THIS PROPERLY
+// FIXME: REORDER THIS PROPERLY (THIS WILL BREAK SETTINGS)
 typedef struct emulator_controller {
     SDL_KeyCode up;
     SDL_KeyCode down;
@@ -50,14 +50,17 @@ typedef struct emulator_controller {
 } Emulator_Controller;
 
 typedef enum emulator_controller_button {
+    EMULATOR_CONTROLLER_INVALID = -1,
+
+    EMULATOR_CONTROLLER_A,
+    EMULATOR_CONTROLLER_B,
+    EMULATOR_CONTROLLER_SELECT,
+    EMULATOR_CONTROLLER_START,
     EMULATOR_CONTROLLER_UP,
     EMULATOR_CONTROLLER_DOWN,
     EMULATOR_CONTROLLER_LEFT,
     EMULATOR_CONTROLLER_RIGHT,
-    EMULATOR_CONTROLLER_A,
-    EMULATOR_CONTROLLER_B,
-    EMULATOR_CONTROLLER_START,
-    EMULATOR_CONTROLLER_SELECT,
+
     EMULATOR_CONTROLLER_ATURBO,
     EMULATOR_CONTROLLER_BTURBO,
 } Emulator_ControllerButton;
@@ -76,14 +79,12 @@ struct emulator_settings {
     float master_vol;
 
     // controls
-    // Emulator_Controller controller1;
+    Emulator_Controller controller1;
 
     // misc.
     // bool cart_inserted;
 };
 
-// TODO: GET RID OF THE NES STATE LOCK
-// EVERYTHING CAN BE HANDLED BY SDL_LOCKAUDIODEVICE
 struct emulator {
     Bus* nes;
     SDL_mutex* nes_state_lock;
@@ -94,9 +95,9 @@ struct emulator {
     Emulator_Settings settings;
 
     int nkeys;
-
     uint8_t* prev_keys;
     const uint8_t* keys;
+    SDL_KeyCode most_recent_key_this_frame;
 
     bool aturbo;
     bool bturbo;
@@ -107,21 +108,29 @@ struct emulator {
 
 Emulator* Emulator_Create(const char* settings_path);
 void Emulator_Destroy(Emulator* emu);
+void Emulator_PowerOn(Emulator* emu);
+void Emulator_Reset(Emulator* emu);
 
+nfdresult_t Emulator_LoadROM(Emulator* emulator);
 bool Emulator_SaveState(Emulator* emu, const char* path);
 bool Emulator_LoadState(Emulator* emu, const char* path);
 bool Emulator_SaveSettings(Emulator* emu, const char* path);
 bool Emulator_LoadSettings(Emulator* emu, const char* path);
 void Emulator_SetDefaultSettings(Emulator* emu);
-void Emulator_PowerOn(Emulator* emu);
-void Emulator_Reset(Emulator* emu);
-
-bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
 
 float Emulator_EmulateSample(Emulator* emu);
 void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len);
 
-nfdresult_t Emulator_LoadROM(Emulator* emulator);
+const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn);
+
+// Returns if key changed from not pushed to pushed
+bool Emulator_KeyPushed(Emulator* emu, SDL_Keycode key);
+// Returns if key is currently held down
+bool Emulator_KeyHeld(Emulator* emu, SDL_Keycode key);
+// Returns if key changed from pushed to not pushed
+bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key);
+
+bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
 
 #ifdef __cplusplus
 }

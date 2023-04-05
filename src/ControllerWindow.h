@@ -22,8 +22,10 @@
 class ControllerWindow : public NESCLEWindow {
 private:
     bool* show;
+    Emulator_ControllerButton btn;
+    SDL_KeyCode last_keypress;
 
-    bool ShowKeySetWindow(Emulator* emu, Emulator_ControllerButton btn);
+    void ShowKeySetWindow(Emulator* emu);
 
 public:
     ControllerWindow(bool* _show) : show(_show) {}

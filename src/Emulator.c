@@ -27,11 +27,75 @@
 #include "Mapper.h"
 #include "Util.h"
 
+static void LogKeymaps(Emulator* emu) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_A),
+        SDL_GetKeyName(emu->settings.controller1.a));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_B),
+        SDL_GetKeyName(emu->settings.controller1.b));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_SELECT),
+        SDL_GetKeyName(emu->settings.controller1.select));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_START),
+        SDL_GetKeyName(emu->settings.controller1.start));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_UP),
+        SDL_GetKeyName(emu->settings.controller1.up));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_DOWN),
+        SDL_GetKeyName(emu->settings.controller1.down));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_LEFT),
+        SDL_GetKeyName(emu->settings.controller1.left));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_RIGHT),
+        SDL_GetKeyName(emu->settings.controller1.right));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_ATURBO),
+        SDL_GetKeyName(emu->settings.controller1.aturbo));
+    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s",
+        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_BTURBO),
+        SDL_GetKeyName(emu->settings.controller1.bturbo));
+}
+
+bool Emulator_KeyPushed(Emulator* emu, SDL_Keycode key) {
+    SDL_Scancode sc = SDL_GetScancodeFromKey(key);
+    return !emu->prev_keys[sc] && emu->keys[sc];
+}
+
+bool Emulator_KeyHeld(Emulator* emu, SDL_Keycode key) {
+    SDL_Scancode sc = SDL_GetScancodeFromKey(key);
+    return emu->keys[sc];
+}
+
+bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key) {
+    SDL_Scancode sc = SDL_GetScancodeFromKey(key);
+    return emu->prev_keys[sc] && !emu->keys[sc];
+}
+
 void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len) {
     Emulator* emu = (Emulator*)userdata;
     float* streamF32 = (float*)stream;
 
-    SDL_LockMutex(emu->nes_state_lock);
+    if (SDL_LockMutex(emu->nes_state_lock) < 0) {
+        for (size_t i = 0; i < (size_t)len/sizeof(float); i++)
+            streamF32[i] = 0.0f;
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Emulator_AudioCallback: Could not lock mutex");
+        return;
+    }
     for (size_t i = 0; i < (size_t)len/sizeof(float); i++) {
         float sample = 0.0f;
         if (emu->run_emulation)
@@ -94,6 +158,11 @@ Emulator* Emulator_Create(const char* settings_path) {
     // that it isn't we will do this
     memcpy(emu->prev_keys, state, sz);
 
+    emu->most_recent_key_this_frame = SDLK_UNKNOWN;
+
+    // Log the keymaps in debug mode
+    LogKeymaps(emu);
+
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);
     return emu;
@@ -118,7 +187,10 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     }
 
     FILE* savestate;
-    fopen_s(&savestate, path, "wb");
+    if (fopen_s(&savestate, "savestate.bin", "wb") != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+            "Emulator_SaveState: Could not open file %s", path);
+    }
 
     Bus* bus = emu->nes;
     if (!Bus_SaveState(emu->nes, savestate))
@@ -225,7 +297,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
     FILE* savestate;
-    fopen_s(&savestate, path, "rb");
+    fopen_s(&savestate, "savestate.bin", "rb");
 
     Bus* bus = emu->nes;
 
@@ -297,6 +369,17 @@ void Emulator_SetDefaultSettings(Emulator* emu) {
     emu->settings.tri_vol = 1.0f;
     emu->settings.noise_vol = 0.75f;
     emu->settings.master_vol = 0.5f;
+    emu->settings.controller1.a = SDLK_k;
+    emu->settings.controller1.b = SDLK_j;
+    emu->settings.controller1.select = SDLK_BACKSPACE;
+    emu->settings.controller1.start = SDLK_RETURN;
+    emu->settings.controller1.aturbo = SDLK_i;
+    emu->settings.controller1.bturbo = SDLK_u;
+    emu->settings.controller1.up = SDLK_w;
+    emu->settings.controller1.left = SDLK_a;
+    emu->settings.controller1.right = SDLK_d;
+    emu->settings.controller1.down = SDLK_s;
+
 
     // emu->settings.sync = EMULATOR_SYNC_AUDIO;
     // emu->settings.vsync = false;
@@ -334,6 +417,61 @@ float Emulator_EmulateSample(Emulator* emu) {
     return 0.25f * (p1 + p2 + tri + noise) * emu->settings.master_vol;
 }
 
+// TODO: IMPLEMENT ME
+bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton btn, SDL_KeyCode key) {
+    if (key == SDLK_UNKNOWN) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
+        return false;
+    }
+
+    // FIXME: CHECK FOR BINDING CONFLICTS
+
+    Emulator_Controller* controller = &emu->settings.controller1;
+
+    switch (btn) {
+    case EMULATOR_CONTROLLER_A:
+        controller->a = key;
+        break;
+    case EMULATOR_CONTROLLER_B:
+        controller->b = key;
+        break;
+    case EMULATOR_CONTROLLER_SELECT:
+        controller->select = key;
+        break;
+    case EMULATOR_CONTROLLER_START:
+        controller->start = key;
+        break;
+    case EMULATOR_CONTROLLER_UP:
+        controller->up = key;
+        break;
+    case EMULATOR_CONTROLLER_DOWN:
+        controller->down = key;
+        break;
+    case EMULATOR_CONTROLLER_LEFT:
+        controller->left = key;
+        break;
+    case EMULATOR_CONTROLLER_RIGHT:
+        controller->right = key;
+        break;
+    case EMULATOR_CONTROLLER_ATURBO:
+        controller->aturbo = key;
+        break;
+    case EMULATOR_CONTROLLER_BTURBO:
+        controller->bturbo = key;
+        break;
+
+    default:
+        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "Invalid button\n");
+        return false;
+        break;
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+        "Button %s mapped to key %s\n",
+        Emulator_GetButtonName(emu, btn), SDL_GetKeyName(key));
+    return true;
+}
+
 nfdresult_t Emulator_LoadROM(Emulator* emu) {
     Bus* bus = emu->nes;
 
@@ -367,4 +505,24 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
         NFD_FreePath(rom);
 
     return result;
+}
+
+const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn) {
+    // FIXME: MAY HAVE TO DO THE SCREWY ORDER OF CONST TO ACHIEVE DESIRED
+    // BEHAVIOR
+    if (btn == EMULATOR_CONTROLLER_INVALID)
+        return "INV";
+    static const char* btn_names[] = {
+        [EMULATOR_CONTROLLER_A] = "A",
+        [EMULATOR_CONTROLLER_B] = "B",
+        [EMULATOR_CONTROLLER_SELECT] = "SELECT",
+        [EMULATOR_CONTROLLER_START] = "START",
+        [EMULATOR_CONTROLLER_UP] = "UP",
+        [EMULATOR_CONTROLLER_DOWN] = "DOWN",
+        [EMULATOR_CONTROLLER_LEFT] = "LEFT",
+        [EMULATOR_CONTROLLER_RIGHT] = "RIGHT",
+        [EMULATOR_CONTROLLER_ATURBO] = "TURBO A",
+        [EMULATOR_CONTROLLER_BTURBO] = "TURBO B"
+    };
+    return btn_names[btn];
 }
