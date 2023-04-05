@@ -547,9 +547,6 @@ void EmulationWindow::Loop() {
         if (show_frametime)
             SDL_Log("frametime: %d\n", (uint32_t)(SDL_GetTicks64() - t0));
     }
-
-    // Quit has been pressed so we must save our settings
-    Emulator_SaveSettings(emulator, "settings.bin");
 }
 
 EmulationWindow::~EmulationWindow() {

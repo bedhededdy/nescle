@@ -26,13 +26,19 @@ set(CMAKE_C_VERSION 11)
 set(CMAKE_C_VERSION_REQUIRED true)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# Fetch nativefiledialog as a CMake subproject
+# Fetch nativefiledialog and jansson as a CMake subproject
 include(FetchContent)
 FetchContent_Declare(nativefiledialog
   GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
   GIT_TAG        master
 )
 FetchContent_MakeAvailable(nativefiledialog)
+
+FetchContent_Declare(jansson
+  GIT_REPOSITORY https://github.com/akheron/jansson.git
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(jansson)
 
 # Figure out what compiler we are using
 # TODO: CHANGE TO USE GENERATOR EXPRESSIONS
@@ -143,7 +149,7 @@ add_executable(nescle ${SRC})
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
                                  PUBLIC ${IMGUI_INC})
 target_include_directories(glad PUBLIC ${GLAD_INC})
-target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
+target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC} ${JANSSON_INCLUDE_DIRS})
 
 # Set compile options for each library
 set(mycc undefined)
@@ -182,5 +188,5 @@ endif()
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
 target_link_libraries(glad PRIVATE opengl32)
-target_link_libraries(nescle PRIVATE glad nfd
+target_link_libraries(nescle PRIVATE glad nfd ${JANSSON_LIBRARIES}
    PUBLIC imgui ${SDL2_LIBRARIES} opengl32)

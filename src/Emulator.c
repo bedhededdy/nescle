@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: INVESTIGATE MAKING THE SETTINGS FILE A JSON FOR MORE FLEXIBILITY
+// AND ALLOWING USER TO EDIT THE FILE MANUALLY IF NECESSARY
 #include "Emulator.h"
 
+#include <jansson.h>
 #include <SDL_log.h>
-
 #include <string.h>
 
 #include "APU.h"
@@ -115,10 +117,10 @@ Emulator* Emulator_Create(const char* settings_path) {
             "Emulator_Create: Bad alloc SDL_Mutex");
     }
 
-    if (!Emulator_LoadSettings(emu, "settings.bin")) {
+    if (!Emulator_LoadSettings(emu, "settings.json")) {
         Emulator_SetDefaultSettings(emu);
         emu->settings.sync = EMULATOR_SYNC_VIDEO;
-        if (!Emulator_SaveSettings(emu, "settings.bin"))
+        if (!Emulator_SaveSettings(emu, "settings.json"))
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "Emulator_Create: Could not save settings");
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -170,7 +172,7 @@ Emulator* Emulator_Create(const char* settings_path) {
 
 void Emulator_Destroy(Emulator* emu) {
     // Save settings for next session
-    Emulator_SaveSettings(emu, "settings.bin");
+    Emulator_SaveSettings(emu, "settings.json");
 
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
@@ -334,28 +336,76 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 }
 
 bool Emulator_SaveSettings(Emulator* emu, const char* path) {
-    FILE* file;
-    fopen_s(&file, path, "wb");
-    if (file == NULL)
-        return false;
-    size_t written = fwrite(&emu->settings, sizeof(Emulator_Settings), 1, file);
-    fclose(file);
-    return written == 1;
+    // TODO: SHOULD CHECK FOR NULL ALLOCS, EVEN THOUGH IT SHOULD NEVER HAPPEN
+    json_t* root = json_object();
+
+    json_object_set_new(root, "sync", json_integer(emu->settings.sync));
+    json_object_set_new(root, "next_sync", json_integer(emu->settings.next_sync));
+    json_object_set_new(root, "vsync", json_boolean(emu->settings.vsync));
+    json_object_set_new(root, "p1_vol", json_real(emu->settings.p1_vol));
+    json_object_set_new(root, "p2_vol", json_real(emu->settings.p2_vol));
+    json_object_set_new(root, "tri_vol", json_real(emu->settings.tri_vol));
+    json_object_set_new(root, "noise_vol", json_real(emu->settings.noise_vol));
+    json_object_set_new(root, "master_vol", json_real(emu->settings.master_vol));
+
+    json_t* controller1 = json_object();
+    json_object_set_new(controller1, "a", json_integer(emu->settings.controller1.a));
+    json_object_set_new(controller1, "b", json_integer(emu->settings.controller1.b));
+    json_object_set_new(controller1, "select", json_integer(emu->settings.controller1.select));
+    json_object_set_new(controller1, "start", json_integer(emu->settings.controller1.start));
+    json_object_set_new(controller1, "up", json_integer(emu->settings.controller1.up));
+    json_object_set_new(controller1, "down", json_integer(emu->settings.controller1.down));
+    json_object_set_new(controller1, "left", json_integer(emu->settings.controller1.left));
+    json_object_set_new(controller1, "right", json_integer(emu->settings.controller1.right));
+    json_object_set_new(controller1, "aturbo", json_integer(emu->settings.controller1.aturbo));
+    json_object_set_new(controller1, "aturbo", json_integer(emu->settings.controller1.bturbo));
+
+    json_object_set_new(root, "controller1", controller1);
+
+    bool res = true;
+    if (json_dump_file(root, path, JSON_INDENT(4)) < 0)
+        res = false;
+    json_decref(root);
+
+    return res;
 }
 
 bool Emulator_LoadSettings(Emulator* emu, const char* path) {
-    FILE* file;
-    fopen_s(&file, path, "rb");
-    if (file == NULL)
+    json_error_t err;
+    json_t* root = json_load_file(path, 0, &err);
+    if (root == NULL)
         return false;
-    size_t read = fread(&emu->settings, sizeof(Emulator_Settings), 1, file);
+
+    Emulator_Settings* settings = &emu->settings;
+
+    // TODO: CHECK FOR PARSE ERRORS
+    settings->sync = json_integer_value(json_object_get(root, "sync"));
+    settings->next_sync = json_integer_value(json_object_get(root, "next_sync"));
+    settings->vsync = json_boolean_value(json_object_get(root, "vsync"));
+    settings->p1_vol = json_real_value(json_object_get(root, "p1_vol"));
+    settings->p2_vol = json_real_value(json_object_get(root, "p2_vol"));
+    settings->tri_vol = json_real_value(json_object_get(root, "tri_vol"));
+    settings->noise_vol = json_real_value(json_object_get(root, "noise_vol"));
+    settings->master_vol = json_real_value(json_object_get(root, "master_vol"));
+
+    json_t* controller1 = json_object_get(root, "controller1");
+    settings->controller1.a = json_integer_value(json_object_get(controller1, "a"));
+    settings->controller1.b = json_integer_value(json_object_get(controller1, "b"));
+    settings->controller1.select = json_integer_value(json_object_get(controller1, "select"));
+    settings->controller1.start = json_integer_value(json_object_get(controller1, "start"));
+    settings->controller1.up = json_integer_value(json_object_get(controller1, "up"));
+    settings->controller1.down = json_integer_value(json_object_get(controller1, "down"));
+    settings->controller1.left = json_integer_value(json_object_get(controller1, "left"));
+    settings->controller1.right = json_integer_value(json_object_get(controller1, "right"));
+    settings->controller1.aturbo = json_integer_value(json_object_get(controller1, "aturbo"));
+    settings->controller1.bturbo = json_integer_value(json_object_get(controller1, "bturbo"));
 
     // Since changes don't take effect on changing sync type on restart
     // we must set sync to next_sync
-    emu->settings.sync = emu->settings.next_sync;
+    settings->sync = settings->next_sync;
+    json_decref(root);
 
-    fclose(file);
-    return read == 1;
+    return true;
 }
 
 void Emulator_SetDefaultSettings(Emulator* emu) {
