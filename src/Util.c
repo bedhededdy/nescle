@@ -52,3 +52,8 @@ void Util_SafeFree(void* ptr) {
     // The C11 standard ensures that free(NULL) is safe
     free(ptr);
 }
+
+void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem) {
+    for (size_t i = 0; i < nelem; i++)
+        ptr[i] = val;
+}

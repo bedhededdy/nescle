@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// FIXME: NEED TO CHECK IF A GAME HAS BEEN LOADED IN ORDER TO SHOW PTTERN TBL
+// ETC.
 // FIXME: YEAH SO MULTIPLE WINDOWS AND VERTICAL SYNC DON'T MIX
 // SO EVEN THOUGH MY MAIN WINDOW DISABLES THE SYNC, THAT DOESN'T APPLY TO
 // THE OTHER WINDOWS WHICH IS A MASSIVE PROBLEM
@@ -150,10 +152,14 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler);
-            ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern);
-            ImGui::MenuItem("Show OAM", nullptr, &show_oam);
-            ImGui::MenuItem("Show Frametime", "Ctrl+F", &show_frametime);
+            bool cart_loaded = Cart_GetROMPath(bus->cart) != NULL;
+            ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
+                cart_loaded);
+            ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
+                cart_loaded);
+            ImGui::MenuItem("Show OAM", nullptr, &show_oam, cart_loaded);
+            ImGui::MenuItem("Show Frametime", "Ctrl+F", &show_frametime,
+                cart_loaded);
 
             ImGui::EndMenu();
         }
