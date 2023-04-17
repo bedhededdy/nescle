@@ -29,6 +29,7 @@ private:
     // EACH CONSECUTIVE NOTIFICATOIN BEFORE A PREVIOUS CLEAR IS CAUSING
     // MORE LEAKS
     static std::vector<NESCLENotification*> notifications;
+    static GLuint fade_shader;
 
     uint64_t t0;
     int duration;

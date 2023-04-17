@@ -52,6 +52,7 @@ verything should be A-Okay
 . Run `cmake --build .`
 . Copy SDL2.dll to the build directory from SDL2/lib/x64/SDL2.dll
 . To run NESCLE, just type ./nescle
+. If you want to save games, create a directory named saves one level up from the build directory
 
 ## Acknowledgements
 I would like to provide a massive thank you to javidx9 (aka the One Lone Coder) for his excellent YouTube series
