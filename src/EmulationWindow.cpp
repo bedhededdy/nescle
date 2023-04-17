@@ -445,6 +445,10 @@ EmulationWindow::EmulationWindow(int w, int h) {
     const char* glsl_version = "#version 130";
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    // Set blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     SetupMainFrame();
 }
 
@@ -826,23 +830,24 @@ void EmulationWindow::Show(Emulator* emu) {
         glGenTextures(1, &ftime_tex);
         glBindTexture(GL_TEXTURE_2D, ftime_tex);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
         // FIXME:
         // NOT SURE OF THE BEST WAY TO DO THIS, BUT THIS CERTAINLY IS NOT ELEGANT
         // SO WE SHOULD PROBABLY MAKE A WAY TO DRAW HERE WITHOUT F-ING UP
         // THE VIEWPORT, BUT IDK MAYBE THIS IS THE RIGHT WAY??
         // TODO: ADD PADDING
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y/8);
         // could calculate this, but this seems overkill for any reasonable
         // period of time
         char buf[64];
         sprintf(buf, "Frametime: %llu", frametime);
         uint32_t* pixels = RetroText::MakeText(buf);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)io.DisplaySize.x, (int)io.DisplaySize.y/8, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        delete pixels;
+        size_t len = strlen(buf);
+        // need weird offset to avoid getting hidden behind menu bar
+        glViewport((int)io.DisplaySize.x - 2 * len * 8 - 10, (int)io.DisplaySize.y - 40, 2 * len * 8, 2 * 8);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, len * 8, 8, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        RetroText::DestroyText(pixels);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glDeleteTextures(1, &ftime_tex);
