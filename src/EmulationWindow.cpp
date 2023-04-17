@@ -136,10 +136,34 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                 nfdresult_t res = Emulator_LoadROM(emu);
                 show_popup = res == NFD_ERROR;
             }
-            if (ImGui::MenuItem("Save state", "Ctrl+S"))
-                Emulator_SaveState(emu, NULL);
-            if (ImGui::MenuItem("Load state", "Ctrl+L"))
-                Emulator_LoadState(emu, NULL);
+            if (ImGui::BeginMenu("Save State")) {
+                for (int i = 0; i < 10; i++) {
+                    char slot_str[7];
+                    sprintf(slot_str, "Slot %d", i);
+                    char shortcut_str[7];
+                    sprintf(shortcut_str, "Ctrl+%d", i);
+                    if (ImGui::MenuItem(slot_str, shortcut_str)) {
+                        char path[19];
+                        sprintf(path, "../saves/slot%d.sav", i);
+                        Emulator_SaveState(emu, path);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Load state")) {
+                for (int i = 0; i < 10; i++) {
+                    char slot_str[7];
+                    sprintf(slot_str, "Slot %d", i);
+                    char shortcut_str[13];
+                    sprintf(shortcut_str, "Ctrl+Shift+%d", i);
+                    if (ImGui::MenuItem(slot_str, shortcut_str)) {
+                        char path[19];
+                        sprintf(path, "../saves/slot%d.sav", i);
+                        Emulator_LoadState(emu, path);
+                    }
+                }
+                ImGui::EndMenu();
+            }
 
             ImGui::EndMenu();
         }
@@ -491,21 +515,60 @@ void EmulationWindow::Loop() {
         emu->aturbo = emu->bturbo = false;
         if (emulation_window_active && imgui_inactive) {
             if (Emulator_KeyHeld(emu, SDLK_LCTRL) || Emulator_KeyHeld(emu, SDLK_RCTRL)) {
-                // only process one of these if multiple are pressed
-                if (Emulator_KeyPushed(emu, SDLK_o)) {
-                    Emulator_LoadROM(emu);
-                    // TODO: SHOW POPUP
-                }
-                else if (Emulator_KeyPushed(emu, SDLK_l)) {
-                    Emulator_LoadState(emu, NULL);
-                } else if (Emulator_KeyPushed(emu, SDLK_s)) {
-                    Emulator_SaveState(emu, NULL);
-                } else if (Emulator_KeyPushed(emu, SDLK_p)) {
-                    emu->run_emulation = !emu->run_emulation;
-                } else if (Emulator_KeyPushed(emu, SDLK_r)) {
-                    Bus_Reset(bus);
-                } else if (Emulator_KeyPushed(emu, SDLK_f)) {
-                    show_frametime = !show_frametime;
+                if (Emulator_KeyHeld(emu, SDLK_LSHIFT) || Emulator_KeyHeld(emu, SDLK_RSHIFT)) {
+                    if (Emulator_KeyPushed(emu, SDLK_0)) {
+                        Emulator_LoadState(emu, "../saves/slot0.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_1)) {
+                        Emulator_LoadState(emu, "../saves/slot1.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_2)) {
+                        Emulator_LoadState(emu, "../saves/slot2.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_3)) {
+                        Emulator_LoadState(emu, "../saves/slot3.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_4)) {
+                        Emulator_LoadState(emu, "../saves/slot4.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_5)) {
+                        Emulator_LoadState(emu, "../saves/slot5.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_6)) {
+                        Emulator_LoadState(emu, "../saves/slot6.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_7)) {
+                        Emulator_LoadState(emu, "../saves/slot7.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_8)) {
+                        Emulator_LoadState(emu, "../saves/slot8.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_9)) {
+                        Emulator_LoadState(emu, "../saves/slot9.sav");
+                    }
+                } else {
+                    // only process one of these if multiple are pressed
+                    if (Emulator_KeyPushed(emu, SDLK_o)) {
+                        Emulator_LoadROM(emu);
+                        // TODO: SHOW POPUP
+                    } else if (Emulator_KeyPushed(emu, SDLK_p)) {
+                        emu->run_emulation = !emu->run_emulation;
+                    } else if (Emulator_KeyPushed(emu, SDLK_r)) {
+                        Bus_Reset(bus);
+                    } else if (Emulator_KeyPushed(emu, SDLK_f)) {
+                        show_frametime = !show_frametime;
+                    } else if (Emulator_KeyPushed(emu, SDLK_0)) {
+                        Emulator_SaveState(emu, "../saves/slot0.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_1)) {
+                        Emulator_SaveState(emu, "../saves/slot1.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_2)) {
+                        Emulator_SaveState(emu, "../saves/slot2.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_3)) {
+                        Emulator_SaveState(emu, "../saves/slot3.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_4)) {
+                        Emulator_SaveState(emu, "../saves/slot4.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_5)) {
+                        Emulator_SaveState(emu, "../saves/slot5.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_6)) {
+                        Emulator_SaveState(emu, "../saves/slot6.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_7)) {
+                        Emulator_SaveState(emu, "../saves/slot7.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_8)) {
+                        Emulator_SaveState(emu, "../saves/slot8.sav");
+                    } else if (Emulator_KeyPushed(emu, SDLK_9)) {
+                        Emulator_SaveState(emu, "../saves/slot9.sav");
+                    }
                 }
             } else {
                 const Emulator_Controller* btn_map = &emu->settings.controller1;

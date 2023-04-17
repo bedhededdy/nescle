@@ -189,7 +189,7 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     }
 
     FILE* savestate;
-    if (fopen_s(&savestate, "savestate.bin", "wb") != 0) {
+    if (fopen_s(&savestate, path, "wb") != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Emulator_SaveState: Could not open file %s", path);
     }
@@ -299,7 +299,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
 
 bool Emulator_LoadState(Emulator* emu, const char* path) {
     FILE* savestate;
-    fopen_s(&savestate, "savestate.bin", "rb");
+    fopen_s(&savestate, path, "rb");
 
     Bus* bus = emu->nes;
 
