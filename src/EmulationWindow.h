@@ -51,6 +51,8 @@ private:
 
     bool show_frametime = false;
 
+    uint64_t frametime = 0;
+
     // can access the window via an enumeration of their types
     enum WindowType {
         PATTERN,

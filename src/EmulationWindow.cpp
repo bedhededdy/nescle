@@ -124,6 +124,7 @@
 #include "MixerWindow.h"
 #include "PatternWindow.h"
 #include "SettingsWindow.h"
+#include "RetroText.h"
 
 void EmulationWindow::RenderMainGUI(Emulator* emu) {
     // ImGui::Shortcut()
@@ -613,8 +614,7 @@ void EmulationWindow::Loop() {
         if (emulator->settings.vsync == false && emulator->settings.sync == EMULATOR_SYNC_AUDIO)
             SDL_Delay(8);
 
-        if (show_frametime)
-            SDL_Log("frametime: %d\n", (uint32_t)(SDL_GetTicks64() - t0));
+        frametime = SDL_GetTicks64() - t0;
     }
 }
 
@@ -812,15 +812,49 @@ void EmulationWindow::Show(Emulator* emu) {
         GL_BGRA, GL_UNSIGNED_BYTE, ppu_framebuffer);
     delete[] ppu_framebuffer;
 
-
-    // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
-    //     GL_BGRA, GL_UNSIGNED_BYTE, bus->ppu->screen);
-
     glBindVertexArray(main_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    // TODO: draw frametime, but will require a rework to avoid messing with
+    // the main_vao and whatnot
+    // same thing for notifications because they need to draw over
+    // the game, so order is important
+    if (show_frametime) {
+        // SDL_Log("Frametime: %llu\n", frametime);
+        // HORRIBLY INEFFICIENT, BUT FINE FOR NOW
+        GLuint ftime_tex;
+        glGenTextures(1, &ftime_tex);
+        glBindTexture(GL_TEXTURE_2D, ftime_tex);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        // FIXME:
+        // NOT SURE OF THE BEST WAY TO DO THIS, BUT THIS CERTAINLY IS NOT ELEGANT
+        // SO WE SHOULD PROBABLY MAKE A WAY TO DRAW HERE WITHOUT F-ING UP
+        // THE VIEWPORT, BUT IDK MAYBE THIS IS THE RIGHT WAY??
+        // TODO: ADD PADDING
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y/8);
+        // could calculate this, but this seems overkill for any reasonable
+        // period of time
+        char buf[64];
+        sprintf(buf, "Frametime: %llu", frametime);
+        uint32_t* pixels = RetroText::MakeText(buf);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)io.DisplaySize.x, (int)io.DisplaySize.y/8, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        delete pixels;
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDeleteTextures(1, &ftime_tex);
+    }
+
+    // ALSO RENDER NOTIFICATIONS HERE, BEFORE THE SECOND DRAW CALL
+
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
+
+
+
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
