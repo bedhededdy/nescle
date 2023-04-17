@@ -14,3 +14,30 @@
  * limitations under the License.
  */
 #pragma once
+
+#include <glad/glad.h>
+
+#include <cstdint>
+#include <vector>
+
+// All public functions are static and all memory is handled internally
+// All the caller has to do is say that they want to make a notification
+// and say when to show it
+class NESCLENotification {
+private:
+    // FIXME: I THINK THIS IS BEING CALLED A MEMORY LEAK
+    // EACH CONSECUTIVE NOTIFICATOIN BEFORE A PREVIOUS CLEAR IS CAUSING
+    // MORE LEAKS
+    static std::vector<NESCLENotification*> notifications;
+
+    uint64_t t0;
+    int duration;
+    GLuint texture;
+
+    NESCLENotification(const char* text, int duration);
+    ~NESCLENotification();
+
+public:
+    static void MakeNotification(const char* text, int duration = 3000);
+    static void ShowNotifications();
+};

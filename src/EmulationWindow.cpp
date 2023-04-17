@@ -125,6 +125,7 @@
 #include "PatternWindow.h"
 #include "SettingsWindow.h"
 #include "RetroText.h"
+#include "NESCLENotification.h"
 
 void EmulationWindow::RenderMainGUI(Emulator* emu) {
     // ImGui::Shortcut()
@@ -147,6 +148,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                         char path[19];
                         sprintf(path, "../saves/slot%d.sav", i);
                         Emulator_SaveState(emu, path);
+                        NESCLENotification::MakeNotification("Saved state");
                     }
                 }
                 ImGui::EndMenu();
@@ -161,6 +163,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                         char path[19];
                         sprintf(path, "../saves/slot%d.sav", i);
                         Emulator_LoadState(emu, path);
+                        NESCLENotification::MakeNotification("Loaded state");
                     }
                 }
                 ImGui::EndMenu();
@@ -523,24 +526,34 @@ void EmulationWindow::Loop() {
                 if (Emulator_KeyHeld(emu, SDLK_LSHIFT) || Emulator_KeyHeld(emu, SDLK_RSHIFT)) {
                     if (Emulator_KeyPushed(emu, SDLK_0)) {
                         Emulator_LoadState(emu, "../saves/slot0.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_1)) {
                         Emulator_LoadState(emu, "../saves/slot1.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_2)) {
                         Emulator_LoadState(emu, "../saves/slot2.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_3)) {
                         Emulator_LoadState(emu, "../saves/slot3.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_4)) {
                         Emulator_LoadState(emu, "../saves/slot4.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_5)) {
                         Emulator_LoadState(emu, "../saves/slot5.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_6)) {
                         Emulator_LoadState(emu, "../saves/slot6.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_7)) {
                         Emulator_LoadState(emu, "../saves/slot7.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_8)) {
                         Emulator_LoadState(emu, "../saves/slot8.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_9)) {
                         Emulator_LoadState(emu, "../saves/slot9.sav");
+                        NESCLENotification::MakeNotification("Loaded state");
                     }
                 } else {
                     // only process one of these if multiple are pressed
@@ -555,24 +568,34 @@ void EmulationWindow::Loop() {
                         show_frametime = !show_frametime;
                     } else if (Emulator_KeyPushed(emu, SDLK_0)) {
                         Emulator_SaveState(emu, "../saves/slot0.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_1)) {
                         Emulator_SaveState(emu, "../saves/slot1.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_2)) {
                         Emulator_SaveState(emu, "../saves/slot2.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_3)) {
                         Emulator_SaveState(emu, "../saves/slot3.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_4)) {
                         Emulator_SaveState(emu, "../saves/slot4.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_5)) {
                         Emulator_SaveState(emu, "../saves/slot5.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_6)) {
                         Emulator_SaveState(emu, "../saves/slot6.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_7)) {
                         Emulator_SaveState(emu, "../saves/slot7.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_8)) {
                         Emulator_SaveState(emu, "../saves/slot8.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_9)) {
                         Emulator_SaveState(emu, "../saves/slot9.sav");
+                        NESCLENotification::MakeNotification("Saved state");
                     }
                 }
             } else {
@@ -853,7 +876,11 @@ void EmulationWindow::Show(Emulator* emu) {
         glDeleteTextures(1, &ftime_tex);
     }
 
-    // ALSO RENDER NOTIFICATIONS HERE, BEFORE THE SECOND DRAW CALL
+    // TODO: CAN OPTIMIZE BY MAKING ONE BIG TEXTURE FOR UI THAT EACH OF THESE
+    // PARTIALLY WRITES TO, BECAUSE AS OF NOW THERE IS 1 DRAW CALL
+    // PER UI ELEMENT, WHICH DOESN'T MATTER SINCE WE HAVE SUCH FEW CALLS,
+    // BUT IT IS REALLY BAD PRACTICE
+    NESCLENotification::ShowNotifications();
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
