@@ -138,6 +138,10 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                 nfdresult_t res = Emulator_LoadROM(emu);
                 show_popup = res == NFD_ERROR;
             }
+            // TODO: EITHER ADD SEPARATE SAVE STATES FOR EACH ROM
+            // OR MARK WHICH GAME EACH SLOT IS REGISTERED TO
+            // SEPARATE PER GAME IS IDEAL, BUT MAY REQUIRE AN INTERNAL DB
+            // FOR INSTANCES WHERE THERE ARE MULTIPLE GAMES WITH THE SAME NAME
             if (ImGui::BeginMenu("Save State")) {
                 for (int i = 0; i < 10; i++) {
                     char slot_str[7];
@@ -865,8 +869,12 @@ void EmulationWindow::Show(Emulator* emu) {
         uint32_t* pixels = RetroText::MakeText(buf);
         size_t len = strlen(buf);
         // need weird offset to avoid getting hidden behind menu bar
-        glViewport((int)io.DisplaySize.x - 2 * len * 8 - 10, (int)io.DisplaySize.y - 40, 2 * len * 8, 2 * 8);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, len * 8, 8, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        // glViewport((int)io.DisplaySize.x - 2 * len * 8 - 10, (int)io.DisplaySize.y - 40, 2 * len * 8, 2 * 8);
+        const int width = 8*len + 4;
+        const int height = 8 + 4;
+
+        glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - 18 - 2*height, 2*width, 2*height);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glGenerateMipmap(GL_TEXTURE_2D);

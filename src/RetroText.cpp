@@ -95,7 +95,8 @@ void RetroText::MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_
 
     // We need to skip to the initial offset of the character in the row
     // Each character is 8 pixels wide, so we need to skip 8 pixels per character
-    pixels += pos * 8;
+    // plus the padding
+    pixels += pos * 8 + padding_x;
 
     // Since the string is of length len, after drawing each row, we need to
     // skip over 8 pixels per character to get to the next row
@@ -111,7 +112,7 @@ void RetroText::MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_
             pixels[7-x] = color ? fgcolor : bgcolor;
         }
 
-        pixels += 8 * len;
+        pixels += 8 * len + 2*padding_x;
     }
 }
 
@@ -120,10 +121,35 @@ uint32_t* RetroText::MakeText(const char* text, uint32_t fgcolor, uint32_t bgcol
         LoadFont();
 
     size_t len = strlen(text);
-    uint32_t* pixels = new uint32_t[len * 8 * 8];
+
+    const int ncols = 2*padding_x + 8*len;
+    const int nrows = 2*padding_y + 8;
+
+    uint32_t* pixels = new uint32_t[(2*padding_x + len*8) * (8 + 2*padding_y)];
 
     for (size_t i = 0; i < len; i++)
-        MakeChar(text[i], i, len, pixels, fgcolor, bgcolor);
+        MakeChar(text[i], i, len, pixels + padding_y*(2*padding_x + len*8), fgcolor, bgcolor);
+
+    // shade background rows
+    for (int y = 0; y < padding_y; y++) {
+        for (int x = 0; x < 2*padding_x + len*8; x++)
+            pixels[y*(2*padding_x + len*8) + x] = bgcolor;
+    }
+    for (int y = 0; y < padding_y; y++) {
+        for (int x = 0; x < 2*padding_x + len*8; x++)
+            pixels[(nrows - 1 - y)*(2*padding_x + len*8) + x] = bgcolor;
+    }
+
+    // shade background cols
+    for (int y = 0; y < nrows; y++) {
+        for (int x = 0; x < padding_x; x++)
+            pixels[y*(2*padding_x + len*8) + x] = bgcolor;
+    }
+
+    for (int y = 0; y < nrows; y++) {
+        for (int x = 0; x < padding_x; x++)
+            pixels[y*(2*padding_x + len*8) + (ncols - 1 - x)] = bgcolor;
+    }
 
     return pixels;
 }

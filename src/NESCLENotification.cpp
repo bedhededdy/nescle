@@ -32,7 +32,7 @@ NESCLENotification::NESCLENotification(const char* text, int duration) {
     glBindTexture(GL_TEXTURE_2D, texture);
     size_t len = strlen(text);
     uint32_t* pixels = RetroText::MakeText(text);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, len * 8, 8, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, len * 8 + 4, 8 + 4, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     RetroText::DestroyText(pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -97,7 +97,7 @@ void NESCLENotification::ShowNotifications() {
         } else {
             ++it;
             // FIXME: GET THE REAL DIMENSIONS
-            glViewport(0, 0, 128, 16);
+            glViewport(0, 0, 132, 24);
             glUseProgram(fade_shader);
             glBindTexture(GL_TEXTURE_2D, n->texture);
             GLint alpha_loc = glGetUniformLocation(fade_shader, "alpha");

@@ -22,7 +22,13 @@
 // TODO: CREATE AN OPENGL TEXTURE WRAPPER THAT KNOWS ITS DIMENSIONS
 class RetroText {
 private:
+    // TODO: FIGURE OUT HOW BIG THE WINDOW IS SO WE CAN SIZE ACCORDINGLY
+    // padding will be added to the left and right of the texture
+    static constexpr int padding_x = 2;
+    static constexpr int padding_y = 2;
+
     static uint8_t* font;
+
     static void LoadFont();
     static int CharToTile(char ch);
     static void MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_t fgcolor, uint32_t bgcolor);

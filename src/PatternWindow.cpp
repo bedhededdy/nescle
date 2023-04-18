@@ -63,6 +63,11 @@ void PatternWindow::Show(Emulator* emu) {
 
     Bus* bus = emu->nes;
 
+    // TODO: ATTEMPT TO GIVE WINDOW A DEFAULT SIZE
+    // IF POSSIBLE FORCE THE WINDOW TO MAINTAIN IT'S ASPECT RATIO
+    ImGui::Begin("Pattern Memory", show);
+    int width = ImGui::GetContentRegionAvail().x;
+    int height = ImGui::GetContentRegionAvail().y;
     glViewport(0, 0, 256, 128);
     glBindFramebuffer(GL_FRAMEBUFFER, palette_fbo);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
@@ -103,11 +108,10 @@ void PatternWindow::Show(Emulator* emu) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    ImGui::Begin("Pattern Memory", show);
     focused = ImGui::IsWindowFocused();
     auto uintptr_tex = static_cast<uintptr_t>(palette_texture);
     auto imguiptr_tex = reinterpret_cast<ImTextureID>(uintptr_tex);
-    ImGui::Image(imguiptr_tex, ImVec2(256 * 2, 128 * 2),
+    ImGui::Image(imguiptr_tex, ImVec2(width, height),
         ImVec2(0, 1), ImVec2(1, 0));
     ImGui::End();
 }
