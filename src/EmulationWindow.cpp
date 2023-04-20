@@ -904,6 +904,27 @@ void EmulationWindow::Show(Emulator* emu) {
         SDL_GL_MakeCurrent(window, gl_context);
     }
 
+    // set window title
+    // FIXME: VERY UNSAFE
+    const char* rom_path = Cart_GetROMPath(bus->cart);
+    const char* game_name = NULL;
+    if (rom_path != NULL) {
+        game_name = strrchr(rom_path, '/') + 1;
+        if (game_name == (char*)1)
+            game_name = strrchr(rom_path, '\\') + 1;
+        if (game_name == (char*)1)
+            game_name = rom_path;
+    } else {
+        game_name = "";
+    }
+    float fps = ImGui::GetIO().Framerate;
+
+    // FIXME: VERY UNSAFE
+    // TODO: DON'T CHANGE TITLE EVERY FRAME, ONLY DO IT EVERY COUPLE FRAMES
+    char window_title[512];
+    sprintf(window_title, "NESCLE: %s (%.2f fps)", game_name, fps);
+
+    SDL_SetWindowTitle(window, window_title);
 
     SDL_GL_SwapWindow(window);
 }
