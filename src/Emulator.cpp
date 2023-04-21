@@ -202,6 +202,7 @@ void Emulator_Destroy(Emulator* emu) {
     // Save settings for next session
     Emulator_SaveSettings(emu, "settings.json");
 
+    delete emu->games_db;
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
