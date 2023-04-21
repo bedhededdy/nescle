@@ -16,7 +16,9 @@
 #include "Util.h"
 
 #include <SDL_log.h>
+
 #include <stdlib.h>
+#include <string.h>
 
 void* Util_SafeMalloc(size_t size) {
     void* ptr = malloc(size);
@@ -56,4 +58,20 @@ void Util_SafeFree(void* ptr) {
 void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem) {
     for (size_t i = 0; i < nelem; i++)
         ptr[i] = val;
+}
+
+
+const char* Util_GetFileName(const char* path) {
+    char slash;
+    #ifdef UTIL_WINDOWS
+    slash = '\\';
+    #else
+    slash = '/';
+    #endif
+
+    const char* file_name = strrchr(path, slash);
+    if (file_name != NULL)
+        return file_name + 1;
+    else
+        return path;
 }

@@ -132,6 +132,8 @@ bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key);
 
 bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
 
+bool Emulator_SeenGame(Emulator* emu, const char* path);
+
 #ifdef __cplusplus
 }
 #endif

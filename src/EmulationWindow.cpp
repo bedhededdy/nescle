@@ -893,9 +893,6 @@ void EmulationWindow::Show(Emulator* emu) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
 
-
-
-
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {

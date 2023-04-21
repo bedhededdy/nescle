@@ -576,3 +576,7 @@ const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn)
     };
     return btn_names[btn];
 }
+
+bool Emulator_SeenGame(Emulator* emu, const char* path) {
+
+}

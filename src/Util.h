@@ -22,12 +22,18 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#define UTIL_WINDOWS
+#endif
+
 void* Util_SafeMalloc(size_t size);
 void* Util_SafeRealloc(void* ptr, size_t size);
 void* Util_SafeCalloc(size_t nelem, size_t elem_sz);
 void  Util_SafeFree(void* ptr);
 
 void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
+
+const char* Util_GetFileName(const char* path);
 
 #ifdef __cplusplus
 }
