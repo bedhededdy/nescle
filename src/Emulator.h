@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 // TODO: INVESTIGATE HAVING A CONTROLLER STRUCT WITH ITS OWN FILE
+// TODO: NEED TO ADD GAMES TO DB ON ROM LOAD, CAN FACILITATE THIS THROUGH
+// AN EMULATOR_LOADROM FUNCTION THAT EVENTUALLY TRAPS TO CART_LOADROM
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
 #include <nfd.h>
 
@@ -26,7 +28,9 @@ extern "C" {
 #include <SDL_mutex.h>
 #include <SDL_keyboard.h>
 
-#include <stdbool.h>
+// #include <stdbool.h>
+#include <unordered_set>
+#include <string>
 
 #include "NESCLETypes.h"
 
@@ -94,6 +98,9 @@ struct emulator {
 
     Emulator_Settings settings;
 
+    std::unordered_set<std::string>* games_db;
+    bool used_saveslots[10];
+
     int nkeys;
     uint8_t* prev_keys;
     const uint8_t* keys;
@@ -134,6 +141,6 @@ bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_Key
 
 bool Emulator_SeenGame(Emulator* emu, const char* path);
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif

@@ -128,7 +128,7 @@ find_package(OpenGL REQUIRED)
 # Add nescle as executable
 set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
-set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.c RetroText.cpp NESCLETexture.cpp
+set(NESCLE_SRC Bus.c Cart.c CPU.c Emulator.cpp RetroText.cpp NESCLETexture.cpp
       EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.c APU.c
       DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
       MixerWindow.cpp Util.c NESCLENotification.cpp)

@@ -119,6 +119,7 @@
 #include "Emulator.h"
 #include "Mapper.h"
 #include "PPU.h"
+#include "Util.h"
 
 #include "ControllerWindow.h"
 #include "MixerWindow.h"
@@ -148,24 +149,28 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str)) {
-                        char path[19];
-                        sprintf(path, "../saves/slot%d.sav", i);
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, Cart_GetROMPath(bus->cart) != NULL)) {
+                        char path[1024];
+                        const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                        sprintf(path, "../saves/%sslot%d.sav", game_name, i);
                         Emulator_SaveState(emu, path);
                         NESCLENotification::MakeNotification("Saved state");
                     }
                 }
                 ImGui::EndMenu();
             }
+            // FIXME: LOAD WILL BE GRAYED OUT FOR SAVESTATES CREATED AFTER
+            // GAME WAS LOADED
             if (ImGui::BeginMenu("Load state")) {
                 for (int i = 0; i < 10; i++) {
                     char slot_str[7];
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[13];
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str)) {
-                        char path[19];
-                        sprintf(path, "../saves/slot%d.sav", i);
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->used_saveslots[i])) {
+                        char path[1024];
+                        const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                        sprintf(path, "../saves/%sslot%d.sav", game_name, i);
                         Emulator_LoadState(emu, path);
                         NESCLENotification::MakeNotification("Loaded state");
                     }
@@ -528,38 +533,57 @@ void EmulationWindow::Loop() {
         if (emulation_window_active && imgui_inactive) {
             if (Emulator_KeyHeld(emu, SDLK_LCTRL) || Emulator_KeyHeld(emu, SDLK_RCTRL)) {
                 if (Emulator_KeyHeld(emu, SDLK_LSHIFT) || Emulator_KeyHeld(emu, SDLK_RSHIFT)) {
+                    // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
+                    // BEFORE CALLING LOAD STATE?
+                    char path_to_save[1024];
+                    const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+
                     if (Emulator_KeyPushed(emu, SDLK_0)) {
-                        Emulator_LoadState(emu, "../saves/slot0.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_1)) {
-                        Emulator_LoadState(emu, "../saves/slot1.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_2)) {
-                        Emulator_LoadState(emu, "../saves/slot2.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_3)) {
-                        Emulator_LoadState(emu, "../saves/slot3.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_4)) {
-                        Emulator_LoadState(emu, "../saves/slot4.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_5)) {
-                        Emulator_LoadState(emu, "../saves/slot5.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_6)) {
-                        Emulator_LoadState(emu, "../saves/slot6.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_7)) {
-                        Emulator_LoadState(emu, "../saves/slot7.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_8)) {
-                        Emulator_LoadState(emu, "../saves/slot8.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (Emulator_KeyPushed(emu, SDLK_9)) {
-                        Emulator_LoadState(emu, "../saves/slot9.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_LoadState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     }
                 } else {
+                    char path_to_save[1024];
+                    // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
+                    const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+
                     // only process one of these if multiple are pressed
                     if (Emulator_KeyPushed(emu, SDLK_o)) {
                         Emulator_LoadROM(emu);
@@ -571,34 +595,44 @@ void EmulationWindow::Loop() {
                     } else if (Emulator_KeyPushed(emu, SDLK_f)) {
                         show_frametime = !show_frametime;
                     } else if (Emulator_KeyPushed(emu, SDLK_0)) {
-                        Emulator_SaveState(emu, "../saves/slot0.sav");
+                        sprintf(path_to_save, "../saves/%sslot0.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_1)) {
-                        Emulator_SaveState(emu, "../saves/slot1.sav");
+                        sprintf(path_to_save, "../saves/%sslot1.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_2)) {
-                        Emulator_SaveState(emu, "../saves/slot2.sav");
+                        sprintf(path_to_save, "../saves/%sslot2.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_3)) {
-                        Emulator_SaveState(emu, "../saves/slot3.sav");
+                        sprintf(path_to_save, "../saves/%sslot3.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_4)) {
-                        Emulator_SaveState(emu, "../saves/slot4.sav");
+                        sprintf(path_to_save, "../saves/%sslot4.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_5)) {
-                        Emulator_SaveState(emu, "../saves/slot5.sav");
+                        sprintf(path_to_save, "../saves/%sslot5.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_6)) {
-                        Emulator_SaveState(emu, "../saves/slot6.sav");
+                        sprintf(path_to_save, "../saves/%sslot6.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_7)) {
-                        Emulator_SaveState(emu, "../saves/slot7.sav");
+                        sprintf(path_to_save, "../saves/%sslot7.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_8)) {
-                        Emulator_SaveState(emu, "../saves/slot8.sav");
+                        sprintf(path_to_save, "../saves/%sslot8.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (Emulator_KeyPushed(emu, SDLK_9)) {
-                        Emulator_SaveState(emu, "../saves/slot9.sav");
+                        sprintf(path_to_save, "../saves/%sslot9.sav", game_name);
+                        Emulator_SaveState(emu, path_to_save);
                         NESCLENotification::MakeNotification("Saved state");
                     }
                 }

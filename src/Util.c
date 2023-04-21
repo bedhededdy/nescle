@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void* Util_SafeMalloc(size_t size) {
     void* ptr = malloc(size);
@@ -62,6 +63,8 @@ void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem) {
 
 
 const char* Util_GetFileName(const char* path) {
+    if (path == NULL)
+        return NULL;
     char slash;
     #ifdef UTIL_WINDOWS
     slash = '\\';
@@ -74,4 +77,13 @@ const char* Util_GetFileName(const char* path) {
         return file_name + 1;
     else
         return path;
+}
+
+bool Util_FileExists(const char* path) {
+    FILE* file;
+    errno_t res = fopen_s(&file, path, "r");
+    if (res != 0)
+        return false;
+    fclose(file);
+    return true;
 }
