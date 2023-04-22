@@ -19,7 +19,9 @@
 
 #include <jansson.h>
 #include <SDL_log.h>
+#include <SDL_filesystem.h>
 
+#include <string>
 #include <cstring>
 // #include <string.h>
 
@@ -112,8 +114,6 @@ void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len) {
 Emulator* Emulator_Create(const char* settings_path) {
     Emulator* emu = (Emulator*)Util_SafeMalloc(sizeof(Emulator));
 
-    emu->games_db = new std::unordered_set<std::string>();
-
     emu->nes = Bus_CreateNES();
     emu->nes_state_lock = SDL_CreateMutex();
     if (emu->nes_state_lock == NULL) {
@@ -121,10 +121,22 @@ Emulator* Emulator_Create(const char* settings_path) {
             "Emulator_Create: Bad alloc SDL_Mutex");
     }
 
-    if (!Emulator_LoadSettings(emu, "settings.json")) {
+    // Get the exe and user data paths
+    emu->exe_path = SDL_GetBasePath();
+    emu->user_data_path = SDL_GetPrefPath("NesEmu", "NesEmu");
+
+    // Create a saves directory if there isn't one
+    std::string saves_path = std::string(emu->user_data_path) + "saves";
+    Util_CreateDirectoryIfNotExists(saves_path.c_str());
+
+    std::string settings_path_str = std::string(emu->user_data_path) + "settings.json";
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "settings_path_str: %s", settings_path_str.c_str());
+    // settings_path_str = "settings.json";
+    if (!Emulator_LoadSettings(emu, settings_path_str.c_str())) {
         Emulator_SetDefaultSettings(emu);
         emu->settings.sync = EMULATOR_SYNC_VIDEO;
-        if (!Emulator_SaveSettings(emu, "settings.json"))
+        if (!Emulator_SaveSettings(emu, settings_path_str.c_str()))
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "Emulator_Create: Could not save settings");
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -169,29 +181,9 @@ Emulator* Emulator_Create(const char* settings_path) {
     // Log the keymaps in debug mode
     LogKeymaps(emu);
 
+    // Set all saveslots as unused
     memset(emu->used_saveslots, false, sizeof(emu->used_saveslots));
 
-    // Populate games_db from romdb.txt
-    if (Util_FileExists("../res/romdb.txt")) {
-        FILE* romdb;
-        fopen_s(&romdb, "../res/romdb.txt", "r");
-        char line[1024];
-        while (fgets(line, sizeof(line), romdb)) {
-            // FIXME: YOU NEED TO TRIM THE NEWLINE
-            size_t len = strlen(line);
-            if (line[len-1] == '\n')
-                line[len-1] = '\0';
-            // check that line wasn't empty
-            if (line[0] != '\0')
-                emu->games_db->insert(std::string(line));
-        }
-        fclose(romdb);
-    } else {
-        // create the file
-        FILE* romdb;
-        fopen_s(&romdb, "../res/romdb.txt", "w");
-        fclose(romdb);
-    }
 
     // Start the audio device
     SDL_PauseAudioDevice(emu->audio_device, 0);
@@ -202,7 +194,8 @@ void Emulator_Destroy(Emulator* emu) {
     // Save settings for next session
     Emulator_SaveSettings(emu, "settings.json");
 
-    delete emu->games_db;
+    SDL_free(const_cast<char*>(emu->exe_path));
+    SDL_free(const_cast<char*>(emu->user_data_path));
     SDL_DestroyMutex(emu->nes_state_lock);
     SDL_CloseAudioDevice(emu->audio_device);
     Bus_DestroyNES(emu->nes);
@@ -581,25 +574,17 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
         Bus_Reset(bus);
     }
 
-    if (Emulator_SeenGame(emu, (const char*)rom)) {
+    if (rom != NULL) {
         // Find out what saves we have
         const char* game_name = Util_GetFileName((const char*)rom);
         // FIXME: UNSAFE, PROBABLY SHOULD USE std::string
         char save_path[1024];
         for (int i = 0; i < 10; i++) {
-            sprintf(save_path, "../saves/%sslot%d.sav", game_name, i);
+            sprintf(save_path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
             emu->used_saveslots[i] = Util_FileExists(save_path);
         }
-    } else if (rom != NULL) {
-        // We have no saves, so add game to seen list and say we have no saves
+    } else {
         memset(emu->used_saveslots, false, sizeof(emu->used_saveslots));
-        emu->games_db->insert(std::string(Util_GetFileName((const char*)rom)));
-
-        // append game to the games_db file
-        // FIXME: MAY NEED TO TELL IT TO CREATE IF NOT EXISTS
-        FILE* db = fopen("../res/romdb.txt", "a");
-        fprintf(db, "%s\n", Util_GetFileName((const char*)rom));
-        fclose(db);
     }
 
     if (rom != NULL)
@@ -628,11 +613,6 @@ const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn)
     return btn_names[btn];
 }
 
-bool Emulator_SeenGame(Emulator* emu, const char* path) {
-    // TODO: MAYBE ADD A CHECK FOR THE EMPTY STRING HERE
-    if (path == NULL)
-        return false;
-    const char* game = Util_GetFileName(path);
-    std::string game_str(game);
-    return emu->games_db->find(game_str) != emu->games_db->end();
+bool Emulator_ROMInserted(Emulator* emu) {
+    return Cart_GetROMPath(emu->nes->cart) != NULL;
 }

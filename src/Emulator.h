@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 // TODO: INVESTIGATE HAVING A CONTROLLER STRUCT WITH ITS OWN FILE
-// TODO: NEED TO ADD GAMES TO DB ON ROM LOAD, CAN FACILITATE THIS THROUGH
-// AN EMULATOR_LOADROM FUNCTION THAT EVENTUALLY TRAPS TO CART_LOADROM
+// TODO: YOU CAN MAKE THIS BACK TO C BY GETTING RID OF THE SET
+// IT'S UNNECESSARY, SINCE AT THE END OF THE DAY WE NEED TO CHECK FOR EXISTENCE
+// OF SAVE FILES
 #pragma once
 
 // #ifdef __cplusplus
 // extern "C" {
 // #endif
+
+// #define EMU_NUM_SAVESLOTS 10
 
 #include <nfd.h>
 
@@ -29,8 +32,6 @@
 #include <SDL_keyboard.h>
 
 // #include <stdbool.h>
-#include <unordered_set>
-#include <string>
 
 #include "NESCLETypes.h"
 
@@ -98,13 +99,15 @@ struct emulator {
 
     Emulator_Settings settings;
 
-    std::unordered_set<std::string>* games_db;
     bool used_saveslots[10];
 
     int nkeys;
     uint8_t* prev_keys;
     const uint8_t* keys;
     SDL_KeyCode most_recent_key_this_frame;
+
+    const char* exe_path;
+    const char* user_data_path;
 
     bool aturbo;
     bool bturbo;
@@ -130,17 +133,14 @@ void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len);
 
 const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn);
 
-// Returns if key changed from not pushed to pushed
 bool Emulator_KeyPushed(Emulator* emu, SDL_Keycode key);
-// Returns if key is currently held down
 bool Emulator_KeyHeld(Emulator* emu, SDL_Keycode key);
-// Returns if key changed from pushed to not pushed
 bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key);
 
 bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
 
-bool Emulator_SeenGame(Emulator* emu, const char* path);
+bool Emulator_ROMInserted(Emulator* emu);
 
-//#ifdef __cplusplus
-//}
-//#endif
+// #ifdef __cplusplus
+// }
+// #endif

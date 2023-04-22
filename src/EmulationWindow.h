@@ -40,7 +40,7 @@ private:
     // TODO: MOVE THESE DEFAULT VALUES TO THE CONSTRUCTOR
     int palette = 0;
 
-    const char* exe_path;
+    // const char* exe_path;
 
     bool show_disassembler = false;
     bool show_oam = false;

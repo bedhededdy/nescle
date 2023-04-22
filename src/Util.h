@@ -32,6 +32,8 @@ void* Util_SafeRealloc(void* ptr, size_t size);
 void* Util_SafeCalloc(size_t nelem, size_t elem_sz);
 void  Util_SafeFree(void* ptr);
 
+bool Util_CreateDirectoryIfNotExists(const char* path);
+
 void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
 
 const char* Util_GetFileName(const char* path);

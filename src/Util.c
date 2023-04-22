@@ -17,9 +17,18 @@
 
 #include <SDL_log.h>
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifdef UTIL_WINDOWS
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 void* Util_SafeMalloc(size_t size) {
     void* ptr = malloc(size);
@@ -86,4 +95,10 @@ bool Util_FileExists(const char* path) {
         return false;
     fclose(file);
     return true;
+}
+
+bool Util_CreateDirectoryIfNotExists(const char* path) {
+    // TODO: INVESTIGATE THE FLAGS
+    int res = mkdir(path, 0777);
+    return res == 0 || errno == EEXIST;
 }
