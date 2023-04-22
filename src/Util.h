@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -39,7 +35,3 @@ void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
 const char* Util_GetFileName(const char* path);
 
 bool Util_FileExists(const char* path);
-
-#ifdef __cplusplus
-}
-#endif

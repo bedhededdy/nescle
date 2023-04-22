@@ -16,10 +16,6 @@
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -128,7 +124,3 @@ static void op_txa(CPU* cpu);    // transfer index x to accumulator          (N 
 static void op_txs(CPU* cpu);    // transfer index x to stack pointer
 static void op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
 */
-
-#ifdef __cplusplus
-}
-#endif

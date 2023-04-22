@@ -28,7 +28,7 @@
 
 /* Constructors/Destructors */
 Bus* Bus_Create(void) {
-    return Util_SafeMalloc(sizeof(Bus));
+    return (Bus*)Util_SafeMalloc(sizeof(Bus));
 }
 
 void Bus_Destroy(Bus* bus) {

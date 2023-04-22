@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct cpu CPU;
 typedef struct bus Bus;
 typedef struct ppu PPU;
@@ -30,7 +26,3 @@ typedef struct emulator Emulator;
 typedef struct emulator_settings Emulator_Settings;
 
 typedef struct ppu_oam PPU_OAM;
-
-#ifdef __cplusplus
-}
-#endif

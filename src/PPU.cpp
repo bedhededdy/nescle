@@ -410,7 +410,7 @@ uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
 
 /* Constructors/Destructors */
 PPU* PPU_Create(void) {
-    PPU* ppu = Util_SafeMalloc(sizeof(PPU));
+    PPU* ppu = (PPU*)Util_SafeMalloc(sizeof(PPU));
     Util_MemsetU32((uint32_t*)ppu->sprpatterntbl, 0xff000000,
         sizeof(ppu->sprpatterntbl)/sizeof(uint32_t));
     Util_MemsetU32((uint32_t*)ppu->screen, 0xff000000,

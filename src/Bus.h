@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -86,7 +82,3 @@ int Bus_SaveState(Bus* bus, FILE* file);
 int Bus_LoadState(Bus* bus, FILE* file);
 
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_rate);
-
-#ifdef __cplusplus
-}
-#endif

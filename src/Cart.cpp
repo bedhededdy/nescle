@@ -58,7 +58,7 @@ struct cart {
 };
 
 Cart* Cart_Create(void) {
-    Cart* cart = Util_SafeMalloc(sizeof(Cart));
+    Cart* cart = (Cart*)Util_SafeMalloc(sizeof(Cart));
     cart->mapper = NULL;
     cart->prg_rom = NULL;
     cart->chr_rom = NULL;
@@ -143,7 +143,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // Recall that Util_Safe* is just a wrapper around stdlib functions that
     // will exit the program if the allocation fails
     const size_t prg_rom_nbytes = Cart_GetPrgRomBytes(cart);
-    cart->prg_rom = realloc(cart->prg_rom, prg_rom_nbytes);
+    cart->prg_rom = (uint8_t*)realloc(cart->prg_rom, prg_rom_nbytes);
     if (cart->prg_rom == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed alloc\n");
@@ -160,7 +160,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
     // is used as RAM. GetChrRomBytes will return 8kb in this case, so we
     // must use GetChrRomBlocks to check if there is RAM or not
     const size_t chr_rom_nbytes = Cart_GetChrRomBytes(cart);
-    cart->chr_rom = realloc(cart->chr_rom, chr_rom_nbytes);
+    cart->chr_rom = (uint8_t*)realloc(cart->chr_rom, chr_rom_nbytes);
     if (cart->chr_rom == NULL) {
         printf("Cart_LoadROM: alloc chr_ram\n");
         return false;
@@ -200,7 +200,7 @@ bool Cart_LoadROM(Cart* cart, const char* path) {
 
     // Free previous path if it exists and copy it into the cart
     size_t path_len = strlen(path) + 1;
-    cart->rom_path = realloc(cart->rom_path, path_len);
+    cart->rom_path = (char*)realloc(cart->rom_path, path_len);
     if (cart->rom_path == NULL) {
         printf("Cart_LoadROM: alloc rom_path\n");
         return false;
@@ -243,7 +243,7 @@ bool Cart_LoadState(Cart* cart, FILE* file) {
     size_t rom_path_len;
     bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
 
-    cart->rom_path = malloc(sizeof(char) * rom_path_len);
+    cart->rom_path = (char*)malloc(sizeof(char) * rom_path_len);
     if (cart->rom_path == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadState: alloc rom_path\n");
@@ -251,14 +251,14 @@ bool Cart_LoadState(Cart* cart, FILE* file) {
     }
     bool b3 = fread(cart->rom_path, sizeof(char), rom_path_len, file) == 1;
 
-    cart->prg_rom = malloc(Cart_GetPrgRomBytes(cart));
+    cart->prg_rom = (uint8_t*)malloc(Cart_GetPrgRomBytes(cart));
     if (cart->prg_rom == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadState: alloc prg_rom\n");
         return false;
     }
     bool b4 = fread(cart->prg_rom, Cart_GetPrgRomBytes(cart), 1, file) == 1;
-    cart->chr_rom = malloc(Cart_GetChrRomBytes(cart));
+    cart->chr_rom = (uint8_t*)malloc(Cart_GetChrRomBytes(cart));
     if (cart->chr_rom == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadState: alloc chr_rom\n");

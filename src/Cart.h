@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -48,7 +44,3 @@ uint8_t Cart_ReadPrgRom(Cart* cart, size_t off);
 void Cart_WritePrgRom(Cart* cart, size_t off, uint8_t data);
 uint8_t Cart_ReadChrRom(Cart* cart, size_t off);
 void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t data);
-
-#ifdef __cplusplus
-}
-#endif

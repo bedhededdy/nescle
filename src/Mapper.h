@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -55,7 +51,3 @@ bool Mapper_GetIRQStatus(Mapper* mapper);
 void Mapper_ClearIRQStatus(Mapper* mapper);
 
 Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper);
-
-#ifdef __cplusplus
-}
-#endif

@@ -532,7 +532,7 @@ void APU_Reset(APU *apu)
 }
 
 APU* APU_Create(void) {
-    return Util_SafeMalloc(sizeof(APU));
+    return (APU*)Util_SafeMalloc(sizeof(APU));
 }
 
 void APU_Destroy(APU *apu) {

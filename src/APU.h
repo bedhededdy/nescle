@@ -15,9 +15,9 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -25,28 +25,26 @@ extern "C" {
 
 #include "NESCLETypes.h"
 
-APU* APU_Create(void);
-void APU_Destroy(APU* apu);
+// namespace NESCLE {
+    APU* APU_Create(void);
+    void APU_Destroy(APU* apu);
 
-void APU_PowerOn(APU* apu);
-void APU_Reset(APU* apu);
+    void APU_PowerOn(APU* apu);
+    void APU_Reset(APU* apu);
 
-uint8_t APU_Read(APU* apu, uint16_t addr);
-bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
+    uint8_t APU_Read(APU* apu, uint16_t addr);
+    bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
 
-void APU_Clock(APU* apu);
-void APU_Reset(APU* apu);
+    void APU_Clock(APU* apu);
+    void APU_Reset(APU* apu);
 
-bool APU_SaveState(APU* apu, FILE* file);
-bool APU_LoadState(APU* apu, FILE* file);
+    bool APU_SaveState(APU* apu, FILE* file);
+    bool APU_LoadState(APU* apu, FILE* file);
 
-void APU_LinkBus(APU* apu, Bus* bus);
+    void APU_LinkBus(APU* apu, Bus* bus);
 
-float APU_GetPulse1Sample(APU* apu);
-float APU_GetPulse2Sample(APU* apu);
-float APU_GetTriangleSample(APU* apu);
-float APU_GetNoiseSample(APU* apu);
-
-#ifdef __cplusplus
-}
-#endif
+    float APU_GetPulse1Sample(APU* apu);
+    float APU_GetPulse2Sample(APU* apu);
+    float APU_GetTriangleSample(APU* apu);
+    float APU_GetNoiseSample(APU* apu);
+// }

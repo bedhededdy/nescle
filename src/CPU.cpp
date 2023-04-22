@@ -873,7 +873,7 @@ static void op_tya(CPU* cpu) {
 
 /* Constructors/Destructors */
 CPU* CPU_Create(void) {
-    return Util_SafeMalloc(sizeof(CPU));
+    return (CPU*)Util_SafeMalloc(sizeof(CPU));
 }
 
 void CPU_Destroy(CPU* cpu) {
@@ -1254,7 +1254,7 @@ char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
      * It will allocate that much anyway due to 8 byte alignment and give
      * me a safety net, so really there is no downside.
      */
-    char* ret = malloc(120*sizeof(char));
+    char* ret = (char*)malloc(120*sizeof(char));
 
     if (ret == NULL)
         return NULL;
@@ -1303,7 +1303,7 @@ uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu) {
     // Need to start all the way from the beginning of prg_rom to determine
     // the alignment of all instructions preceding the current one
     const int ret_len = 27;
-    uint16_t* ret = malloc(ret_len * sizeof(uint16_t));
+    uint16_t* ret = (uint16_t*)malloc(ret_len * sizeof(uint16_t));
     uint16_t addr = 0x8000;
 
     if (ret == NULL)

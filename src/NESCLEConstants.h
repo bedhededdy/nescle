@@ -15,10 +15,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define APU_SAMPLE_RATE 44100
 
 #define BUS_RAM_SIZE    (1024 * 2)
@@ -106,7 +102,3 @@ extern "C" {
 #define PPU_LOOPY_NAMETBL_X             (1 << 10)
 #define PPU_LOOPY_NAMETBL_Y             (1 << 11)
 #define PPU_LOOPY_FINE_Y                (0x7000)
-
-#ifdef __cplusplus
-}
-#endif
