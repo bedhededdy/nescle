@@ -35,87 +35,6 @@
 #include "Util.h"
 
 namespace NESCLE {
-// Sprite (OAM) information container
-struct ppu_oam {
-    uint8_t y;
-    uint8_t tile_id;
-    uint8_t attributes;
-    uint8_t x;
-};
-
-struct ppu {
-    Bus* bus;
-
-    // Current screen and last complete frame
-    // We represent them as 1D arrays instead of 2D, because
-    // when we want to copy the frame buffer to an SDL_Texture
-    // it expects the pixels as linear arrays
-    uint32_t screen[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
-    uint32_t frame_buffer[PPU_RESOLUTION_Y * PPU_RESOLUTION_X];
-
-    uint8_t nametbl[2][PPU_NAMETBL_SIZE];   // nes supported 2, 1kb nametables
-    // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
-    //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
-    uint8_t palette[PPU_PALETTE_SIZE];     // color palette information
-
-    // Sprite internal info
-    PPU_OAM oam[64];
-    // For accessing OAM as a sequence of bytes
-    uint8_t* oam_ptr;
-
-    uint8_t oam_addr;
-
-    // Sprite rendering info
-    PPU_OAM spr_scanline[PPU_SPR_PER_LINE];
-    int spr_count;
-    // Shifters for each sprite in the row
-    uint8_t spr_shifter_pattern_lo[PPU_SPR_PER_LINE];
-    uint8_t spr_shifter_pattern_hi[PPU_SPR_PER_LINE];
-
-    // Sprite 0
-    bool spr0_can_hit;
-    bool spr0_rendering;
-
-    // 8x8px per tile x 256 tiles per half
-    // representation of the pattern table as rgb values
-    uint32_t sprpatterntbl[2][PPU_TILE_X * PPU_TILE_NBYTES][PPU_TILE_Y * PPU_TILE_NBYTES];
-
-    int scanline;   // which row of the screen we are on
-    int cycle;      // what col of the screen we are on (1 pixel per cycle)
-
-    // Registers
-    uint8_t status;
-    uint8_t mask;
-    uint8_t control;
-
-    // Loopy registers
-    uint16_t vram_addr;
-    uint16_t tram_addr;
-
-    uint8_t fine_x;
-
-    uint8_t addr_latch;     // indicates whether I'm writing the lo or hi byte of the address
-    uint8_t data_buffer;    // r/w buffer, since most r/w is delayed by a cycle
-
-    // Background rendering
-    uint8_t bg_next_tile_id;
-    uint8_t bg_next_tile_attr;
-    uint8_t bg_next_tile_lsb;
-    uint8_t bg_next_tile_msb;
-
-    // Used for pixel offset into palette based on tile_id
-    uint16_t bg_shifter_pattern_lo;
-    uint16_t bg_shifter_pattern_hi;
-
-    // Used to determine palette based on tile_attr (palette used for 8 pixels in a row,
-    // so we pad these out to work like the other shifters)
-    uint16_t bg_shifter_attr_lo;
-    uint16_t bg_shifter_attr_hi;
-
-    bool frame_complete;
-    bool nmi;
-};
-
 /* Helper Functions */
 static uint8_t flip_bits(uint8_t x) {
     // The trivial algorithm is to say if the ith position is set,
@@ -194,17 +113,18 @@ static uint16_t align_loopy_register(uint16_t reg, uint16_t bitmask) {
     return ret;
 }
 
-static void screen_write(PPU* ppu, int x, int y, uint32_t color) {
+void PPU::ScreenWrite(int x, int y, uint32_t color) {
     // Avoids buffer overflow on overscan
     if (y >= PPU_RESOLUTION_Y || x >= PPU_RESOLUTION_X || x < 0 || y < 0)
         return;
-    ppu->screen[y * PPU_RESOLUTION_X + x] = color;
+    screen[y * PPU_RESOLUTION_X + x] = color;
 }
 
-static void load_bg_shifters(PPU* ppu) {
+void PPU::LoadBGShifters() {
     // Shift the current LSB to the MSB and then stick the
     // next tile byte as the LSB
     // This is for the pixel offset
+    PPU* ppu = this;
     ppu->bg_shifter_pattern_lo = (ppu->bg_shifter_pattern_lo & 0xff00)
         | ppu->bg_next_tile_lsb;
     ppu->bg_shifter_pattern_hi = (ppu->bg_shifter_pattern_hi & 0xff00)
@@ -220,7 +140,8 @@ static void load_bg_shifters(PPU* ppu) {
         | ((ppu->bg_next_tile_attr & 2) ? 0xff : 0x00);
 }
 
-static void update_shifters(PPU* ppu) {
+void PPU::UpdateShifters() {
+    PPU* ppu = this;
     if (ppu->mask & PPU_MASK_BG_ENABLE) {
         ppu->bg_shifter_pattern_lo <<= 1;
         ppu->bg_shifter_pattern_hi <<= 1;
@@ -245,7 +166,8 @@ static void update_shifters(PPU* ppu) {
     }
 }
 
-static void increment_scroll_x(PPU* ppu) {
+void PPU::IncrementScrollX() {
+    PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         // Recall that a nametable is 32 across,
         // so we must wrap the value if we hit idx 31
@@ -266,7 +188,8 @@ static void increment_scroll_x(PPU* ppu) {
     }
 }
 
-static void increment_scroll_y(PPU* ppu) {
+void PPU::IncrementScrollY() {
+    PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         uint16_t fine_y = align_loopy_register(ppu->vram_addr, PPU_LOOPY_FINE_Y);
         if (fine_y < 7) {
@@ -304,7 +227,8 @@ static void increment_scroll_y(PPU* ppu) {
     }
 }
 
-static void transfer_addr_x(PPU* ppu) {
+void PPU::TransferAddrX() {
+    PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         // Copy x components of tram into vram
         uint16_t ntx = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_X);
@@ -315,7 +239,8 @@ static void transfer_addr_x(PPU* ppu) {
     }
 }
 
-static void transfer_addr_y(PPU* ppu) {
+void PPU::TransferAddrY() {
+    PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         uint16_t fine_y = align_loopy_register(ppu->tram_addr, PPU_LOOPY_FINE_Y);
         uint16_t nty = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_Y);
@@ -328,16 +253,17 @@ static void transfer_addr_y(PPU* ppu) {
     }
 }
 
-static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette,
+void PPU::WriteToSprPatternTbl(int idx, uint8_t palette,
     int tile, int x, int y) {
+    PPU* ppu = this;
     for (int i = 0; i < 8; i++) {
-        uint8_t tile_lsb = PPU_Read(ppu, 0x1000 * idx + tile * 16 + i);
-        uint8_t tile_msb = PPU_Read(ppu, 0x1000 * idx + tile * 16 + i + 8);
+        uint8_t tile_lsb = Read(0x1000 * idx + tile * 16 + i);
+        uint8_t tile_msb = Read(0x1000 * idx + tile * 16 + i + 8);
 
         for (int j = 0; j < 8; j++) {
             uint8_t color = ((tile_msb & 1) << 1) | (tile_lsb & 1);
 
-            uint32_t px = PPU_GetColorFromPalette(ppu, palette, color);
+            uint32_t px = GetColorFromPalette(palette, color);
             ppu->sprpatterntbl[idx][i+y][7 - j + x] = px;
 
             tile_msb >>= 1;
@@ -346,7 +272,7 @@ static void write_tile_to_sprpatterntbl(PPU* ppu, int idx, uint8_t palette,
     }
 }
 
-static uint32_t map_color(int idx) {
+uint32_t PPU::MapColor(int idx) {
     // Maps a value in range 0 to 0x40 to a valid NES color in ARGB format
     // All colors begin with ff to signify that they are opaque
     static const uint32_t color_map[0x40] = {
@@ -374,11 +300,11 @@ static uint32_t map_color(int idx) {
     return color_map[idx];
 }
 
-uint32_t* PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
+uint32_t* PPU::GetPatternTable(uint8_t idx, uint8_t palette) {
     int x = 0;
     int y = 0;
     for (int tile = 0; tile < 256; tile++) {
-        write_tile_to_sprpatterntbl(ppu, idx, palette, tile, x, y);
+        WriteToSprPatternTbl(idx, palette, tile, x, y);
         x += 8;
         if (x == 128) {
             x = 0;
@@ -387,10 +313,10 @@ uint32_t* PPU_GetPatternTable(PPU* ppu, uint8_t idx, uint8_t palette) {
     }
 
     // matrix will be interpreted as a linear array
-    return (uint32_t*)ppu->sprpatterntbl[idx];
+    return (uint32_t*)sprpatterntbl[idx];
 }
 
-uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
+uint32_t PPU::GetColorFromPalette(uint8_t palette, uint8_t pixel) {
     // we need to read into the area of memory that the PPU reserves for the palette
     // each palette in the range is a 4 byte offset and then the individual
     // pixel color in that palette we want is a 1 byte offset on top of that
@@ -406,28 +332,26 @@ uint32_t PPU_GetColorFromPalette(PPU* ppu, uint8_t palette, uint8_t pixel) {
     //return map_color(PPU_Read(ppu, PPU_PALETTE_OFFSET + palette * 4 + pixel));
 
     // FIXME: MAY BE WRONG B/C OF LACK OF MIRRORING???
-    return map_color(ppu->palette[palette * 4 + pixel]);
+    return MapColor(this->palette[palette * 4 + pixel]);
 }
 
 /* Constructors/Destructors */
-PPU* PPU_Create(void) {
-    PPU* ppu = (PPU*)Util_SafeMalloc(sizeof(PPU));
+PPU::PPU() {
+    PPU* ppu = this;
     Util_MemsetU32((uint32_t*)ppu->sprpatterntbl, 0xff000000,
         sizeof(ppu->sprpatterntbl)/sizeof(uint32_t));
     Util_MemsetU32((uint32_t*)ppu->screen, 0xff000000,
         sizeof(ppu->screen)/sizeof(uint32_t));
     Util_MemsetU32((uint32_t*)ppu->frame_buffer, 0xff000000,
         sizeof(ppu->frame_buffer)/sizeof(uint32_t));
-    return ppu;
 }
 
-void PPU_Destroy(PPU* ppu) {
-    Util_SafeFree(ppu);
-}
+PPU::~PPU() {}
 
 /* Interrupts (technically the PPU has no notion of interrupts) */
 // https://www.nesdev.org/wiki/PPU_rendering
-void PPU_Clock(PPU* ppu) {
+void PPU::Clock() {
+    PPU* ppu = this;
     // TODO: MAY WANNA DECOUPEL THE FG RENDER FROM THE BG RENDER
 
     // FIXME: SPRITE 0 COLLLIISION IS NOT FULLY CORRECT
@@ -467,16 +391,15 @@ void PPU_Clock(PPU* ppu) {
             // NOTE: If we move this to the bottom we might only wanna do one cycle
             // cuz obviously this will get shifted before we did anything if starting
             // at one
-            update_shifters(ppu);
+            UpdateShifters();
 
             switch ((ppu->cycle - 1) % 8) {
             case 0:
                 // Read next tile id
                 // Tile id is read from the nametable, but I only want the
                 // bottom 12 bits, hence the & 0x0fff
-                load_bg_shifters(ppu);
-                ppu->bg_next_tile_id = PPU_Read(ppu,
-                    PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+                LoadBGShifters();
+                ppu->bg_next_tile_id = Read(PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
                 break;
             case 2:
                 // Read attribute information (extra tiles at bottom of
@@ -491,7 +414,7 @@ void PPU_Clock(PPU* ppu) {
                 my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 2) << 0;
 
                 // 0x23c0 is the starting address of the attribute memory
-                ppu->bg_next_tile_attr = PPU_Read(ppu, 0x23c0 | my_off);
+                ppu->bg_next_tile_attr = Read(0x23c0 | my_off);
 
                 // Final info is only 2 bits
                 // Doing some basic arithmetic, we can determine that one byte
@@ -514,7 +437,7 @@ break;
                 my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
                 my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
 
-                ppu->bg_next_tile_lsb = PPU_Read(ppu, my_off);
+                ppu->bg_next_tile_lsb = Read(my_off);
                 break;
             case 6:
                 // Get MSB
@@ -522,10 +445,10 @@ break;
                 my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
                 my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
 
-                ppu->bg_next_tile_msb = PPU_Read(ppu, my_off + 8);
+                ppu->bg_next_tile_msb = Read(my_off + 8);
                 break;
             case 7:
-                increment_scroll_x(ppu);
+                IncrementScrollX();
                 break;
             }
         }
@@ -549,21 +472,21 @@ break;
         else if (ppu->scanline == 0 && ppu->cycle == 0)
             ppu->cycle = 1;
         else if (ppu->scanline == -1 && ppu->cycle >= 280 && ppu->cycle < 305)
-            transfer_addr_y(ppu);
+            TransferAddrY();
 
             // First invisible cycle, increment to next scanline
             if (ppu->cycle == PPU_RESOLUTION_X)
-                increment_scroll_y(ppu);
+                IncrementScrollY();
             // Prepare tiles for next scanline
             else if (ppu->cycle == PPU_RESOLUTION_X + 1) {
-                load_bg_shifters(ppu);
-                transfer_addr_x(ppu);
+                LoadBGShifters();
+                TransferAddrX();
 
                 // May wanna put this in a separate if for readability
                 if (ppu->scanline >= 0) {
                     // Set sprite info to 0xff, because if the y-coord of the sprite
                     // is 0xff, we will never see it
-                    memset(ppu->spr_scanline, 0xff, PPU_SPR_PER_LINE * sizeof(PPU_OAM));
+                    memset(ppu->spr_scanline, 0xff, PPU_SPR_PER_LINE * sizeof(OAM));
                     ppu->spr_count = 0;
                     ppu->spr0_can_hit = false;
 
@@ -587,7 +510,7 @@ break;
 
                                 // TODO: Don't use memcpy, it's clearer to do explicitly
                                 memcpy(&ppu->spr_scanline[ppu->spr_count], &ppu->oam[oam_entry],
-                                    sizeof(PPU_OAM));
+                                    sizeof(OAM));
                                 ppu->spr_count++;
                             }
                         }
@@ -605,8 +528,7 @@ break;
             // Dummy reads that shouldn't affect anything (but could maybe due to
             // reading changing the state)
             else if (ppu->cycle == 338 || ppu->cycle == 340) {
-                ppu->bg_next_tile_id = PPU_Read(ppu,
-                    PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+                ppu->bg_next_tile_id = Read(PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
 
                 // NOTE: THIS IS WHERE THE INACCURACY COMES INTO PLAY (I THINK)
                 // May wanna denest this and make 340 its own if
@@ -681,8 +603,8 @@ break;
 
                         // Recall pixel data is always 8 bytes apart
                         spr_pattern_addr_hi = spr_pattern_addr_lo + 8;
-                        spr_pattern_bits_lo = PPU_Read(ppu, spr_pattern_addr_lo);
-                        spr_pattern_bits_hi = PPU_Read(ppu, spr_pattern_addr_hi);
+                        spr_pattern_bits_lo = Read(spr_pattern_addr_lo);
+                        spr_pattern_bits_hi = Read(spr_pattern_addr_hi);
 
                         if (ppu->spr_scanline[i].attributes & (1 << 6)) {
                             // horizontal flipped
@@ -859,8 +781,8 @@ break;
     }
 
     // We write to cycle-1 because cycle 0 is a dummy cycle
-    screen_write(ppu, ppu->cycle-1, ppu->scanline,
-        PPU_GetColorFromPalette(ppu, final_palette, final_pixel));
+    ScreenWrite(ppu->cycle-1, ppu->scanline,
+        GetColorFromPalette(final_palette, final_pixel));
 
     // Properly increment the cycle and scanline
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
@@ -882,8 +804,9 @@ break;
 }
 
 // https://www.nesdev.org/wiki/PPU_power_up_state
-void PPU_PowerOn(PPU* ppu) {
+void PPU::PowerOn() {
     // TODO: INITIALIZE MORE SUTFF TO 0
+    PPU* ppu = this;
 
     ppu->control = 0x00;
     ppu->mask = 0x00;
@@ -898,11 +821,12 @@ void PPU_PowerOn(PPU* ppu) {
     memset(ppu->screen, 0, sizeof(ppu->screen));
 
     // just run the reset for safety
-    PPU_Reset(ppu);
+    Reset();
 }
 
 // https://www.nesdev.org/wiki/PPU_power_up_state
-void PPU_Reset(PPU* ppu) {
+void PPU::Reset() {
+    PPU* ppu = this;
     // TODO: INITIALIZE MORE SUTFF TO 0
 
     // FIXME: THERE NEEDS TO BE LOGIC THAT PREVENTS GAME
@@ -976,8 +900,9 @@ void PPU_Reset(PPU* ppu) {
     ppu->oam_ptr = (uint8_t*)ppu->oam;
 }
 
-uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
+uint8_t PPU::Read(uint16_t addr) {
     // Address can't be more than 16kb
+    PPU* ppu = this;
     Bus* bus = ppu->bus;
     addr %= 0x4000;
 
@@ -1082,7 +1007,8 @@ uint8_t PPU_Read(PPU* ppu, uint16_t addr) {
     return 0xff;
 }
 
-bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
+bool PPU::Write(uint16_t addr, uint8_t data) {
+    PPU* ppu = this;
     Bus* bus = ppu->bus;
     addr %= 0x4000;
 
@@ -1166,7 +1092,8 @@ bool PPU_Write(PPU* ppu, uint16_t addr, uint8_t data) {
     return true;
 }
 
-uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
+uint8_t PPU::RegisterRead(uint16_t addr) {
+    PPU* ppu = this;
     uint8_t tmp = 0xff;
     addr %= 8;
 
@@ -1195,7 +1122,7 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
         break;
     case 7: // ppu data
         tmp = ppu->data_buffer;
-        ppu->data_buffer = PPU_Read(ppu, ppu->vram_addr);
+        ppu->data_buffer = Read(ppu->vram_addr);
 
         // Palette memory isn't delayed by one cycle like the rest of memory
 
@@ -1234,7 +1161,8 @@ uint8_t PPU_RegisterRead(PPU* ppu, uint16_t addr) {
     return tmp;
 }
 
-bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
+bool PPU::RegisterWrite(uint16_t addr, uint8_t data) {
+    PPU* ppu = this;
     addr %= 8;
     switch (addr) {
     case 0: // control
@@ -1288,7 +1216,7 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     case 7: // ppu data
         // write to address with auto increment
         // FIXME: MIGHT ALSO HAVE THE DELAY LIEK READ????
-        PPU_Write(ppu, ppu->vram_addr, data);
+        Write(ppu->vram_addr, data);
         // recall the nametable is 32x32, so based on increment mode we either
         // increment by one row (32) or one pixel/col (1)
         ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
@@ -1298,8 +1226,9 @@ bool PPU_RegisterWrite(PPU* ppu, uint16_t addr, uint8_t data) {
     return true;
 }
 
-uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
+uint8_t PPU::RegisterInspect(uint16_t addr) {
 
+    PPU* ppu = this;
     uint8_t tmp = 0xff;
     addr %= 8;
 
@@ -1332,7 +1261,7 @@ uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
 
         // Palette memory isn't delayed by one cycle like the rest of memory
         if (ppu->vram_addr >= 0x3f00)
-            tmp = PPU_Read(ppu, ppu->vram_addr);
+            tmp = Read(ppu->vram_addr);
         //ppu->vram_addr += (ppu->control & PPU_CTRL_INCREMENT_MODE) ? 32 : 1;
         break;
     }
@@ -1340,16 +1269,17 @@ uint8_t PPU_RegisterInspect(PPU* ppu, uint16_t addr) {
     return tmp;
 }
 
-bool PPU_SaveState(PPU* ppu, FILE* file) {
-    if (fwrite(ppu, sizeof(PPU), 1, file) < 1)
+bool PPU::SaveState(FILE* file) {
+    if (fwrite(this, sizeof(PPU), 1, file) < 1)
         return false;
     return true;
 
 }
 
-bool PPU_LoadState(PPU* ppu, FILE* file) {
+bool PPU::LoadState(FILE* file) {
     // FIXME: THIS FUNCTION IS NOT RESILIENT AGAINST
     // FAILED READS
+    PPU* ppu = this;
     Bus* bus = ppu->bus;
     size_t size = fread(ppu, sizeof(PPU), 1, file);
     if (size < 1)
@@ -1359,31 +1289,31 @@ bool PPU_LoadState(PPU* ppu, FILE* file) {
     return true;
 }
 
-void PPU_LinkBus(PPU* ppu, Bus* bus) {
-    ppu->bus = bus;
+void PPU::LinkBus(Bus* bus) {
+    this->bus = bus;
 }
 
-bool PPU_GetNMIStatus(PPU* ppu) {
-    return ppu->nmi;
+bool PPU::GetNMIStatus() {
+    return nmi;
 }
 
-void PPU_ClearNMIStatus(PPU* ppu) {
-    ppu->nmi = false;
+void PPU::ClearNMIStatus() {
+    nmi = false;
 }
 
-void PPU_WriteOAM(PPU* ppu, uint8_t addr, uint8_t data) {
-    ppu->oam_ptr[addr] = data;
+void PPU::WriteOAM(uint8_t addr, uint8_t data) {
+    oam_ptr[addr] = data;
 }
 
-bool PPU_GetFrameComplete(PPU* ppu) {
-    return ppu->frame_complete;
+bool PPU::GetFrameComplete() {
+    return frame_complete;
 }
 
-void PPU_ClearFrameComplete(PPU* ppu) {
-    ppu->frame_complete = false;
+void PPU::ClearFrameComplete() {
+    frame_complete = false;
 }
 
-uint32_t* PPU_GetFramebuffer(PPU* ppu) {
-    return ppu->frame_buffer;
+uint32_t* PPU::GetFramebuffer() {
+    return frame_buffer;
 }
 }

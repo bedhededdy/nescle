@@ -1091,7 +1091,7 @@ char* CPU::DisassembleString(uint16_t addr) {
             addr_eff = (b3 << 8) | b2;
             if (addr_eff >= 0x2000 && addr_eff < 0x4000)
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
-                    PPU_RegisterInspect(bus->ppu, addr_eff));
+                    bus->ppu->RegisterInspect(addr_eff));
             else
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
                     Bus_Read(bus, (b3 << 8) | b2));

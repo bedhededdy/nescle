@@ -235,7 +235,7 @@ bool Emulator::SaveState(const char* path) {
         printf("mapper too short");
     Mapper_SaveState(bus->cart->GetMapper(), savestate);
 
-    if (!PPU_SaveState(bus->ppu, savestate))
+    if (!bus->ppu->SaveState(savestate))
         printf("ppu too short");
 
     fclose(savestate);
@@ -350,7 +350,7 @@ bool Emulator::LoadState(const char* path) {
     bus->cart->SetMapper(Mapper_Create(mapper_id, bus->cart, (Mapper_MirrorMode)0));
     Mapper_LoadState(bus->cart->GetMapper(), savestate);
 
-    PPU_LoadState(bus->ppu, savestate);
+    bus->ppu->LoadState(savestate);
 
     fclose(savestate);
 
@@ -458,8 +458,8 @@ void Emulator::SetDefaultSettings() {
 
 float Emulator::EmulateSample() {
     while (!Bus_Clock(nes)) {
-        if (PPU_GetFrameComplete(nes->ppu)) {
-            PPU_ClearFrameComplete(nes->ppu);
+        if (nes->ppu->GetFrameComplete()) {
+            nes->ppu->ClearFrameComplete();
 
             // After we emulate a sample, we will check to see
             // if a frame has been rendered

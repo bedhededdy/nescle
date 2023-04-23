@@ -39,7 +39,7 @@ void Bus_Destroy(Bus* bus) {
 Bus* Bus_CreateNES(void) {
     Bus* bus = Bus_Create();
     CPU* cpu = new CPU();
-    PPU* ppu = PPU_Create();
+    PPU* ppu = new PPU();
     Cart* cart = new Cart();
     APU* apu = new APU();
 
@@ -51,7 +51,7 @@ Bus* Bus_CreateNES(void) {
     bus->cpu = cpu;
     cpu->LinkBus(bus);
     bus->ppu = ppu;
-    PPU_LinkBus(ppu, bus);
+    ppu->LinkBus(bus);
     bus->cart = cart;
 
     bus->apu = apu;
@@ -62,7 +62,7 @@ Bus* Bus_CreateNES(void) {
 
 void Bus_DestroyNES(Bus* bus) {
     delete bus->cpu;
-    PPU_Destroy(bus->ppu);
+    delete bus->ppu;
     delete bus->cart;
     delete bus->apu;
     Bus_Destroy(bus);
@@ -86,7 +86,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         /* PPU Registers */
-        return PPU_RegisterRead(bus->ppu, addr);
+        return bus->ppu->RegisterRead(addr);
     }
     else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
         return bus->apu->Read(addr);
@@ -137,7 +137,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         /* PPU Registers */
-        return PPU_RegisterWrite(bus->ppu, addr, data);
+        return bus->ppu->RegisterWrite(addr, data);
     }
     else if (addr == 0x4014) {
         /* DMA (Direct Memory Access) */
@@ -147,7 +147,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
         //        AT THE END ITS VALUE MUST REMAIN IN TACT
         bus->dma_page = data;
         bus->dma_addr = 0;
-        bus->dma_2003_off = PPU_RegisterRead(bus->ppu, 0x2003);
+        bus->dma_2003_off = bus->ppu->RegisterRead(0x2003);
         bus->dma_transfer = true;
     }
     // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
@@ -192,7 +192,7 @@ bool Bus_Clock(Bus* bus) {
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
 
-    PPU_Clock(bus->ppu);
+    bus->ppu->Clock();
     bus->apu->Clock();
 
     if (bus->clocks_count % 3 == 0) {
@@ -214,7 +214,7 @@ bool Bus_Clock(Bus* bus) {
                     // DMA transfers 256 bytes to the OAM at once,
                     // so we auto-increment the address
                     // TODO: TRY PUTTING THE ++ IN THE FUNC CALL
-                    PPU_WriteOAM(bus->ppu, bus->dma_addr, bus->dma_data);
+                    bus->ppu->WriteOAM(bus->dma_addr, bus->dma_data);
                     bus->dma_addr++;
 
                     // If we overflow, we know that the transfer is done
@@ -244,8 +244,8 @@ bool Bus_Clock(Bus* bus) {
 
     // PPU can optionally emit a NMI to the CPU upon entering the vertical
     // blank state
-    if (PPU_GetNMIStatus(bus->ppu)) {
-        PPU_ClearNMIStatus(bus->ppu);
+    if (bus->ppu->GetNMIStatus()) {
+        bus->ppu->ClearNMIStatus();
         bus->cpu->NMI();
     }
 
@@ -264,7 +264,7 @@ void Bus_PowerOn(Bus* bus) {
     // Mapper* mapper = Cart_GetMapper(bus->cart);
     // if (mapper != NULL)
     //     Mapper_Reset(mapper);
-    PPU_PowerOn(bus->ppu);
+    bus->ppu->PowerOn();
     bus->cpu->PowerOn();
     bus->apu->PowerOn();
     bus->controller1 = 0;
@@ -288,7 +288,7 @@ void Bus_Reset(Bus* bus) {
     Mapper* mapper = bus->cart->GetMapper();
     if (mapper != NULL)
         Mapper_Reset(mapper);
-    PPU_Reset(bus->ppu);
+    bus->ppu->Reset();
     bus->cpu->Reset();
     bus->apu->Reset();
     bus->clocks_count = 0;
