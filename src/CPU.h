@@ -16,40 +16,135 @@
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-/* Constructors/Destructors */
-CPU* CPU_Create(void);
-void CPU_Destroy(CPU* cpu);
+class CPU {
+private:
+    enum class AddrMode {
+        ACC,
+        IMM,
+        ABS,
+        ZPG,
+        ZPX,
+        ZPY,
+        ABX,
+        ABY,
+        IMP,
+        REL,
+        IDX,
+        IDY,
+        IND,
 
-/* Interrupts */
-// https://www.nesdev.org/wiki/CPU_interrupts
-void CPU_Clock(CPU* cpu);   // Execute one clock cycle (not cycle-accurate)
-void CPU_IRQ(CPU* cpu);     // Interrupt request
-void CPU_NMI(CPU* cpu);     // Non-maskable IRQ
-void CPU_Reset(CPU* cpu);   // Reset
-void CPU_PowerOn(CPU* cpu); // Put NES in powerup state (not a real interrupt)
+        INV
+    };
 
-/* Fetch/Decode/Execute */
-void CPU_SetAddrMode(CPU* cpu);               // Sets addr_eff with effective address for current instruction
-void CPU_Execute(CPU* cpu);                   // Executes current CPU instruction
+    enum class OpType {
+        ADC, AND, ASL,
+        BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS,
+        CLC, CLD, CLI, CLV, CMP, CPX, CPY,
+        DEC, DEX, DEY,
+        EOR,
+        INC, INX, INY,
+        JMP, JSR,
+        LDA, LDX, LDY, LSR,
+        NOP,
+        ORA,
+        PHA, PHP, PLA, PLP,
+        ROL, ROR, RTI, RTS,
+        SBC, SEC, SED, SEI, STA, STX, STY,
+        TAX, TAY, TSX, TXA, TXS, TYA,
 
-/* Dissasembler */
-char* CPU_DisassembleString(CPU* cpu, uint16_t addr);   // Generates disassembly string for the instruction at addr
-void CPU_DisassembleLog(CPU* cpu);                      // Logs disassembly string for current instruction to a file
-uint16_t* CPU_GenerateOpStartingAddrs(CPU* cpu);        // Gets the starting addresses of instructions around the current instruction
+        INV
+    };
 
-/* Savestates */
-bool CPU_SaveState(CPU* cpu, FILE* file);
-bool CPU_LoadState(CPU* cpu, FILE* file);
+    struct Instr {
+        const uint8_t opcode;
+        const AddrMode addr_mode;
+        const OpType op_type;
+        const int bytes;
+        const int cycles;
+    };
 
-void CPU_LinkBus(CPU* cpu, Bus* bus);
+    Bus* bus;
+
+    // Registers
+    uint8_t a;      // Accumulator
+    uint8_t y;      // Y
+    uint8_t x;      // X
+    uint8_t sp;     // Stack Pointer
+    uint8_t status; // Status Register
+    uint16_t pc;    // Program Counter
+
+    const Instr* instr;    // Current instruction
+    uint16_t addr_eff; // Effective address of current instruction
+    int cycles_rem;     // Number of cycles remaining for current instruction
+    uint64_t cycles_count; // NUmber of CPU clocks
+
+    const Instr* Decode(uint8_t opcode);
+    uint8_t StackPop();
+    bool StackPush(uint8_t data);
+    uint8_t FetchOperand();
+    void SetStatus(uint8_t flag, bool set);
+    void Branch();
+
+    // Addressing Modes
+    void AddrMode_ACC(); // 1-byte,  reg,    operation occurs on accumulator
+    void AddrMode_IMM(); // 2-bytes, op,     second byte contains the operand
+    void AddrMode_ABS(); // 3-bytes, addr,   second byte contains lo bits, third byte contains hi bits
+    void AddrMode_ZPG(); // 2-bytes, addr,   second byte is the offset from the zero page
+    void AddrMode_ZPX(); // 2-bytes, addr,   zeropage but offset is indexed by x
+    void AddrMode_ZPY(); // 2-bytes, addr,   zeropage but offset is indexed by y
+    void AddrMode_ABX(); // 3-bytes, addr,   absolute address indexed by x
+    void AddrMode_ABY(); // 3-bytes, addr,   absolute address indexed by y
+    void AddrMode_IMP(); // 1-byte,  reg,    implied
+    void AddrMode_REL(); // 2-bytes, addr,   relative address
+    void AddrMode_IDX(); // 2-bytes, addr,   indexed indirect
+    void AddrMode_IDY(); // 2-bytes, addr,   indirect indexed
+    void AddrMode_IND(); // 3-bytes, addr,   indirect
+
+    // Instructions
+    void Op_ADC(); void Op_AND(); void Op_ASL();
+    void Op_BCC(); void Op_BCS(); void Op_BEQ(); void Op_BIT(); void Op_BMI(); void Op_BNE(); void Op_BPL(); void Op_BRK(); void Op_BVC(); void Op_BVS();
+    void Op_CLC(); void Op_CLD(); void Op_CLI(); void Op_CLV(); void Op_CMP(); void Op_CPX(); void Op_CPY();
+    void Op_DEC(); void Op_DEX(); void Op_DEY();
+    void Op_EOR();
+    void Op_INC(); void Op_INX(); void Op_INY();
+    void Op_JMP(); void Op_JSR();
+    void Op_LDA(); void Op_LDX(); void Op_LDY(); void Op_LSR();
+    void Op_NOP();
+    void Op_ORA();
+    void Op_PHA(); void Op_PHP(); void Op_PLA(); void Op_PLP();
+    void Op_ROL(); void Op_ROR(); void Op_RTI(); void Op_RTS();
+    void Op_SBC(); void Op_SEC(); void Op_SED(); void Op_SEI(); void Op_STA(); void Op_STX(); void Op_STY();
+    void Op_TAX(); void Op_TAY(); void Op_TSX(); void Op_TXA(); void Op_TXS(); void Op_TYA();
+
+public:
+    CPU();
+    ~CPU();
+
+    void Clock();
+    void IRQ();
+    void NMI();
+    void Reset();
+    void PowerOn();
+
+    void SetAddrMode();
+    void Execute();
+
+    char* DisassembleString(uint16_t addr);
+    void DisassembleLog();
+    uint16_t* GenerateOpStartingAddrs();
+
+    bool SaveState(FILE* file);
+    bool LoadState(FILE* file);
+
+    void LinkBus(Bus* bus);
+};
 
 /*
 // Addressing Modes

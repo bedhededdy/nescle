@@ -222,7 +222,7 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     if (!Bus_SaveState(emu->nes, savestate))
         printf("bus too short");
 
-    if (!CPU_SaveState(bus->cpu, savestate))
+    if (!bus->cpu->SaveState(savestate))
         printf("cpu too short");
 
     if (!bus->apu->SaveState(savestate))
@@ -330,7 +330,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     Bus_LoadState(bus, savestate);
 
     // CPU
-    CPU_LoadState(bus->cpu, savestate);
+    bus->cpu->LoadState(savestate);
 
     // APU
     bus->apu->LoadState(savestate);

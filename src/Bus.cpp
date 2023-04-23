@@ -38,7 +38,7 @@ void Bus_Destroy(Bus* bus) {
 
 Bus* Bus_CreateNES(void) {
     Bus* bus = Bus_Create();
-    CPU* cpu = CPU_Create();
+    CPU* cpu = new CPU();
     PPU* ppu = PPU_Create();
     Cart* cart = new Cart();
     APU* apu = new APU();
@@ -49,7 +49,7 @@ Bus* Bus_CreateNES(void) {
     }
 
     bus->cpu = cpu;
-    CPU_LinkBus(cpu, bus);
+    cpu->LinkBus(bus);
     bus->ppu = ppu;
     PPU_LinkBus(ppu, bus);
     bus->cart = cart;
@@ -61,7 +61,7 @@ Bus* Bus_CreateNES(void) {
 }
 
 void Bus_DestroyNES(Bus* bus) {
-    CPU_Destroy(bus->cpu);
+    delete bus->cpu;
     PPU_Destroy(bus->ppu);
     delete bus->cart;
     delete bus->apu;
@@ -226,7 +226,7 @@ bool Bus_Clock(Bus* bus) {
             }
         }
         else {
-            CPU_Clock(bus->cpu);
+            bus->cpu->Clock();
         }
     }
 
@@ -246,12 +246,12 @@ bool Bus_Clock(Bus* bus) {
     // blank state
     if (PPU_GetNMIStatus(bus->ppu)) {
         PPU_ClearNMIStatus(bus->ppu);
-        CPU_NMI(bus->cpu);
+        bus->cpu->NMI();
     }
 
     if (Mapper_GetIRQStatus(bus->cart->GetMapper())) {
         Mapper_ClearIRQStatus(bus->cart->GetMapper());
-        CPU_IRQ(bus->cpu);
+        bus->cpu->IRQ();
     }
 
     bus->clocks_count++;
@@ -265,7 +265,7 @@ void Bus_PowerOn(Bus* bus) {
     // if (mapper != NULL)
     //     Mapper_Reset(mapper);
     PPU_PowerOn(bus->ppu);
-    CPU_PowerOn(bus->cpu);
+    bus->cpu->PowerOn();
     bus->apu->PowerOn();
     bus->controller1 = 0;
     bus->controller2 = 0;
@@ -289,7 +289,7 @@ void Bus_Reset(Bus* bus) {
     if (mapper != NULL)
         Mapper_Reset(mapper);
     PPU_Reset(bus->ppu);
-    CPU_Reset(bus->cpu);
+    bus->cpu->Reset();
     bus->apu->Reset();
     bus->clocks_count = 0;
     bus->dma_page = 0;
