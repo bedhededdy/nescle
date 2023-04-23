@@ -15,36 +15,130 @@
  */
 #pragma once
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 #include "NESCLETypes.h"
 
-// namespace NESCLE {
-    APU* APU_Create(void);
-    void APU_Destroy(APU* apu);
+namespace NESCLE {
+class APU {
+private:
+    // Contrary to many of the other structures, the elements of the APU are
+    // either not explicitly marked as being part of a register or if they are,
+    // the register is of a bizarre bit-length. Therefore, as much as possible,
+    // we use bools for flags and ints for counters regardless of the actual
+    // bit length for simplicity. We could of course store these values in
+    // "registers", but it would be a pointless refactor of the code that makes
+    // it harder to read and understand.
+    struct Sequencer {
+        int timer;
+        int reload;
+    };
 
-    void APU_PowerOn(APU* apu);
-    void APU_Reset(APU* apu);
+    struct Envelope {
+        bool start;
+        bool disable;
+        bool constant_volume;
+        int volume;
+        int output;
+        int divider_count;
+        int decay_count;
+    };
 
-    uint8_t APU_Read(APU* apu, uint16_t addr);
-    bool APU_Write(APU* apu, uint16_t addr, uint8_t data);
+    struct Sweeper {
+        bool enabled;
+        bool down;
+        bool reload;
+        bool mute;
+        int shift;
+        int timer;
+        int period;
+    };
 
-    void APU_Clock(APU* apu);
-    void APU_Reset(APU* apu);
+    struct PulseChannel {
+        bool enable;
+        float sample;
+        float prev_sample;
+        bool halt;
+        uint8_t length;
+        float volume;
+        int duty_sequence;
+        int duty_index;
+        Sequencer sequencer;
+        Envelope envelope;
+        Sweeper sweeper;
+    };
 
-    bool APU_SaveState(APU* apu, FILE* file);
-    bool APU_LoadState(APU* apu, FILE* file);
+    struct TriangleChannel {
+        bool enable;
+        float sample;
+        float prev_sample;
+        int index;
+        bool halt;
+        uint8_t length;
+        float volume;
+        bool linear_counter_reload;
+        bool control_flag;
+        int linear_counter;
+        int linear_counter_reload_value;
+        Sequencer sequencer;
+    };
 
-    void APU_LinkBus(APU* apu, Bus* bus);
+    struct NoiseChannel {
+        bool enable;
+        bool halt;
+        uint8_t length;
+        float sample;
+        float prev_sample;
+        float volume;
+        // FIXME: CHANGE TO INT BUT I'M AFRAID OF BREAKING THINGS
+        uint16_t shift_register;
+        // FIXME: PROBABLY SHOULD BE A BOOL
+        uint8_t mode;
+        Envelope envelope;
+        Sequencer sequencer;
+    };
 
-    float APU_GetPulse1Sample(APU* apu);
-    float APU_GetPulse2Sample(APU* apu);
-    float APU_GetTriangleSample(APU* apu);
-    float APU_GetNoiseSample(APU* apu);
-// }
+    struct SampleChannel {
+        int bar;
+    };
+
+    int GetAmp(int index);
+    int GetNoisePeriod(int index);
+    uint8_t GetLength(int index);
+    int GetDuty(int seq, int off);
+
+    void ClockSweeper(PulseChannel* pulse);
+    void ClockPulse(PulseChannel* pulse);
+    void ClockNoise(NoiseChannel* noise);
+    void ClockTriangle(TriangleChannel* triangle);
+    void ClockEnvelope(Envelope* envelope, bool halt);
+
+    Bus* bus;
+    PulseChannel pulse1;
+    PulseChannel pulse2;
+    TriangleChannel triangle;
+    NoiseChannel noise;
+    SampleChannel sample;
+    uint64_t clock_count;
+    uint64_t frame_clock_count;
+    // FIXME: MOVE TO THE EMULATOR
+    float master_volume;
+
+public:
+    APU();
+    ~APU();
+    void PowerOn();
+    void Reset();
+    uint8_t Read(uint16_t addr);
+    bool Write(uint16_t addr, uint8_t data);
+    void Clock();
+    bool SaveState(FILE* file);
+    bool LoadState(FILE* file);
+    void LinkBus(Bus* bus);
+    float GetPulse1Sample();
+    float GetPulse2Sample();
+    float GetTriangleSample();
+    float GetNoiseSample();
+};
+}
