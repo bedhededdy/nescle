@@ -18,12 +18,12 @@
 #include "Emulator.h"
 
 #include <jansson.h>
+
 #include <SDL_log.h>
 #include <SDL_filesystem.h>
 
 #include <string>
 #include <cstring>
-// #include <string.h>
 
 #include "APU.h"
 #include "Bus.h"
@@ -34,69 +34,68 @@
 #include "Util.h"
 
 namespace NESCLE {
-static void LogKeymaps(Emulator* emu) {
+void Emulator::LogKeymaps() {
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_A),
-        SDL_GetKeyName(emu->settings.controller1.a));
+        GetButtonName(ControllerButton::A),
+        SDL_GetKeyName(settings.controller1.a));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_B),
-        SDL_GetKeyName(emu->settings.controller1.b));
+        GetButtonName(ControllerButton::B),
+        SDL_GetKeyName(settings.controller1.b));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_SELECT),
-        SDL_GetKeyName(emu->settings.controller1.select));
+        GetButtonName(ControllerButton::SELECT),
+        SDL_GetKeyName(settings.controller1.select));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_START),
-        SDL_GetKeyName(emu->settings.controller1.start));
+        Emulator::GetButtonName(Emulator::ControllerButton::START),
+        SDL_GetKeyName(settings.controller1.start));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_UP),
-        SDL_GetKeyName(emu->settings.controller1.up));
+        Emulator::GetButtonName(Emulator::ControllerButton::UP),
+        SDL_GetKeyName(settings.controller1.up));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_DOWN),
-        SDL_GetKeyName(emu->settings.controller1.down));
+        Emulator::GetButtonName(Emulator::ControllerButton::DOWN),
+        SDL_GetKeyName(settings.controller1.down));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_LEFT),
-        SDL_GetKeyName(emu->settings.controller1.left));
+        Emulator::GetButtonName(Emulator::ControllerButton::LEFT),
+        SDL_GetKeyName(settings.controller1.left));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_RIGHT),
-        SDL_GetKeyName(emu->settings.controller1.right));
+        Emulator::GetButtonName(Emulator::ControllerButton::RIGHT),
+        SDL_GetKeyName(settings.controller1.right));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_ATURBO),
-        SDL_GetKeyName(emu->settings.controller1.aturbo));
+        Emulator::GetButtonName(Emulator::ControllerButton::ATURBO),
+        SDL_GetKeyName(settings.controller1.aturbo));
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
-        Emulator_GetButtonName(emu, EMULATOR_CONTROLLER_BTURBO),
-        SDL_GetKeyName(emu->settings.controller1.bturbo));
+        Emulator::GetButtonName(Emulator::ControllerButton::BTURBO),
+        SDL_GetKeyName(settings.controller1.bturbo));
 }
 
-bool Emulator_KeyPushed(Emulator* emu, SDL_Keycode key) {
+bool Emulator::KeyPushed(SDL_Keycode key) {
     SDL_Scancode sc = SDL_GetScancodeFromKey(key);
-    return !emu->prev_keys[sc] && emu->keys[sc];
+    return !prev_keys[sc] && keys[sc];
 }
 
-bool Emulator_KeyHeld(Emulator* emu, SDL_Keycode key) {
+bool Emulator::KeyHeld(SDL_Keycode key) {
     SDL_Scancode sc = SDL_GetScancodeFromKey(key);
-    return emu->keys[sc];
+    return keys[sc];
 }
 
-bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key) {
+bool Emulator::KeyReleased(SDL_Keycode key) {
     SDL_Scancode sc = SDL_GetScancodeFromKey(key);
-    return emu->prev_keys[sc] && !emu->keys[sc];
+    return prev_keys[sc] && !keys[sc];
 }
 
-void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len) {
-    Emulator* emu = (Emulator*)userdata;
+void Emulator::AudioCallback(void* userdata, uint8_t* stream, int len) {
     float* streamF32 = (float*)stream;
 
-    if (SDL_LockMutex(emu->nes_state_lock) < 0) {
+    if (SDL_LockMutex(nes_state_lock) < 0) {
         for (size_t i = 0; i < (size_t)len/sizeof(float); i++)
             streamF32[i] = 0.0f;
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -105,46 +104,44 @@ void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len) {
     }
     for (size_t i = 0; i < (size_t)len/sizeof(float); i++) {
         float sample = 0.0f;
-        if (emu->run_emulation)
-            sample = Emulator_EmulateSample(emu);
+        if (run_emulation)
+            sample = Emulator::EmulateSample();
         streamF32[i] = sample;
     }
-    SDL_UnlockMutex(emu->nes_state_lock);
+    SDL_UnlockMutex(nes_state_lock);
 }
 
-Emulator* Emulator_Create(const char* settings_path) {
-    Emulator* emu = (Emulator*)Util_SafeMalloc(sizeof(Emulator));
-
-    emu->nes = Bus_CreateNES();
-    emu->nes_state_lock = SDL_CreateMutex();
-    if (emu->nes_state_lock == NULL) {
+Emulator::Emulator(const char* settings_path) {
+    nes = Bus_CreateNES();
+    nes_state_lock = SDL_CreateMutex();
+    if (nes_state_lock == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Emulator_Create: Bad alloc SDL_Mutex");
     }
 
     // Get the exe and user data paths
-    emu->exe_path = SDL_GetBasePath();
-    emu->user_data_path = SDL_GetPrefPath("NesEmu", "NesEmu");
+    exe_path = SDL_GetBasePath();
+    user_data_path = SDL_GetPrefPath("NesEmu", "NesEmu");
 
     // Create a saves directory if there isn't one
-    std::string saves_path = std::string(emu->user_data_path) + "saves";
+    std::string saves_path = std::string(user_data_path) + "saves";
     Util_CreateDirectoryIfNotExists(saves_path.c_str());
 
-    std::string settings_path_str = std::string(emu->user_data_path) + "settings.json";
+    std::string settings_path_str = std::string(user_data_path) + "settings.json";
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "settings_path_str: %s", settings_path_str.c_str());
     // settings_path_str = "settings.json";
-    if (!Emulator_LoadSettings(emu, settings_path_str.c_str())) {
-        Emulator_SetDefaultSettings(emu);
-        emu->settings.sync = EMULATOR_SYNC_VIDEO;
-        if (!Emulator_SaveSettings(emu, settings_path_str.c_str()))
+    if (!Emulator::LoadSettings(settings_path_str.c_str())) {
+        Emulator::SetDefaultSettings();
+        settings.sync = SyncType::VIDEO;
+        if (!Emulator::SaveSettings(settings_path_str.c_str()))
             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "Emulator_Create: Could not save settings");
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_Create: Could not load settings, using defaults");
     }
-    emu->aturbo = false;
-    emu->bturbo = false;
+    aturbo = false;
+    bturbo = false;
 
     SDL_AudioSpec desired_spec = { 0 };
     desired_spec.freq = 44100;
@@ -153,60 +150,62 @@ Emulator* Emulator_Create(const char* settings_path) {
     // TODO: LET THE USER CHOOSE THIS
     desired_spec.samples = 512;
 
-    if (emu->settings.sync == EMULATOR_SYNC_AUDIO) {
-        desired_spec.callback = &Emulator_AudioCallback;
-        desired_spec.userdata = emu;
+    if (settings.sync == SyncType::AUDIO) {
+        desired_spec.userdata = this;
+        desired_spec.callback = [](void* userdata, uint8_t* stream, int len) {
+            auto my_emu = static_cast<Emulator*>(userdata);
+            my_emu->AudioCallback(nullptr, stream, len);
+        };
     }
 
-    emu->audio_device = SDL_OpenAudioDevice(NULL, 0, &desired_spec,
-        &emu->audio_settings, 0);
-    if (emu->audio_device == 0) {
+    audio_device = SDL_OpenAudioDevice(NULL, 0, &desired_spec,
+        &audio_settings, 0);
+    if (audio_device == 0) {
         // TODO: ADD ERROR MESSAGE
         exit(EXIT_FAILURE);
     }
 
     // TODO: ADD CHECKING FOR CHANGES TO THE DESIRED AUDIO SETTINGS
 
-    emu->quit = false;
-    emu->run_emulation = false;
+    quit = false;
+    run_emulation = false;
 
-    const uint8_t* state = SDL_GetKeyboardState(&emu->nkeys);
-    const size_t sz = emu->nkeys * sizeof(uint8_t);
-    emu->prev_keys = (uint8_t*)Util_SafeMalloc(sz);
+    const uint8_t* state = SDL_GetKeyboardState(&nkeys);
+    const size_t sz = nkeys * sizeof(uint8_t);
+    prev_keys = (uint8_t*)Util_SafeMalloc(sz);
     // Should be the equivalent of just memsetting 0, but on the off chance
     // that it isn't we will do this
-    memcpy(emu->prev_keys, state, sz);
+    memcpy(prev_keys, state, sz);
 
-    emu->most_recent_key_this_frame = SDLK_UNKNOWN;
+    most_recent_key_this_frame = SDLK_UNKNOWN;
 
     // Log the keymaps in debug mode
-    LogKeymaps(emu);
+    LogKeymaps();
 
     // Set all saveslots as unused
-    memset(emu->used_saveslots, false, sizeof(emu->used_saveslots));
+    memset(used_saveslots, false, sizeof(used_saveslots));
 
 
     // Start the audio device
-    SDL_PauseAudioDevice(emu->audio_device, 0);
-    return emu;
+    SDL_PauseAudioDevice(audio_device, 0);
 }
 
-void Emulator_Destroy(Emulator* emu) {
+Emulator::~Emulator() {
     // Save settings for next session
-    Emulator_SaveSettings(emu, "settings.json");
+    std::string settings_path_str = std::string(user_data_path) + "settings.json";
+    SaveSettings(settings_path_str.c_str());
 
-    SDL_free(const_cast<char*>(emu->exe_path));
-    SDL_free(const_cast<char*>(emu->user_data_path));
-    SDL_DestroyMutex(emu->nes_state_lock);
-    SDL_CloseAudioDevice(emu->audio_device);
-    Bus_DestroyNES(emu->nes);
-    Util_SafeFree(emu->prev_keys);
-    Util_SafeFree(emu);
+    SDL_free(const_cast<char*>(exe_path));
+    SDL_free(const_cast<char*>(user_data_path));
+    SDL_DestroyMutex(nes_state_lock);
+    SDL_CloseAudioDevice(audio_device);
+    Bus_DestroyNES(nes);
+    Util_SafeFree(prev_keys);
 }
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
-bool Emulator_SaveState(Emulator* emu, const char* path) {
-    if (emu->nes->cart->GetROMPath() == NULL) {
+bool Emulator::SaveState(const char* path) {
+    if (nes->cart->GetROMPath() == NULL) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
@@ -218,8 +217,8 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
             "Emulator_SaveState: Could not open file %s", path);
     }
 
-    Bus* bus = emu->nes;
-    if (!Bus_SaveState(emu->nes, savestate))
+    Bus* bus = nes;
+    if (!Bus_SaveState(nes, savestate))
         printf("bus too short");
 
     if (!bus->cpu->SaveState(savestate))
@@ -244,7 +243,7 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     return 0;
 }
 /*
-bool Emulator_LoadState(Emulator* emu, const char* path) {
+bool Emulator_LoadState(Emulator* const char* path) {
     FILE* to_load = fopen(path, "rb");
     if (to_load == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -253,23 +252,23 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     }
 
     // FIXME: THIS IS NOT THE WAY TO DO TMP FILES
-    if (!Emulator_SaveState(emu, "../saves/emusavtmp.bin")) {
+    if (!Emulator_SaveState("../saves/emusavtmp.bin")) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Emulator_LoadState: Could not backup state to tmp file");
         fclose(to_load);
         return false;
     }
 
-    Bus* bus = emu->nes;
+    Bus* bus = nes;
 
     // Do the loading
-    bool success = Bus_LoadState(emu->nes, to_load);
-    success = success && CPU_LoadState(emu->nes->cpu, to_load);
-    success = success && PPU_LoadState(emu->nes->ppu, to_load);
-    success = success && APU_LoadState(emu->nes->apu, to_load);
+    bool success = Bus_LoadState(nes, to_load);
+    success = success && CPU_LoadState(nes->cpu, to_load);
+    success = success && PPU_LoadState(nes->ppu, to_load);
+    success = success && APU_LoadState(nes->apu, to_load);
     // FIXME: FOR THIS TO WORK, THE CART'S GOTTA HANDLE ITS OWN SHIT
     Mapper* mapper_addr = bus->cart->mapper;
-    success = success && Cart_LoadState(emu->nes->cart, to_load);
+    success = success && Cart_LoadState(nes->cart, to_load);
     // Mapper
     bus->cart->mapper = mapper_addr;
     if (bus->cart->mapper != NULL) {
@@ -295,11 +294,11 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
             return false;
         }
 
-        success = Bus_LoadState(emu->nes, backup);
-        success = success && CPU_LoadState(emu->nes->cpu, backup);
-        success = success && PPU_LoadState(emu->nes->ppu, backup);
-        success = success && APU_LoadState(emu->nes->apu, backup);
-        success = success && Cart_LoadState(emu->nes->cart, backup);
+        success = Bus_LoadState(nes, backup);
+        success = success && CPU_LoadState(nes->cpu, backup);
+        success = success && PPU_LoadState(nes->ppu, backup);
+        success = success && APU_LoadState(nes->apu, backup);
+        success = success && Cart_LoadState(nes->cart, backup);
 
         if (!success) {
             SDL_LogCritical(SDL_LOG_CATEGORY_ERROR,
@@ -315,17 +314,17 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     }
 
     fclose(to_load);
-    emu->run_emulation = true;
+    run_emulation = true;
 
     return true;
 }
 */
 
-bool Emulator_LoadState(Emulator* emu, const char* path) {
+bool Emulator::LoadState(const char* path) {
     FILE* savestate;
     fopen_s(&savestate, path, "rb");
 
-    Bus* bus = emu->nes;
+    Bus* bus = nes;
 
     Bus_LoadState(bus, savestate);
 
@@ -359,30 +358,30 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     return 0;
 }
 
-bool Emulator_SaveSettings(Emulator* emu, const char* path) {
+bool Emulator::SaveSettings(const char* path) {
     // TODO: SHOULD CHECK FOR NULL ALLOCS, EVEN THOUGH IT SHOULD NEVER HAPPEN
     json_t* root = json_object();
 
-    json_object_set_new(root, "sync", json_integer(emu->settings.sync));
-    json_object_set_new(root, "next_sync", json_integer(emu->settings.next_sync));
-    json_object_set_new(root, "vsync", json_boolean(emu->settings.vsync));
-    json_object_set_new(root, "p1_vol", json_real(emu->settings.p1_vol));
-    json_object_set_new(root, "p2_vol", json_real(emu->settings.p2_vol));
-    json_object_set_new(root, "tri_vol", json_real(emu->settings.tri_vol));
-    json_object_set_new(root, "noise_vol", json_real(emu->settings.noise_vol));
-    json_object_set_new(root, "master_vol", json_real(emu->settings.master_vol));
+    json_object_set_new(root, "sync", json_integer((long long)settings.sync));
+    json_object_set_new(root, "next_sync", json_integer((long long)settings.next_sync));
+    json_object_set_new(root, "vsync", json_boolean(settings.vsync));
+    json_object_set_new(root, "p1_vol", json_real(settings.p1_vol));
+    json_object_set_new(root, "p2_vol", json_real(settings.p2_vol));
+    json_object_set_new(root, "tri_vol", json_real(settings.tri_vol));
+    json_object_set_new(root, "noise_vol", json_real(settings.noise_vol));
+    json_object_set_new(root, "master_vol", json_real(settings.master_vol));
 
     json_t* controller1 = json_object();
-    json_object_set_new(controller1, "a", json_integer(emu->settings.controller1.a));
-    json_object_set_new(controller1, "b", json_integer(emu->settings.controller1.b));
-    json_object_set_new(controller1, "select", json_integer(emu->settings.controller1.select));
-    json_object_set_new(controller1, "start", json_integer(emu->settings.controller1.start));
-    json_object_set_new(controller1, "up", json_integer(emu->settings.controller1.up));
-    json_object_set_new(controller1, "down", json_integer(emu->settings.controller1.down));
-    json_object_set_new(controller1, "left", json_integer(emu->settings.controller1.left));
-    json_object_set_new(controller1, "right", json_integer(emu->settings.controller1.right));
-    json_object_set_new(controller1, "aturbo", json_integer(emu->settings.controller1.aturbo));
-    json_object_set_new(controller1, "aturbo", json_integer(emu->settings.controller1.bturbo));
+    json_object_set_new(controller1, "a", json_integer(settings.controller1.a));
+    json_object_set_new(controller1, "b", json_integer(settings.controller1.b));
+    json_object_set_new(controller1, "select", json_integer(settings.controller1.select));
+    json_object_set_new(controller1, "start", json_integer(settings.controller1.start));
+    json_object_set_new(controller1, "up", json_integer(settings.controller1.up));
+    json_object_set_new(controller1, "down", json_integer(settings.controller1.down));
+    json_object_set_new(controller1, "left", json_integer(settings.controller1.left));
+    json_object_set_new(controller1, "right", json_integer(settings.controller1.right));
+    json_object_set_new(controller1, "aturbo", json_integer(settings.controller1.aturbo));
+    json_object_set_new(controller1, "aturbo", json_integer(settings.controller1.bturbo));
 
     json_object_set_new(root, "controller1", controller1);
 
@@ -394,106 +393,104 @@ bool Emulator_SaveSettings(Emulator* emu, const char* path) {
     return res;
 }
 
-bool Emulator_LoadSettings(Emulator* emu, const char* path) {
+bool Emulator::LoadSettings(const char* path) {
     json_error_t err;
     json_t* root = json_load_file(path, 0, &err);
     if (root == NULL)
         return false;
 
-    Emulator_Settings* settings = &emu->settings;
-
     // TODO: CHECK FOR PARSE ERRORS
-    settings->sync = (Emulator_SyncType)json_integer_value(json_object_get(root, "sync"));
-    settings->next_sync = (Emulator_SyncType)json_integer_value(json_object_get(root, "next_sync"));
-    settings->vsync = json_boolean_value(json_object_get(root, "vsync"));
-    settings->p1_vol = json_real_value(json_object_get(root, "p1_vol"));
-    settings->p2_vol = json_real_value(json_object_get(root, "p2_vol"));
-    settings->tri_vol = json_real_value(json_object_get(root, "tri_vol"));
-    settings->noise_vol = json_real_value(json_object_get(root, "noise_vol"));
-    settings->master_vol = json_real_value(json_object_get(root, "master_vol"));
+    settings.sync = (SyncType)json_integer_value(json_object_get(root, "sync"));
+    settings.next_sync = (SyncType)json_integer_value(json_object_get(root, "next_sync"));
+    settings.vsync = json_boolean_value(json_object_get(root, "vsync"));
+    settings.p1_vol = json_real_value(json_object_get(root, "p1_vol"));
+    settings.p2_vol = json_real_value(json_object_get(root, "p2_vol"));
+    settings.tri_vol = json_real_value(json_object_get(root, "tri_vol"));
+    settings.noise_vol = json_real_value(json_object_get(root, "noise_vol"));
+    settings.master_vol = json_real_value(json_object_get(root, "master_vol"));
 
     json_t* controller1 = json_object_get(root, "controller1");
-    settings->controller1.b = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "b"));
-    settings->controller1.a = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "a"));
-    settings->controller1.select = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "select"));
-    settings->controller1.start = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "start"));
-    settings->controller1.up = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "up"));
-    settings->controller1.down = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "down"));
-    settings->controller1.left = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "left"));
-    settings->controller1.right = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "right"));
-    settings->controller1.aturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "aturbo"));
-    settings->controller1.bturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "bturbo"));
+    settings.controller1.b = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "b"));
+    settings.controller1.a = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "a"));
+    settings.controller1.select = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "select"));
+    settings.controller1.start = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "start"));
+    settings.controller1.up = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "up"));
+    settings.controller1.down = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "down"));
+    settings.controller1.left = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "left"));
+    settings.controller1.right = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "right"));
+    settings.controller1.aturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "aturbo"));
+    settings.controller1.bturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "bturbo"));
 
     // Since changes don't take effect on changing sync type on restart
     // we must set sync to next_sync
-    settings->sync = settings->next_sync;
+    settings.sync = settings.next_sync;
     json_decref(root);
 
     return true;
 }
 
-void Emulator_SetDefaultSettings(Emulator* emu) {
+void Emulator::SetDefaultSettings() {
     // NOTE: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
     // YOU WILL BREAK, SO YOU HAVE TO CHANGE ONLY THE NEXT SYNC TYPE
-    // emu->settings.sync = EMULATOR_SYNC_VIDEO;
-    emu->settings.next_sync = EMULATOR_SYNC_VIDEO;
-    emu->settings.vsync = true;
-    emu->settings.p1_vol = 1.0f;
-    emu->settings.p2_vol = 1.0f;
-    emu->settings.tri_vol = 1.0f;
-    emu->settings.noise_vol = 0.75f;
-    emu->settings.master_vol = 0.5f;
-    emu->settings.controller1.a = SDLK_k;
-    emu->settings.controller1.b = SDLK_j;
-    emu->settings.controller1.select = SDLK_BACKSPACE;
-    emu->settings.controller1.start = SDLK_RETURN;
-    emu->settings.controller1.aturbo = SDLK_i;
-    emu->settings.controller1.bturbo = SDLK_u;
-    emu->settings.controller1.up = SDLK_w;
-    emu->settings.controller1.left = SDLK_a;
-    emu->settings.controller1.right = SDLK_d;
-    emu->settings.controller1.down = SDLK_s;
+    // settings.sync = EMULATOR_SYNC_VIDEO;
+    settings.next_sync = SyncType::VIDEO;
+    settings.vsync = true;
+    settings.p1_vol = 1.0f;
+    settings.p2_vol = 1.0f;
+    settings.tri_vol = 1.0f;
+    settings.noise_vol = 0.75f;
+    settings.master_vol = 0.5f;
+    settings.controller1.a = SDLK_k;
+    settings.controller1.b = SDLK_j;
+    settings.controller1.select = SDLK_BACKSPACE;
+    settings.controller1.start = SDLK_RETURN;
+    settings.controller1.aturbo = SDLK_i;
+    settings.controller1.bturbo = SDLK_u;
+    settings.controller1.up = SDLK_w;
+    settings.controller1.left = SDLK_a;
+    settings.controller1.right = SDLK_d;
+    settings.controller1.down = SDLK_s;
 
 
-    // emu->settings.sync = EMULATOR_SYNC_AUDIO;
-    // emu->settings.vsync = false;
+    // settings.sync = EMULATOR_SYNC_AUDIO;
+    // settings.vsync = false;
 }
 
-float Emulator_EmulateSample(Emulator* emu) {
-    while (!Bus_Clock(emu->nes)) {
-        if (PPU_GetFrameComplete(emu->nes->ppu)) {
-            PPU_ClearFrameComplete(emu->nes->ppu);
+float Emulator::EmulateSample() {
+    while (!Bus_Clock(nes)) {
+        if (PPU_GetFrameComplete(nes->ppu)) {
+            PPU_ClearFrameComplete(nes->ppu);
 
             // After we emulate a sample, we will check to see
             // if a frame has been rendered
             // if it has and we are pressing the turbo button, we will
             // flip the state of the bit that corresponds to that turbo button
-            if (emu->aturbo) {
-                if (emu->nes->controller1 & BUS_CONTROLLER_A)
-                    emu->nes->controller1 &= ~BUS_CONTROLLER_A;
+            if (aturbo) {
+                if (nes->controller1 & BUS_CONTROLLER_A)
+                    nes->controller1 &= ~BUS_CONTROLLER_A;
                 else
-                    emu->nes->controller1 |= BUS_CONTROLLER_A;
+                    nes->controller1 |= BUS_CONTROLLER_A;
             }
-            if (emu->bturbo) {
-                if (emu->nes->controller1 & BUS_CONTROLLER_B)
-                    emu->nes->controller1 &= ~BUS_CONTROLLER_B;
+            if (bturbo) {
+                if (nes->controller1 & BUS_CONTROLLER_B)
+                    nes->controller1 &= ~BUS_CONTROLLER_B;
                 else
-                    emu->nes->controller1 |= BUS_CONTROLLER_B;
+                    nes->controller1 |= BUS_CONTROLLER_B;
             }
         }
     }
 
-    APU* apu = emu->nes->apu;
-    float p1 = apu->GetPulse1Sample() * emu->settings.p1_vol;
-    float p2 = apu->GetPulse2Sample() * emu->settings.p2_vol;
-    float tri = apu->GetTriangleSample() * emu->settings.tri_vol;
-    float noise = apu->GetNoiseSample() * emu->settings.noise_vol;
+    APU* apu = nes->apu;
+    float p1 = apu->GetPulse1Sample() * settings.p1_vol;
+    float p2 = apu->GetPulse2Sample() * settings.p2_vol;
+    float tri = apu->GetTriangleSample() * settings.tri_vol;
+    float noise = apu->GetNoiseSample() * settings.noise_vol;
 
-    return 0.25f * (p1 + p2 + tri + noise) * emu->settings.master_vol;
+    return 0.25f * (p1 + p2 + tri + noise) * settings.master_vol;
 }
 
 // TODO: IMPLEMENT ME
-bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton btn, SDL_KeyCode key) {
+bool Emulator::MapButton(ControllerButton btn, SDL_KeyCode key) {
     if (key == SDLK_UNKNOWN) {
         SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
         return false;
@@ -501,37 +498,37 @@ bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton btn, SDL_KeyCod
 
     // FIXME: CHECK FOR BINDING CONFLICTS
 
-    Emulator_Controller* controller = &emu->settings.controller1;
+    Controller* controller = &settings.controller1;
 
     switch (btn) {
-    case EMULATOR_CONTROLLER_A:
+    case Emulator::ControllerButton::A:
         controller->a = key;
         break;
-    case EMULATOR_CONTROLLER_B:
+    case Emulator::ControllerButton::B:
         controller->b = key;
         break;
-    case EMULATOR_CONTROLLER_SELECT:
+    case Emulator::ControllerButton::SELECT:
         controller->select = key;
         break;
-    case EMULATOR_CONTROLLER_START:
+    case Emulator::ControllerButton::START:
         controller->start = key;
         break;
-    case EMULATOR_CONTROLLER_UP:
+    case Emulator::ControllerButton::UP:
         controller->up = key;
         break;
-    case EMULATOR_CONTROLLER_DOWN:
+    case Emulator::ControllerButton::DOWN:
         controller->down = key;
         break;
-    case EMULATOR_CONTROLLER_LEFT:
+    case Emulator::ControllerButton::LEFT:
         controller->left = key;
         break;
-    case EMULATOR_CONTROLLER_RIGHT:
+    case Emulator::ControllerButton::RIGHT:
         controller->right = key;
         break;
-    case EMULATOR_CONTROLLER_ATURBO:
+    case Emulator::ControllerButton::ATURBO:
         controller->aturbo = key;
         break;
-    case EMULATOR_CONTROLLER_BTURBO:
+    case Emulator::ControllerButton::BTURBO:
         controller->bturbo = key;
         break;
 
@@ -543,12 +540,12 @@ bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton btn, SDL_KeyCod
 
     SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s\n",
-        Emulator_GetButtonName(emu, btn), SDL_GetKeyName(key));
+        Emulator::GetButtonName(btn), SDL_GetKeyName(key));
     return true;
 }
 
-nfdresult_t Emulator_LoadROM(Emulator* emu) {
-    Bus* bus = emu->nes;
+nfdresult_t Emulator::LoadROM() {
+    Bus* bus = nes;
 
     nfdchar_t *rom;
     nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
@@ -566,13 +563,13 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
     }
 
     if (!bus->cart->LoadROM((const char*)rom)) {
-        emu->run_emulation = cancelled;
+        run_emulation = cancelled;
         if (bus->cart->GetROMPath() == NULL)
-            emu->run_emulation = false;
+            run_emulation = false;
         if (!cancelled)
             result = NFD_ERROR;
     } else {
-        emu->run_emulation = true;
+        run_emulation = true;
         Bus_Reset(bus);
     }
 
@@ -582,11 +579,11 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
         // FIXME: UNSAFE, PROBABLY SHOULD USE std::string
         char save_path[1024];
         for (int i = 0; i < 10; i++) {
-            sprintf(save_path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
-            emu->used_saveslots[i] = Util_FileExists(save_path);
+            sprintf(save_path, "%ssaves/%sslot%d.sav", user_data_path, game_name, i);
+            used_saveslots[i] = Util_FileExists(save_path);
         }
     } else {
-        memset(emu->used_saveslots, false, sizeof(emu->used_saveslots));
+        memset(used_saveslots, false, sizeof(used_saveslots));
     }
 
     if (rom != NULL)
@@ -595,27 +592,27 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
     return result;
 }
 
-const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn) {
+const char* Emulator::GetButtonName(ControllerButton btn) {
     // FIXME: MAY HAVE TO DO THE SCREWY ORDER OF CONST TO ACHIEVE DESIRED
     // BEHAVIOR
-    if (btn == EMULATOR_CONTROLLER_INVALID)
+    if (btn == Emulator::ControllerButton::INVALID)
         return "INV";
     static const char* btn_names[] = {
-        [EMULATOR_CONTROLLER_A] = "A",
-        [EMULATOR_CONTROLLER_B] = "B",
-        [EMULATOR_CONTROLLER_SELECT] = "SELECT",
-        [EMULATOR_CONTROLLER_START] = "START",
-        [EMULATOR_CONTROLLER_UP] = "UP",
-        [EMULATOR_CONTROLLER_DOWN] = "DOWN",
-        [EMULATOR_CONTROLLER_LEFT] = "LEFT",
-        [EMULATOR_CONTROLLER_RIGHT] = "RIGHT",
-        [EMULATOR_CONTROLLER_ATURBO] = "TURBO A",
-        [EMULATOR_CONTROLLER_BTURBO] = "TURBO B"
+        "A",
+        "B",
+        "SELECT",
+        "START",
+        "UP",
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "TURBO A",
+        "TURBO B"
     };
-    return btn_names[btn];
+    return btn_names[(int)btn];
 }
 
-bool Emulator_ROMInserted(Emulator* emu) {
-    return emu->nes->cart->GetROMPath() != NULL;
+bool Emulator::ROMInserted() {
+    return nes->cart->GetROMPath() != NULL;
 }
 }

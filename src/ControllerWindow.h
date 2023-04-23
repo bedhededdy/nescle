@@ -23,7 +23,7 @@ namespace NESCLE {
 class ControllerWindow : public NESCLEWindow {
 private:
     bool* show;
-    Emulator_ControllerButton btn;
+    Emulator::ControllerButton btn;
     SDL_KeyCode last_keypress;
 
     void ShowKeySetWindow(Emulator* emu);

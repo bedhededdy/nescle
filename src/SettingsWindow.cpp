@@ -22,19 +22,19 @@ namespace NESCLE {
 void SettingsWindow::Show(Emulator* emu) {
     // Wanna be able to set vsync and change sync to audio/video
     bool show_popup = false;
-    Emulator_Settings* settings = &emu->settings;
+    Emulator::Settings* settings = &emu->settings;
     if (ImGui::Begin("Settings", show)) {
         // Have to create this dummy var because casting Emulator_SyncType*
         // to int* is considered unsafe as technically in C an enum does
         // not necessarily have to be an int
         int v = static_cast<int>(settings->next_sync);
         ImGui::Text("Emulation Synchronization");
-        ImGui::RadioButton("Audio", &v, EMULATOR_SYNC_AUDIO);
+        ImGui::RadioButton("Audio", &v, (int)Emulator::SyncType::AUDIO);
         ImGui::SameLine();
-        ImGui::RadioButton("Video", &v, EMULATOR_SYNC_VIDEO);
-        if (settings->next_sync != v)
+        ImGui::RadioButton("Video", &v, (int)Emulator::SyncType::VIDEO);
+        if ((int)settings->next_sync != v)
             show_popup = true;
-        settings->next_sync = static_cast<Emulator_SyncType>(v);
+        settings->next_sync = static_cast<Emulator::SyncType>(v);
 
         ImGui::Text("VSync");
         if (ImGui::RadioButton("On", settings->vsync)) {

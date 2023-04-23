@@ -19,12 +19,11 @@ namespace NESCLE {
 typedef struct bus Bus;
 typedef struct ppu PPU;
 typedef struct mapper Mapper;
-typedef struct emulator Emulator;
-typedef struct emulator_settings Emulator_Settings;
 typedef struct ppu_oam PPU_OAM;
 
 // Forward decl for objs
 class APU;
 class Cart;
 class CPU;
+class Emulator;
 }

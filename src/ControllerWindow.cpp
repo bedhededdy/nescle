@@ -36,19 +36,19 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
             ImGui::Text("Key pressed: %s", SDL_GetKeyName(last_keypress));
         ImGui::Text("Press ESC to save, DEL to clear");
         if (ImGui::IsWindowFocused()) {
-            if (Emulator_KeyPushed(emu, SDLK_DELETE))
+            if (emu->KeyPushed(SDLK_DELETE))
                 last_keypress = SDLK_UNKNOWN;
-            if (Emulator_KeyPushed(emu, SDLK_ESCAPE)) {
+            if (emu->KeyPushed(SDLK_ESCAPE)) {
                 // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
                 // CONTROLLER BUTTON
-                Emulator_MapButton(emu, btn, last_keypress);
+                emu->MapButton(btn, last_keypress);
                 ImGui::CloseCurrentPopup();
             }
         }
         ImGui::EndPopup();
     } else {
         last_keypress = SDLK_UNKNOWN;
-        btn = EMULATOR_CONTROLLER_INVALID;
+        btn = Emulator::ControllerButton::INVALID;
     }
 }
 
@@ -57,50 +57,50 @@ void ControllerWindow::Show(Emulator* emu) {
     if (ImGui::Begin("Controller", show)) {
         if (ImGui::Button("Up")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_UP;
+            btn = Emulator::ControllerButton::UP;
         }
         ImGui::SameLine();
         if (ImGui::Button("Turbo A")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_ATURBO;
+            btn = Emulator::ControllerButton::ATURBO;
         }
         ImGui::SameLine();
         if (ImGui::Button("Turbo B")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_BTURBO;
+            btn = Emulator::ControllerButton::BTURBO;
         }
         if (ImGui::Button("Left")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_LEFT;
+            btn = Emulator::ControllerButton::LEFT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Right")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_RIGHT;
+            btn = Emulator::ControllerButton::RIGHT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Select")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_SELECT;
+            btn = Emulator::ControllerButton::SELECT;
         }
         ImGui::SameLine();
         if (ImGui::Button("Start")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_START;
+            btn = Emulator::ControllerButton::START;
         }
         ImGui::SameLine();
         if (ImGui::Button("A")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_A;
+            btn = Emulator::ControllerButton::A;
         }
         ImGui::SameLine();
         if (ImGui::Button("B")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_B;
+            btn = Emulator::ControllerButton::B;
         }
         if (ImGui::Button("Down")) {
             open_popup = true;
-            btn = EMULATOR_CONTROLLER_DOWN;
+            btn = Emulator::ControllerButton::DOWN;
         }
         ImGui::End();
     }

@@ -19,81 +19,84 @@
 // OF SAVE FILES
 #pragma once
 
-
 #include <nfd.h>
 
 #include <SDL_audio.h>
 #include <SDL_mutex.h>
 #include <SDL_keyboard.h>
 
-// #include <stdbool.h>
-
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-typedef enum emulator_sync_type {
-    EMULATOR_SYNC_AUDIO,
-    EMULATOR_SYNC_VIDEO
-} Emulator_SyncType;
+class Emulator {
+private:
 
-// FIXME: REORDER THIS PROPERLY (THIS WILL BREAK SETTINGS)
-typedef struct emulator_controller {
-    SDL_KeyCode up;
-    SDL_KeyCode down;
-    SDL_KeyCode left;
-    SDL_KeyCode right;
-    SDL_KeyCode a;
-    SDL_KeyCode b;
-    SDL_KeyCode start;
-    SDL_KeyCode select;
-    SDL_KeyCode aturbo;
-    SDL_KeyCode bturbo;
-} Emulator_Controller;
+    void LogKeymaps();
 
-typedef enum emulator_controller_button {
-    EMULATOR_CONTROLLER_INVALID = -1,
+public:
+    enum class SyncType {
+        AUDIO,
+        VIDEO
+    };
 
-    EMULATOR_CONTROLLER_A,
-    EMULATOR_CONTROLLER_B,
-    EMULATOR_CONTROLLER_SELECT,
-    EMULATOR_CONTROLLER_START,
-    EMULATOR_CONTROLLER_UP,
-    EMULATOR_CONTROLLER_DOWN,
-    EMULATOR_CONTROLLER_LEFT,
-    EMULATOR_CONTROLLER_RIGHT,
+    enum class ControllerButton {
+        INVALID = -1,
 
-    EMULATOR_CONTROLLER_ATURBO,
-    EMULATOR_CONTROLLER_BTURBO,
-} Emulator_ControllerButton;
+        A,
+        B,
+        SELECT,
+        START,
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT,
 
-struct emulator_settings {
-    // video
-    Emulator_SyncType sync;
-    Emulator_SyncType next_sync;
-    bool vsync;
+        ATURBO,
+        BTURBO,
+    };
 
-    // audio
-    float p1_vol;
-    float p2_vol;
-    float tri_vol;
-    float noise_vol;
-    float master_vol;
+    // FIXME: REORDER THIS PROPERLY (BUT THIS BREAKS SETTINGS.JSON)
+    struct Controller {
+        SDL_KeyCode up;
+        SDL_KeyCode down;
+        SDL_KeyCode left;
+        SDL_KeyCode right;
+        SDL_KeyCode a;
+        SDL_KeyCode b;
+        SDL_KeyCode start;
+        SDL_KeyCode select;
+        SDL_KeyCode aturbo;
+        SDL_KeyCode bturbo;
+    };
 
-    // controls
-    Emulator_Controller controller1;
+    struct Settings {
+        // video
+        SyncType sync;
+        SyncType next_sync;
+        bool vsync;
 
-    // misc.
-    // bool cart_inserted;
-};
+        // audio
+        float p1_vol;
+        float p2_vol;
+        float tri_vol;
+        float noise_vol;
+        float master_vol;
 
-struct emulator {
+        // controls
+        Controller controller1;
+
+        // misc.
+        // bool cart_inserted;
+    };
+
+    // FIXME: MAKE THESE PRIVATE
     Bus* nes;
     SDL_mutex* nes_state_lock;
 
     SDL_AudioSpec audio_settings;
     SDL_AudioDeviceID audio_device;
 
-    Emulator_Settings settings;
+    Settings settings;
 
     bool used_saveslots[10];
 
@@ -110,30 +113,31 @@ struct emulator {
 
     bool quit;
     bool run_emulation;
+
+    Emulator(const char* settings_path);
+    ~Emulator();
+
+    void PowerOn();
+    void Reset();
+
+    nfdresult_t LoadROM();
+    bool SaveState(const char* path);
+    bool LoadState(const char* path);
+    bool SaveSettings(const char* path);
+    bool LoadSettings(const char* path);
+    void SetDefaultSettings();
+
+    float EmulateSample();
+    void AudioCallback(void* userdata, uint8_t* stream, int len);
+
+    const char* GetButtonName(ControllerButton btn);
+
+    bool KeyPushed(SDL_Keycode key);
+    bool KeyHeld(SDL_Keycode key);
+    bool KeyReleased(SDL_Keycode key);
+
+    bool MapButton(ControllerButton button, SDL_KeyCode key);
+
+    bool ROMInserted();
 };
-
-Emulator* Emulator_Create(const char* settings_path);
-void Emulator_Destroy(Emulator* emu);
-void Emulator_PowerOn(Emulator* emu);
-void Emulator_Reset(Emulator* emu);
-
-nfdresult_t Emulator_LoadROM(Emulator* emulator);
-bool Emulator_SaveState(Emulator* emu, const char* path);
-bool Emulator_LoadState(Emulator* emu, const char* path);
-bool Emulator_SaveSettings(Emulator* emu, const char* path);
-bool Emulator_LoadSettings(Emulator* emu, const char* path);
-void Emulator_SetDefaultSettings(Emulator* emu);
-
-float Emulator_EmulateSample(Emulator* emu);
-void Emulator_AudioCallback(void* userdata, uint8_t* stream, int len);
-
-const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn);
-
-bool Emulator_KeyPushed(Emulator* emu, SDL_Keycode key);
-bool Emulator_KeyHeld(Emulator* emu, SDL_Keycode key);
-bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key);
-
-bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
-
-bool Emulator_ROMInserted(Emulator* emu);
 }
