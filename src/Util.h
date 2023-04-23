@@ -23,6 +23,7 @@
 #define UTIL_WINDOWS
 #endif
 
+namespace NESCLE {
 void* Util_SafeMalloc(size_t size);
 void* Util_SafeRealloc(void* ptr, size_t size);
 void* Util_SafeCalloc(size_t nelem, size_t elem_sz);
@@ -35,3 +36,4 @@ void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
 const char* Util_GetFileName(const char* path);
 
 bool Util_FileExists(const char* path);
+}

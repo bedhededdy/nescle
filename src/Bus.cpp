@@ -26,6 +26,7 @@
 
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 /* Constructors/Destructors */
 Bus* Bus_Create(void) {
     return (Bus*)Util_SafeMalloc(sizeof(Bus));
@@ -40,7 +41,7 @@ Bus* Bus_CreateNES(void) {
     CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Create();
     Cart* cart = Cart_Create();
-    APU* apu = APU_Create();
+    APU* apu = new APU();
 
     if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
         printf("Bus_CreateNES: alloc failed\n");
@@ -54,7 +55,7 @@ Bus* Bus_CreateNES(void) {
     bus->cart = cart;
 
     bus->apu = apu;
-    APU_LinkBus(apu, bus);
+    apu->LinkBus(bus);
 
     return bus;
 }
@@ -63,7 +64,7 @@ void Bus_DestroyNES(Bus* bus) {
     CPU_Destroy(bus->cpu);
     PPU_Destroy(bus->ppu);
     Cart_Destroy(bus->cart);
-    APU_Destroy(bus->apu);
+    delete bus->apu;
     Bus_Destroy(bus);
 }
 
@@ -88,7 +89,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         return PPU_RegisterRead(bus->ppu, addr);
     }
     else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
-        return APU_Read(bus->apu, addr);
+        return bus->apu->Read(addr);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -151,7 +152,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
     else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
-        return APU_Write(bus->apu, addr, data);
+        return bus->apu->Write(addr, data);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -192,7 +193,7 @@ bool Bus_Clock(Bus* bus) {
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
 
     PPU_Clock(bus->ppu);
-    APU_Clock(bus->apu);
+    bus->apu->Clock();
 
     if (bus->clocks_count % 3 == 0) {
         // CPU completely halts if DMA is occuring
@@ -265,7 +266,7 @@ void Bus_PowerOn(Bus* bus) {
     //     Mapper_Reset(mapper);
     PPU_PowerOn(bus->ppu);
     CPU_PowerOn(bus->cpu);
-    APU_PowerOn(bus->apu);
+    bus->apu->PowerOn();
     bus->controller1 = 0;
     bus->controller2 = 0;
     bus->controller1_shifter = 0;
@@ -289,7 +290,7 @@ void Bus_Reset(Bus* bus) {
         Mapper_Reset(mapper);
     PPU_Reset(bus->ppu);
     CPU_Reset(bus->cpu);
-    APU_Reset(bus->apu);
+    bus->apu->Reset();
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;
@@ -322,4 +323,5 @@ int Bus_LoadState(Bus* bus, FILE* file) {
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_frequency) {
     bus->time_per_sample = 1.0 / (double)sample_frequency;
     bus->time_per_clock = 1.0 / BUS_CLOCK_FREQ;
+}
 }

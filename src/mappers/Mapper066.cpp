@@ -15,6 +15,7 @@
  */
 #include "Mapper066.h"
 
+namespace NESCLE {
 void Mapper066::Reset() {
     bank_select = 0;
 }
@@ -54,4 +55,5 @@ bool Mapper066::LoadState(FILE* file) {
     bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
     return b1 && b2;
+}
 }

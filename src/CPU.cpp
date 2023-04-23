@@ -23,6 +23,7 @@
 #include "PPU.h"
 #include "Util.h"
 
+namespace NESCLE {
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
 //#define DISASSEMBLY_LOG
 
@@ -1072,6 +1073,7 @@ void CPU_Execute(CPU* cpu) {
 }
 
 /* Disassembler */
+// TODO: MAKE THIS RETURN A STD::STRING
 // Returns a string of the disassembled instruction at addr
 // Call before clocking
 char* CPU_DisassembleString(CPU* cpu, uint16_t addr) {
@@ -1383,4 +1385,6 @@ bool CPU_LoadState(CPU* cpu, FILE* file) {
 
 void CPU_LinkBus(CPU* cpu, Bus* bus) {
     cpu->bus = bus;
+}
+
 }

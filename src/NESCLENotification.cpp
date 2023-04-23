@@ -20,6 +20,7 @@
 
 #include "RetroText.h"
 
+namespace NESCLE {
 // FIXME: MAY WANT TO MAKE IT A VECTOR TO INSTANCES, NOT POINTERS
 std::vector<NESCLENotification*> NESCLENotification::notifications;
 GLuint NESCLENotification::fade_shader = -1;
@@ -112,4 +113,5 @@ void NESCLENotification::ShowNotifications() {
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
     }
+}
 }

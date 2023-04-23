@@ -22,6 +22,7 @@
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 Cart* Cart_Create(void);
 void Cart_Destroy(Cart* cart);
 
@@ -44,3 +45,4 @@ uint8_t Cart_ReadPrgRom(Cart* cart, size_t off);
 void Cart_WritePrgRom(Cart* cart, size_t off, uint8_t data);
 uint8_t Cart_ReadChrRom(Cart* cart, size_t off);
 void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t data);
+}

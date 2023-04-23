@@ -1,5 +1,6 @@
 #include "NESCLETexture.h"
 
+namespace NESCLE {
 NESCLETexture::NESCLETexture(int w, int h) {
     // TODO: REBIND PREVIOUS TEXTURE
     glGenTextures(1, &handle);
@@ -24,4 +25,5 @@ int NESCLETexture::GetWidth() {
 
 int NESCLETexture::GetHeight() {
     return height;
+}
 }

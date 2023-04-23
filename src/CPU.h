@@ -23,6 +23,7 @@
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 /* Constructors/Destructors */
 CPU* CPU_Create(void);
 void CPU_Destroy(CPU* cpu);
@@ -124,3 +125,4 @@ static void op_txa(CPU* cpu);    // transfer index x to accumulator          (N 
 static void op_txs(CPU* cpu);    // transfer index x to stack pointer
 static void op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
 */
+}

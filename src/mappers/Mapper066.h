@@ -17,6 +17,7 @@
 
 #include "MapperBase.h"
 
+namespace NESCLE {
 class Mapper066 : public MapperBase {
 private:
     uint8_t bank_select;
@@ -35,3 +36,4 @@ public:
     bool SaveState(FILE* file) override;
     bool LoadState(FILE* file) override;
 };
+}

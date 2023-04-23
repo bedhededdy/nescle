@@ -18,6 +18,7 @@
 #include <SDL.h>
 #include "Emulator.h"
 
+namespace NESCLE {
 void SettingsWindow::Show(Emulator* emu) {
     // Wanna be able to set vsync and change sync to audio/video
     bool show_popup = false;
@@ -71,4 +72,5 @@ void SettingsWindow::Show(Emulator* emu) {
         }
         ImGui::EndPopup();
     }
+}
 }

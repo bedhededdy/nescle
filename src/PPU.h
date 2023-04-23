@@ -22,6 +22,7 @@
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 /* Constructors/Destructors */
 PPU* PPU_Create(void);
 void PPU_Destroy(PPU* ppu);
@@ -58,3 +59,4 @@ void PPU_ClearFrameComplete(PPU* ppu);
 void PPU_WriteOAM(PPU* ppu, uint8_t off, uint8_t data);
 
 uint32_t* PPU_GetFramebuffer(PPU* ppu);
+}

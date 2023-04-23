@@ -4,6 +4,7 @@
 #include "Emulator.h"
 #include "APU.h"
 
+namespace NESCLE {
 MixerWindow::MixerWindow(bool* show) {
     this->show = show;
 }
@@ -57,4 +58,5 @@ void MixerWindow::Show(Emulator* emu) {
         }
         ImGui::End();
     }
+}
 }

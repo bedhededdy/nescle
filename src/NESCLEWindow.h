@@ -19,6 +19,7 @@
 #include <imgui.h>
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 class NESCLEWindow {
 protected:
     bool focused = false;
@@ -30,3 +31,4 @@ public:
 
     bool IsFocused() { return focused; }
 };
+}

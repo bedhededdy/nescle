@@ -22,6 +22,7 @@
 #include "NESCLETypes.h"
 #include "NESCLEWindow.h"
 
+namespace NESCLE {
 class EmulationWindow {
 private:
     SDL_Window* window;
@@ -85,3 +86,4 @@ public:
     void Show(Emulator* emu);
     uint32_t GetWindowID();
 };
+}

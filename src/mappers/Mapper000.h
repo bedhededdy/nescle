@@ -18,6 +18,7 @@
 
 #include "MapperBase.h"
 
+namespace NESCLE {
 class Mapper000 : public MapperBase {
 public:
     Mapper000(Cart* cart, Mapper_MirrorMode mirror)
@@ -31,3 +32,4 @@ public:
     bool SaveState(FILE* file) override;
     bool LoadState(FILE* file) override;
 };
+}

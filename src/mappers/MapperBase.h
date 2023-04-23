@@ -20,6 +20,7 @@
 #include "../Cart.h"
 #include "../Mapper.h"
 
+namespace NESCLE {
 class MapperBase {
 protected:
     Cart *cart;
@@ -46,3 +47,4 @@ public:
 
     Mapper_MirrorMode GetMirrorMode() { return mirror_mode; }
 };
+}

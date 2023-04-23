@@ -18,6 +18,7 @@
 #include <glad/glad.h>
 #include "NESCLEWindow.h"
 
+namespace NESCLE {
 class PatternWindow : public NESCLEWindow {
 private:
     GLuint palette_fbo;
@@ -39,3 +40,4 @@ public:
     void Show(Emulator* emu) override;
     void IncrementPalette();
 };
+}

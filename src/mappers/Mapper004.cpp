@@ -21,6 +21,7 @@
 // FIXME: SOME GAMES DON'T EVEN BOOT, THIS IS DEFINITELY FISHY
 #include "Mapper004.h"
 
+namespace NESCLE {
 void Mapper004::Reset() {
     target_register = 0;
     prg_bank_mode = false;
@@ -203,4 +204,5 @@ bool Mapper004::GetIRQStatus() {
 
 void Mapper004::ClearIRQStatus() {
     irq_active = false;
+}
 }

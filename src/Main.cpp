@@ -579,7 +579,7 @@ int main(int argc, char** argv) {
     //emuWin.Loop();
 
     // Have to alloc on the heap to check for leaks
-    EmulationWindow* emuWin = new EmulationWindow(256 * 3, 240 * 3);
+    auto emuWin = new NESCLE::EmulationWindow(256 * 3, 240 * 3);
     emuWin->Loop();
     delete emuWin;
 

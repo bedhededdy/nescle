@@ -23,6 +23,7 @@
 // All public functions are static and all memory is handled internally
 // All the caller has to do is say that they want to make a notification
 // and say when to show it
+namespace NESCLE {
 class NESCLENotification {
 private:
     // FIXME: I THINK THIS IS BEING CALLED A MEMORY LEAK
@@ -42,3 +43,4 @@ public:
     static void MakeNotification(const char* text, int duration = 3000);
     static void ShowNotifications();
 };
+}

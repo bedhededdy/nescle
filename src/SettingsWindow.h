@@ -17,6 +17,7 @@
 
 #include "NESCLEWindow.h"
 
+namespace NESCLE {
 class SettingsWindow : public NESCLEWindow {
 private:
     bool* show;
@@ -25,3 +26,4 @@ public:
     SettingsWindow(bool* _show) : show(_show) {}
     void Show(Emulator* emu) override;
 };
+}

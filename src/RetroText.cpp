@@ -21,6 +21,7 @@
 
 #include "Cart.h"
 
+namespace NESCLE {
 uint8_t* RetroText::font = nullptr;
 
 int RetroText::CharToTile(char ch) {
@@ -156,4 +157,5 @@ uint32_t* RetroText::MakeText(const char* text, uint32_t fgcolor, uint32_t bgcol
 
 void RetroText::DestroyText(uint32_t* pixels) {
     delete pixels;
+}
 }

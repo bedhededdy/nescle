@@ -17,6 +17,7 @@
 
 #include <SDL_log.h>
 
+namespace NESCLE {
 // FIXME: IMGUI SAYS THIS SHOULD CLOSE ON ESC PRESSED BUT IT DOESN'T
 // THIS COULD BREAK THE LOGIC REGARDING PRESSING ESC TO SAVE
 // MAYBE SHOULD HAVE A BTN TO SAVE ON THE POPUP
@@ -107,4 +108,5 @@ void ControllerWindow::Show(Emulator* emu) {
     if (open_popup)
         ImGui::OpenPopup("Set Key");
     ShowKeySetWindow(emu);
+}
 }

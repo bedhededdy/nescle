@@ -17,6 +17,7 @@
 
 #include <cstdint>
 
+namespace NESCLE {
 // FIXME: THIS WILL LEAK MEMORY AS THE FONT WON'T BE FREED UNTIL THE PROGRAM
 // TERMINATES, BUT THIS IS FINE
 // TODO: CREATE AN OPENGL TEXTURE WRAPPER THAT KNOWS ITS DIMENSIONS
@@ -41,3 +42,4 @@ public:
         uint32_t bgcolor = 0xff000000);
     static void DestroyText(uint32_t* pixels);
 };
+}

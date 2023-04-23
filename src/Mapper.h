@@ -21,6 +21,7 @@
 
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 typedef enum mapper_mirror_mode {
     MAPPER_MIRRORMODE_HORZ,   // Horizontal
     MAPPER_MIRRORMODE_VERT,   // Vertical
@@ -51,3 +52,4 @@ bool Mapper_GetIRQStatus(Mapper* mapper);
 void Mapper_ClearIRQStatus(Mapper* mapper);
 
 Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper);
+}

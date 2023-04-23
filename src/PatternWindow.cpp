@@ -20,6 +20,7 @@
 #include "Emulator.h"
 #include "PPU.h"
 
+namespace NESCLE {
 PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shader(shader), main_vao(vao), show(show) {
     palette = 0;
 
@@ -117,3 +118,4 @@ void PatternWindow::Show(Emulator* emu) {
 }
 
 void PatternWindow::IncrementPalette() { palette = (palette + 1) % 8; }
+}

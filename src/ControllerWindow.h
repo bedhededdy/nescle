@@ -19,6 +19,7 @@
 #include "Emulator.h"
 #include "NESCLEWindow.h"
 
+namespace NESCLE {
 class ControllerWindow : public NESCLEWindow {
 private:
     bool* show;
@@ -31,3 +32,4 @@ public:
     ControllerWindow(bool* _show) : show(_show) {}
     void Show(Emulator* emu);
 };
+}

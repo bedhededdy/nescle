@@ -22,6 +22,7 @@
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 /*
  * The NES Bus connects the various components of the NES together.
  * In a way it is a stand-in for the actual NES, since it contains
@@ -82,3 +83,4 @@ int Bus_SaveState(Bus* bus, FILE* file);
 int Bus_LoadState(Bus* bus, FILE* file);
 
 void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_rate);
+}

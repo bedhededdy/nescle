@@ -128,6 +128,7 @@
 #include "RetroText.h"
 #include "NESCLENotification.h"
 
+namespace NESCLE {
 void EmulationWindow::RenderMainGUI(Emulator* emu) {
     // ImGui::Shortcut()
     Bus* bus = emu->nes;
@@ -968,4 +969,5 @@ void EmulationWindow::Show(Emulator* emu) {
 
 uint32_t EmulationWindow::GetWindowID() {
     return SDL_GetWindowID(window);
+}
 }

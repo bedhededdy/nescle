@@ -33,6 +33,7 @@
 #include "Mapper.h"
 #include "Util.h"
 
+namespace NESCLE {
 static void LogKeymaps(Emulator* emu) {
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
@@ -224,7 +225,7 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     if (!CPU_SaveState(bus->cpu, savestate))
         printf("cpu too short");
 
-    if (!APU_SaveState(bus->apu, savestate))
+    if (!bus->apu->SaveState(savestate))
         printf("apu too short");
 
     if (!Cart_SaveState(bus->cart, savestate))
@@ -332,7 +333,7 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     CPU_LoadState(bus->cpu, savestate);
 
     // APU
-    APU_LoadState(bus->apu, savestate);
+    bus->apu->LoadState(savestate);
 
     // Cart
     Mapper* mapper_addr = Cart_GetMapper(bus->cart);
@@ -482,10 +483,11 @@ float Emulator_EmulateSample(Emulator* emu) {
         }
     }
 
-    float p1 = APU_GetPulse1Sample(emu->nes->apu) * emu->settings.p1_vol;
-    float p2 = APU_GetPulse2Sample(emu->nes->apu) * emu->settings.p2_vol;
-    float tri = APU_GetTriangleSample(emu->nes->apu) * emu->settings.tri_vol;
-    float noise = APU_GetNoiseSample(emu->nes->apu) * emu->settings.noise_vol;
+    APU* apu = emu->nes->apu;
+    float p1 = apu->GetPulse1Sample() * emu->settings.p1_vol;
+    float p2 = apu->GetPulse2Sample() * emu->settings.p2_vol;
+    float tri = apu->GetTriangleSample() * emu->settings.tri_vol;
+    float noise = apu->GetNoiseSample() * emu->settings.noise_vol;
 
     return 0.25f * (p1 + p2 + tri + noise) * emu->settings.master_vol;
 }
@@ -615,4 +617,5 @@ const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn)
 
 bool Emulator_ROMInserted(Emulator* emu) {
     return Cart_GetROMPath(emu->nes->cart) != NULL;
+}
 }

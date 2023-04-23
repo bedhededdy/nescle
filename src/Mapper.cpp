@@ -25,6 +25,7 @@
 #include "mappers/Mapper007.h"
 #include "mappers/Mapper066.h"
 
+namespace NESCLE {
 Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
     Mapper* mapper = (Mapper*)malloc(sizeof(Mapper));
     mapper->id = id;
@@ -117,4 +118,5 @@ void Mapper_ClearIRQStatus(Mapper* mapper) {
 
 Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper) {
     return static_cast<MapperBase*>(mapper->mapper_class)->GetMirrorMode();
+}
 }

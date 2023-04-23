@@ -34,6 +34,7 @@
 #include "Mapper.h"
 #include "Util.h"
 
+namespace NESCLE {
 // Sprite (OAM) information container
 struct ppu_oam {
     uint8_t y;
@@ -1384,4 +1385,5 @@ void PPU_ClearFrameComplete(PPU* ppu) {
 
 uint32_t* PPU_GetFramebuffer(PPU* ppu) {
     return ppu->frame_buffer;
+}
 }

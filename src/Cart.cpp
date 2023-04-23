@@ -25,6 +25,7 @@
 #include "Mapper.h"
 #include "Util.h"
 
+namespace NESCLE {
 // ROM file header in iNES (.nes) format
 typedef struct cart_rom_header {
     uint8_t name[4];        // Should always say NES followed by DOS EOF
@@ -320,4 +321,5 @@ const char* Cart_GetROMPath(Cart* cart) {
 
 void Cart_SetMapper(Cart* cart, Mapper* mapper) {
     cart->mapper = mapper;
+}
 }

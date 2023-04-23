@@ -49,6 +49,7 @@
 
 #include <SDL_log.h>
 
+namespace NESCLE {
 void Mapper001::Reset() {
     load = 0;
     load_reg_ct = 0;
@@ -210,4 +211,5 @@ bool Mapper001::LoadState(FILE* file) {
     bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
     bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
     return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
+}
 }

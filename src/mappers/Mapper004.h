@@ -17,6 +17,7 @@
 
 #include "MapperBase.h"
 
+namespace NESCLE {
 class Mapper004 : public MapperBase {
 private:
     // FIXME: SHOULDN'T THESE BE 8 BYTES
@@ -54,3 +55,4 @@ public:
     bool GetIRQStatus() override;
     void ClearIRQStatus() override;
 };
+}

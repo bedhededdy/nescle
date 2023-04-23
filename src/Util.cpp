@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #endif
 
+namespace NESCLE {
 void* Util_SafeMalloc(size_t size) {
     void* ptr = malloc(size);
     if (ptr == NULL) {
@@ -101,4 +102,5 @@ bool Util_CreateDirectoryIfNotExists(const char* path) {
     // TODO: INVESTIGATE THE FLAGS
     int res = mkdir(path, 0777);
     return res == 0 || errno == EEXIST;
+}
 }

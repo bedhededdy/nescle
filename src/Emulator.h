@@ -19,11 +19,6 @@
 // OF SAVE FILES
 #pragma once
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
-
-// #define EMU_NUM_SAVESLOTS 10
 
 #include <nfd.h>
 
@@ -35,6 +30,7 @@
 
 #include "NESCLETypes.h"
 
+namespace NESCLE {
 typedef enum emulator_sync_type {
     EMULATOR_SYNC_AUDIO,
     EMULATOR_SYNC_VIDEO
@@ -140,7 +136,4 @@ bool Emulator_KeyReleased(Emulator* emu, SDL_Keycode key);
 bool Emulator_MapButton(Emulator* emu, Emulator_ControllerButton button, SDL_KeyCode key);
 
 bool Emulator_ROMInserted(Emulator* emu);
-
-// #ifdef __cplusplus
-// }
-// #endif
+}

@@ -16,6 +16,7 @@
 // https://nesdev.org/wiki/NROM
 #include "Mapper000.h"
 
+namespace NESCLE {
 uint8_t Mapper000::MapCPURead(uint16_t addr) {
     addr %= Cart_GetPrgRomBlocks(cart) > 1 ? 0x8000 : 0x4000;
     return Cart_ReadPrgRom(cart, addr);
@@ -45,4 +46,5 @@ bool Mapper000::SaveState(FILE* file) {
 
 bool Mapper000::LoadState(FILE* file) {
     return fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
+}
 }

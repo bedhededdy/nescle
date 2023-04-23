@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <glad/glad.h>
 
+namespace NESCLE {
 class NESCLETexture {
 private:
     GLuint handle;
@@ -19,3 +20,4 @@ public:
     int GetWidth();
     int GetHeight();
 };
+}
