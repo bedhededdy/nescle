@@ -206,7 +206,7 @@ void Emulator_Destroy(Emulator* emu) {
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
 bool Emulator_SaveState(Emulator* emu, const char* path) {
-    if (Cart_GetROMPath(emu->nes->cart) == NULL) {
+    if (emu->nes->cart->GetROMPath() == NULL) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
@@ -228,13 +228,13 @@ bool Emulator_SaveState(Emulator* emu, const char* path) {
     if (!bus->apu->SaveState(savestate))
         printf("apu too short");
 
-    if (!Cart_SaveState(bus->cart, savestate))
+    if (!bus->cart->SaveState(savestate))
         printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
-    if (fwrite(Cart_GetMapper(bus->cart), sizeof(Mapper), 1, savestate) < 1)
+    if (fwrite(bus->cart->GetMapper(), sizeof(Mapper), 1, savestate) < 1)
         printf("mapper too short");
-    Mapper_SaveState(Cart_GetMapper(bus->cart), savestate);
+    Mapper_SaveState(bus->cart->GetMapper(), savestate);
 
     if (!PPU_SaveState(bus->ppu, savestate))
         printf("ppu too short");
@@ -336,20 +336,20 @@ bool Emulator_LoadState(Emulator* emu, const char* path) {
     bus->apu->LoadState(savestate);
 
     // Cart
-    Mapper* mapper_addr = Cart_GetMapper(bus->cart);
-    Cart_LoadState(bus->cart, savestate);
+    Mapper* mapper_addr = bus->cart->GetMapper();
+    bus->cart->LoadState(savestate);
 
     // Mapper
-    Cart_SetMapper(bus->cart, mapper_addr);
-    if (Cart_GetMapper(bus->cart) != NULL) {
-        Mapper_Destroy(Cart_GetMapper(bus->cart));
+    bus->cart->SetMapper(mapper_addr);
+    if (bus->cart->GetMapper() != NULL) {
+        Mapper_Destroy(bus->cart->GetMapper());
     }
     uint8_t dummy_buf[sizeof(Mapper)];
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
     // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    Cart_SetMapper(bus->cart, Mapper_Create(mapper_id, bus->cart, (Mapper_MirrorMode)0));
-    Mapper_LoadState(Cart_GetMapper(bus->cart), savestate);
+    bus->cart->SetMapper(Mapper_Create(mapper_id, bus->cart, (Mapper_MirrorMode)0));
+    Mapper_LoadState(bus->cart->GetMapper(), savestate);
 
     PPU_LoadState(bus->ppu, savestate);
 
@@ -565,9 +565,9 @@ nfdresult_t Emulator_LoadROM(Emulator* emu) {
         SDL_Log("Error opening file: %s\n", NFD_GetError());
     }
 
-    if (!Cart_LoadROM(bus->cart, (const char*)rom)) {
+    if (!bus->cart->LoadROM((const char*)rom)) {
         emu->run_emulation = cancelled;
-        if (Cart_GetROMPath(bus->cart) == NULL)
+        if (bus->cart->GetROMPath() == NULL)
             emu->run_emulation = false;
         if (!cancelled)
             result = NFD_ERROR;
@@ -616,6 +616,6 @@ const char* Emulator_GetButtonName(Emulator* emu, Emulator_ControllerButton btn)
 }
 
 bool Emulator_ROMInserted(Emulator* emu) {
-    return Cart_GetROMPath(emu->nes->cart) != NULL;
+    return emu->nes->cart->GetROMPath() != NULL;
 }
 }

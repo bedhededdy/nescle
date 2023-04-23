@@ -40,7 +40,7 @@ Bus* Bus_CreateNES(void) {
     Bus* bus = Bus_Create();
     CPU* cpu = CPU_Create();
     PPU* ppu = PPU_Create();
-    Cart* cart = Cart_Create();
+    Cart* cart = new Cart();
     APU* apu = new APU();
 
     if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
@@ -63,7 +63,7 @@ Bus* Bus_CreateNES(void) {
 void Bus_DestroyNES(Bus* bus) {
     CPU_Destroy(bus->cpu);
     PPU_Destroy(bus->ppu);
-    Cart_Destroy(bus->cart);
+    delete bus->cart;
     delete bus->apu;
     Bus_Destroy(bus);
 }
@@ -116,7 +116,7 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        Mapper* mapper = Cart_GetMapper(bus->cart);
+        Mapper* mapper = bus->cart->GetMapper();
         return Mapper_MapCPURead(mapper, addr);
     }
 
@@ -169,7 +169,7 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        Mapper* mapper = Cart_GetMapper(bus->cart);
+        Mapper* mapper = bus->cart->GetMapper();
         return Mapper_MapCPUWrite(mapper, addr, data);
     }
 
@@ -249,8 +249,8 @@ bool Bus_Clock(Bus* bus) {
         CPU_NMI(bus->cpu);
     }
 
-    if (Mapper_GetIRQStatus(Cart_GetMapper(bus->cart))) {
-        Mapper_ClearIRQStatus(Cart_GetMapper(bus->cart));
+    if (Mapper_GetIRQStatus(bus->cart->GetMapper())) {
+        Mapper_ClearIRQStatus(bus->cart->GetMapper());
         CPU_IRQ(bus->cpu);
     }
 
@@ -285,7 +285,7 @@ void Bus_PowerOn(Bus* bus) {
 
 void Bus_Reset(Bus* bus) {
     // Contents of RAM do not clear on reset
-    Mapper* mapper = Cart_GetMapper(bus->cart);
+    Mapper* mapper = bus->cart->GetMapper();
     if (mapper != NULL)
         Mapper_Reset(mapper);
     PPU_Reset(bus->ppu);

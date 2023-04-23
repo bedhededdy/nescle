@@ -15,34 +15,66 @@
  */
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 #include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-Cart* Cart_Create(void);
-void Cart_Destroy(Cart* cart);
+class Cart {
+private:
+    // ROM file header in iNES (.nes) format
+    struct ROMHeader {
+        uint8_t name[4];        // Should always say NES followed by DOS EOF
+        uint8_t prg_rom_size;   // One chunk = 16kb
+        uint8_t chr_rom_size;   // One chunk = 8kb (0 chr_rom means 8kb of chr_ram)
+        uint8_t mapper1;        // Discerns mapper, mirroring, battery, and trainer
+        uint8_t mapper2;        // Discerns mapper, VS/Playchoice, NES 2.0
+        uint8_t prg_ram_size;   // Apparently rarely used
+        uint8_t tv_system1;     // Apparently rarely used
+        uint8_t tv_system2;     // Apparently rarely used
+        uint8_t padding[5];     // Unused padding
+    };
 
-bool Cart_LoadROM(Cart* cart, const char* path);
+    enum FileType {
+        INES = 1,
+        NES2
+    };
 
-bool Cart_SaveState(Cart* cart, FILE* file);
-bool Cart_LoadState(Cart* cart, FILE* file);
+    ROMHeader metadata;
+    FileType file_type;
+    char* rom_path;
 
-void Cart_SetMapper(Cart* cart, Mapper* mapper);
-Mapper* Cart_GetMapper(Cart* cart);
+    Mapper* mapper;
 
-const char* Cart_GetROMPath(Cart* cart);
+    uint8_t* prg_rom;
+    uint8_t* chr_rom;
 
-uint8_t Cart_GetPrgRomBlocks(Cart* cart);
-size_t Cart_GetPrgRomBytes(Cart* cart);
-uint8_t Cart_GetChrRomBlocks(Cart* cart);
-size_t Cart_GetChrRomBytes(Cart* cart);
+    // TODO: NEED TO ADD THIS
+    // Bus* bus
 
-uint8_t Cart_ReadPrgRom(Cart* cart, size_t off);
-void Cart_WritePrgRom(Cart* cart, size_t off, uint8_t data);
-uint8_t Cart_ReadChrRom(Cart* cart, size_t off);
-void Cart_WriteChrRom(Cart* cart, size_t off, uint8_t data);
+public:
+    Cart();
+    ~Cart();
+
+    bool LoadROM(const char* path);
+    bool SaveState(FILE* file);
+    bool LoadState(FILE* file);
+
+    void SetMapper(Mapper* mapper);
+    Mapper* GetMapper();
+
+    const char* GetROMPath();
+
+    uint8_t GetPrgRomBlocks();
+    size_t GetPrgRomBytes();
+    uint8_t GetChrRomBlocks();
+    size_t GetChrRomBytes();
+
+    uint8_t ReadPrgRom(size_t off);
+    void WritePrgRom(size_t off, uint8_t data);
+    uint8_t ReadChrRom(size_t off);
+    void WriteChrRom(size_t off, uint8_t data);
+};
 }

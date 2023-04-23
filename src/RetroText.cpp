@@ -83,12 +83,12 @@ void RetroText::LoadFont() {
     // 128 8x8 tiles per half
     constexpr size_t nbytes = 128 * 8 * 8;
     font = new uint8_t[nbytes];
-    Cart* cart = Cart_Create();
-    Cart_LoadROM(cart, "../res/nestest.nes");
+    Cart* cart = new Cart();
+    cart->LoadROM("../res/nestest.nes");
     // inefficient compared to a memcpy, but it's fine
     for (size_t i = 0; i < nbytes; i++)
-        font[i] = Cart_ReadChrRom(cart, i);
-    Cart_Destroy(cart);
+        font[i] = cart->ReadChrRom(i);
+    delete cart;
 }
 
 void RetroText::MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_t fgcolor, uint32_t bgcolor) {

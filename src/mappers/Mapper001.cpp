@@ -61,7 +61,7 @@ void Mapper001::Reset() {
 
     prg_select32 = 0;
     prg_select16_lo = 0;
-    prg_select16_hi = Cart_GetPrgRomBlocks(cart) - 1;
+    prg_select16_hi = cart->GetPrgRomBlocks() - 1;
 
     load = 0;
     load_reg_ct = 0;
@@ -78,10 +78,10 @@ uint8_t Mapper001::MapCPURead(uint16_t addr) {
     if (ctrl & 8) {
         // 16k
         uint8_t select = addr >= 0xc000 ? prg_select16_hi : prg_select16_lo;
-        return Cart_ReadPrgRom(cart, select * 0x4000 + (addr % 0x4000));
+        return cart->ReadPrgRom(select * 0x4000 + (addr % 0x4000));
     } else {
         // 32k
-        return Cart_ReadPrgRom(cart, prg_select32 * 0x8000 + (addr % 0x8000));
+        return cart->ReadPrgRom(prg_select32 * 0x8000 + (addr % 0x8000));
     }
 }
 
@@ -146,7 +146,7 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                     prg_select16_hi = load & 0x0f;
                 } else if (prg_mode == 3) {
                     prg_select16_lo = load & 0x0f;
-                    prg_select16_hi = Cart_GetPrgRomBlocks(cart) - 1;
+                    prg_select16_hi = cart->GetPrgRomBlocks() - 1;
                 }
             }
 
@@ -159,22 +159,22 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
 }
 
 uint8_t Mapper001::MapPPURead(uint16_t addr) {
-    if (Cart_GetChrRomBlocks(cart) == 0)
-        return Cart_ReadChrRom(cart, addr);
+    if (cart->GetChrRomBlocks() == 0)
+        return cart->ReadChrRom(addr);
 
     if (ctrl & 0x10) {
         // 4kb mode
         uint8_t select = addr >= 0x1000 ? chr_select4_hi : chr_select4_lo;
-        return Cart_ReadChrRom(cart, select * 0x1000 + (addr % 0x1000));
+        return cart->ReadChrRom(select * 0x1000 + (addr % 0x1000));
     } else {
         // 8kb mode
-        return Cart_ReadChrRom(cart, chr_select8 * 0x2000 + (addr % 0x2000));
+        return cart->ReadChrRom(chr_select8 * 0x2000 + (addr % 0x2000));
     }
 }
 
 bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (Cart_GetChrRomBlocks(cart) == 0) {
-        Cart_WriteChrRom(cart, addr, data);
+    if (cart->GetChrRomBlocks() == 0) {
+        cart->WriteChrRom(addr, data);
         return true;
     }
 

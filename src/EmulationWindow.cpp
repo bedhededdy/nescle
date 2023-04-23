@@ -150,9 +150,9 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, Cart_GetROMPath(bus->cart) != NULL)) {
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->cart->GetROMPath() != NULL)) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                        const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
                         Emulator_SaveState(emu, path);
                         emu->used_saveslots[i] = true;
@@ -169,7 +169,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->used_saveslots[i])) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                        const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
                         Emulator_LoadState(emu, path);
                         NESCLENotification::MakeNotification("Loaded state");
@@ -189,7 +189,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            bool cart_loaded = Cart_GetROMPath(bus->cart) != NULL;
+            bool cart_loaded = bus->cart->GetROMPath() != NULL;
             ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
                 cart_loaded);
             ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
@@ -226,7 +226,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         ImGui::Separator();
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            if (Cart_GetROMPath(bus->cart) != NULL)
+            if (bus->cart->GetROMPath() != NULL)
                 emu->run_emulation = true;
             ImGui::CloseCurrentPopup();
         }
@@ -533,7 +533,7 @@ void EmulationWindow::Loop() {
                     // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
                     // BEFORE CALLING LOAD STATE?
                     char path_to_save[1024];
-                    const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                    const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
 
                     if (Emulator_KeyPushed(emu, SDLK_0)) {
                         sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->user_data_path, game_name);
@@ -579,7 +579,7 @@ void EmulationWindow::Loop() {
                 } else {
                     char path_to_save[1024];
                     // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
-                    const char* game_name = Util_GetFileName(Cart_GetROMPath(bus->cart));
+                    const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
 
                     // only process one of these if multiple are pressed
                     if (Emulator_KeyPushed(emu, SDLK_o)) {
@@ -944,7 +944,7 @@ void EmulationWindow::Show(Emulator* emu) {
 
     // set window title
     // FIXME: VERY UNSAFE
-    const char* rom_path = Cart_GetROMPath(bus->cart);
+    const char* rom_path = bus->cart->GetROMPath();
     const char* game_name = NULL;
     if (rom_path != NULL) {
         game_name = strrchr(rom_path, '/') + 1;
