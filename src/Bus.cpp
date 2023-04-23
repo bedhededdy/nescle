@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// TODO: OBJECTIFY THIS
 #include "Bus.h"
 
-#include <string.h>
+#include <cstring>
 
 #include "APU.h"
 #include "CPU.h"

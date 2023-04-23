@@ -60,19 +60,19 @@ static uint8_t flip_bits(uint8_t x) {
 static void set_loopy_register(uint16_t* reg, uint16_t value,
     uint16_t bitmask) {
     switch (bitmask) {
-    case PPU_LOOPY_COARSE_X:
+    case PPU::LOOPY_COARSE_X:
         value <<= 0;
         break;
-    case PPU_LOOPY_COARSE_Y:
+    case PPU::LOOPY_COARSE_Y:
         value <<= 5;
         break;
-    case PPU_LOOPY_NAMETBL_X:
+    case PPU::LOOPY_NAMETBL_X:
         value <<= 10;
         break;
-    case PPU_LOOPY_NAMETBL_Y:
+    case PPU::LOOPY_NAMETBL_Y:
         value <<= 11;
         break;
-    case PPU_LOOPY_FINE_Y:
+    case PPU::LOOPY_FINE_Y:
         value <<= 12;
         break;
 
@@ -89,19 +89,19 @@ static uint16_t align_loopy_register(uint16_t reg, uint16_t bitmask) {
     uint16_t ret = reg & bitmask;
 
     switch (bitmask) {
-    case PPU_LOOPY_COARSE_X:
+    case PPU::LOOPY_COARSE_X:
         ret >>= 0;
         break;
-    case PPU_LOOPY_COARSE_Y:
+    case PPU::LOOPY_COARSE_Y:
         ret >>= 5;
         break;
-    case PPU_LOOPY_NAMETBL_X:
+    case PPU::LOOPY_NAMETBL_X:
         ret >>= 10;
         break;
-    case PPU_LOOPY_NAMETBL_Y:
+    case PPU::LOOPY_NAMETBL_Y:
         ret >>= 11;
         break;
-    case PPU_LOOPY_FINE_Y:
+    case PPU::LOOPY_FINE_Y:
         ret >>= 12;
         break;
 
@@ -115,9 +115,9 @@ static uint16_t align_loopy_register(uint16_t reg, uint16_t bitmask) {
 
 void PPU::ScreenWrite(int x, int y, uint32_t color) {
     // Avoids buffer overflow on overscan
-    if (y >= PPU_RESOLUTION_Y || x >= PPU_RESOLUTION_X || x < 0 || y < 0)
+    if (y >= RESOLUTION_Y || x >= RESOLUTION_X || x < 0 || y < 0)
         return;
-    screen[y * PPU_RESOLUTION_X + x] = color;
+    screen[y * RESOLUTION_X + x] = color;
 }
 
 void PPU::LoadBGShifters() {
@@ -171,19 +171,19 @@ void PPU::IncrementScrollX() {
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         // Recall that a nametable is 32 across,
         // so we must wrap the value if we hit idx 31
-        if (align_loopy_register(ppu->vram_addr, PPU_LOOPY_COARSE_X) == 31) {
+        if (align_loopy_register(ppu->vram_addr, LOOPY_COARSE_X) == 31) {
             // Clear the coarse_x bits and flip the nametable bit
-            ppu->vram_addr &= ~PPU_LOOPY_COARSE_X;
+            ppu->vram_addr &= ~LOOPY_COARSE_X;
             uint16_t ntx = align_loopy_register(ppu->vram_addr,
-                PPU_LOOPY_NAMETBL_X);
-            set_loopy_register(&ppu->vram_addr, ~ntx, PPU_LOOPY_NAMETBL_X);
+                LOOPY_NAMETBL_X);
+            set_loopy_register(&ppu->vram_addr, ~ntx, LOOPY_NAMETBL_X);
         }
         else {
             // Increment the coarse_x
             uint16_t course_x = align_loopy_register(ppu->vram_addr,
-                PPU_LOOPY_COARSE_X);
+                LOOPY_COARSE_X);
             set_loopy_register(&ppu->vram_addr, course_x + 1,
-                PPU_LOOPY_COARSE_X);
+                LOOPY_COARSE_X);
         }
     }
 }
@@ -191,37 +191,37 @@ void PPU::IncrementScrollX() {
 void PPU::IncrementScrollY() {
     PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
-        uint16_t fine_y = align_loopy_register(ppu->vram_addr, PPU_LOOPY_FINE_Y);
+        uint16_t fine_y = align_loopy_register(ppu->vram_addr, LOOPY_FINE_Y);
         if (fine_y < 7) {
-            set_loopy_register(&ppu->vram_addr, fine_y + 1, PPU_LOOPY_FINE_Y);
+            set_loopy_register(&ppu->vram_addr, fine_y + 1, LOOPY_FINE_Y);
         }
         else {
             // Wipe the fine y bits
-            ppu->vram_addr &= ~PPU_LOOPY_FINE_Y;
+            ppu->vram_addr &= ~LOOPY_FINE_Y;
 
             uint16_t coarse_y = align_loopy_register(ppu->vram_addr,
-                PPU_LOOPY_COARSE_Y);
+                LOOPY_COARSE_Y);
 
             // If we are in the regular memory
             if (coarse_y == 29) {
                 // Wipe the coarse y bits
-                ppu->vram_addr &= ~PPU_LOOPY_COARSE_Y;
+                ppu->vram_addr &= ~LOOPY_COARSE_Y;
 
                 // Flip nametable bit
                 uint16_t nty = align_loopy_register(ppu->vram_addr,
-                    PPU_LOOPY_NAMETBL_Y);
-                set_loopy_register(&ppu->vram_addr, ~nty, PPU_LOOPY_NAMETBL_Y);
+                    LOOPY_NAMETBL_Y);
+                set_loopy_register(&ppu->vram_addr, ~nty, LOOPY_NAMETBL_Y);
             }
             // If we are in the attribute memory
             // (recall last 2 rows are the attribute data)
             else if (coarse_y == 31) {
                 // Wipe the coarse y bits
-                ppu->vram_addr &= ~PPU_LOOPY_COARSE_Y;
+                ppu->vram_addr &= ~LOOPY_COARSE_Y;
             }
             else {
                 // By default just increment coarse_y by 1
                 set_loopy_register(&ppu->vram_addr, coarse_y + 1,
-                    PPU_LOOPY_COARSE_Y);
+                    LOOPY_COARSE_Y);
             }
         }
     }
@@ -231,25 +231,25 @@ void PPU::TransferAddrX() {
     PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         // Copy x components of tram into vram
-        uint16_t ntx = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_X);
+        uint16_t ntx = align_loopy_register(ppu->tram_addr, LOOPY_NAMETBL_X);
         uint16_t coarse_x = align_loopy_register(ppu->tram_addr,
-            PPU_LOOPY_COARSE_X);
-        set_loopy_register(&ppu->vram_addr, ntx, PPU_LOOPY_NAMETBL_X);
-        set_loopy_register(&ppu->vram_addr, coarse_x, PPU_LOOPY_COARSE_X);
+            LOOPY_COARSE_X);
+        set_loopy_register(&ppu->vram_addr, ntx, LOOPY_NAMETBL_X);
+        set_loopy_register(&ppu->vram_addr, coarse_x, LOOPY_COARSE_X);
     }
 }
 
 void PPU::TransferAddrY() {
     PPU* ppu = this;
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
-        uint16_t fine_y = align_loopy_register(ppu->tram_addr, PPU_LOOPY_FINE_Y);
-        uint16_t nty = align_loopy_register(ppu->tram_addr, PPU_LOOPY_NAMETBL_Y);
+        uint16_t fine_y = align_loopy_register(ppu->tram_addr, LOOPY_FINE_Y);
+        uint16_t nty = align_loopy_register(ppu->tram_addr, LOOPY_NAMETBL_Y);
         uint16_t coarse_y = align_loopy_register(ppu->tram_addr,
-            PPU_LOOPY_COARSE_Y);
+            LOOPY_COARSE_Y);
 
-        set_loopy_register(&ppu->vram_addr, fine_y, PPU_LOOPY_FINE_Y);
-        set_loopy_register(&ppu->vram_addr, nty, PPU_LOOPY_NAMETBL_Y);
-        set_loopy_register(&ppu->vram_addr, coarse_y, PPU_LOOPY_COARSE_Y);
+        set_loopy_register(&ppu->vram_addr, fine_y, LOOPY_FINE_Y);
+        set_loopy_register(&ppu->vram_addr, nty, LOOPY_NAMETBL_Y);
+        set_loopy_register(&ppu->vram_addr, coarse_y, LOOPY_COARSE_Y);
     }
 }
 
@@ -369,7 +369,7 @@ void PPU::Clock() {
     // dummy cycle
 
     // Prerender and visible scanlines
-    if (ppu->scanline >= -1 && ppu->scanline < PPU_RESOLUTION_Y) {
+    if (ppu->scanline >= -1 && ppu->scanline < PPU::RESOLUTION_Y) {
         uint16_t my_off;
 
         // Visible cycles and preparation cycles
@@ -399,7 +399,7 @@ void PPU::Clock() {
                 // Tile id is read from the nametable, but I only want the
                 // bottom 12 bits, hence the & 0x0fff
                 LoadBGShifters();
-                ppu->bg_next_tile_id = Read(PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+                ppu->bg_next_tile_id = Read(NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
                 break;
             case 2:
                 // Read attribute information (extra tiles at bottom of
@@ -410,8 +410,8 @@ void PPU::Clock() {
 
                 // Keep the top 3 bits of coarse y and x
                 // and put them in the right place
-                my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 7) << 3;
-                my_off |= ((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 2) << 0;
+                my_off |= ((ppu->vram_addr & LOOPY_COARSE_Y) >> 7) << 3;
+                my_off |= ((ppu->vram_addr & LOOPY_COARSE_X) >> 2) << 0;
 
                 // 0x23c0 is the starting address of the attribute memory
                 ppu->bg_next_tile_attr = Read(0x23c0 | my_off);
@@ -421,9 +421,9 @@ void PPU::Clock() {
                 // in the attribute memory actually coressponds to a group of 4 tiles
                 // we only need 2 bits to represent a color. so we do some arithmetic
                 // to get the appropriate palette for each tile
-                if (((ppu->vram_addr & PPU_LOOPY_COARSE_Y) >> 5) & 0x02)
+                if (((ppu->vram_addr & LOOPY_COARSE_Y) >> 5) & 0x02)
                     ppu->bg_next_tile_attr >>= 4;
-                if (((ppu->vram_addr & PPU_LOOPY_COARSE_X) >> 0) & 0x02)
+                if (((ppu->vram_addr & LOOPY_COARSE_X) >> 0) & 0x02)
                     ppu->bg_next_tile_attr >>= 2;
 ppu->bg_next_tile_attr &= 0x03;
 
@@ -435,7 +435,7 @@ break;
                 // to cover 256 tiles instead of the whole 512
                 my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
                 my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
-                my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
+                my_off += (ppu->vram_addr & LOOPY_FINE_Y) >> 12;
 
                 ppu->bg_next_tile_lsb = Read(my_off);
                 break;
@@ -443,7 +443,7 @@ break;
                 // Get MSB
                 my_off = ((ppu->control & PPU_CTRL_BG_TILE_SELECT) >> 4) << 12;
                 my_off += ((uint16_t)ppu->bg_next_tile_id << 4);
-                my_off += (ppu->vram_addr & PPU_LOOPY_FINE_Y) >> 12;
+                my_off += (ppu->vram_addr & LOOPY_FINE_Y) >> 12;
 
                 ppu->bg_next_tile_msb = Read(my_off + 8);
                 break;
@@ -462,7 +462,7 @@ break;
             //ppu->status &= ~(PPU_STATUS_VBLANK | PPU_STATUS_SPR_OVERFLOW
             //      | PPU_STATUS_SPR_HIT);
 
-            for (int i = 0; i < PPU_SPR_PER_LINE; i++) {
+            for (int i = 0; i < SPR_PER_LINE; i++) {
                 ppu->spr_shifter_pattern_lo[i] = 0;
                 ppu->spr_shifter_pattern_hi[i] = 0;
             }
@@ -475,10 +475,10 @@ break;
             TransferAddrY();
 
             // First invisible cycle, increment to next scanline
-            if (ppu->cycle == PPU_RESOLUTION_X)
+            if (ppu->cycle == RESOLUTION_X)
                 IncrementScrollY();
             // Prepare tiles for next scanline
-            else if (ppu->cycle == PPU_RESOLUTION_X + 1) {
+            else if (ppu->cycle == RESOLUTION_X + 1) {
                 LoadBGShifters();
                 TransferAddrX();
 
@@ -486,7 +486,7 @@ break;
                 if (ppu->scanline >= 0) {
                     // Set sprite info to 0xff, because if the y-coord of the sprite
                     // is 0xff, we will never see it
-                    memset(ppu->spr_scanline, 0xff, PPU_SPR_PER_LINE * sizeof(OAM));
+                    memset(ppu->spr_scanline, 0xff, SPR_PER_LINE * sizeof(OAM));
                     ppu->spr_count = 0;
                     ppu->spr0_can_hit = false;
 
@@ -528,7 +528,7 @@ break;
             // Dummy reads that shouldn't affect anything (but could maybe due to
             // reading changing the state)
             else if (ppu->cycle == 338 || ppu->cycle == 340) {
-                ppu->bg_next_tile_id = Read(PPU_NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+                ppu->bg_next_tile_id = Read(NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
 
                 // NOTE: THIS IS WHERE THE INACCURACY COMES INTO PLAY (I THINK)
                 // May wanna denest this and make 340 its own if
@@ -625,10 +625,10 @@ break;
         //        THIS WILL PROBABLY BREAK MANY GAMES *COUGH* BATTLETOADS *COUGH*
     }
     // Dummy scanline, do nothing
-    else if (ppu->scanline == PPU_RESOLUTION_Y) {
+    else if (ppu->scanline == PPU::RESOLUTION_Y) {
 
     }
-    else if (ppu->scanline > PPU_RESOLUTION_Y && ppu->scanline <= 260) {
+    else if (ppu->scanline > PPU::RESOLUTION_Y && ppu->scanline <= 260) {
         // Enter the VBLANK period and emit an NMI if the control register says to
         if (ppu->scanline == 241 && ppu->cycle == 1) {
             ppu->status |= PPU_STATUS_VBLANK;
@@ -903,7 +903,7 @@ void PPU::Reset() {
 uint8_t PPU::Read(uint16_t addr) {
     // Address can't be more than 16kb
     PPU* ppu = this;
-    Bus* bus = ppu->bus;
+    // Bus* bus = ppu->bus;
     addr %= 0x4000;
 
     // chr rom, vram, palette
@@ -1009,7 +1009,7 @@ uint8_t PPU::Read(uint16_t addr) {
 
 bool PPU::Write(uint16_t addr, uint8_t data) {
     PPU* ppu = this;
-    Bus* bus = ppu->bus;
+    // Bus* bus = ppu->bus;
     addr %= 0x4000;
 
     // chr rom, vram, palette
@@ -1169,10 +1169,10 @@ bool PPU::RegisterWrite(uint16_t addr, uint8_t data) {
         ppu->control = data;
         set_loopy_register(&ppu->tram_addr,
             (ppu->control & PPU_CTRL_NAMETBL_SELECT_X) >> 0,
-            PPU_LOOPY_NAMETBL_X);
+            LOOPY_NAMETBL_X);
         set_loopy_register(&ppu->tram_addr,
             (ppu->control & PPU_CTRL_NAMETBL_SELECT_Y) >> 1,
-            PPU_LOOPY_NAMETBL_Y);
+            LOOPY_NAMETBL_Y);
         break;
     case 1: // mask
         ppu->mask = data;
@@ -1191,12 +1191,12 @@ bool PPU::RegisterWrite(uint16_t addr, uint8_t data) {
     case 5: // scroll
         if (ppu->addr_latch == 0) {
             ppu->fine_x = data & 0x07;
-            set_loopy_register(&ppu->tram_addr, data >> 3, PPU_LOOPY_COARSE_X);
+            set_loopy_register(&ppu->tram_addr, data >> 3, LOOPY_COARSE_X);
             ppu->addr_latch = 1;
         }
         else {
-            set_loopy_register(&ppu->tram_addr, data & 0x07, PPU_LOOPY_FINE_Y);
-            set_loopy_register(&ppu->tram_addr, data >> 3, PPU_LOOPY_COARSE_Y);
+            set_loopy_register(&ppu->tram_addr, data & 0x07, LOOPY_FINE_Y);
+            set_loopy_register(&ppu->tram_addr, data >> 3, LOOPY_COARSE_Y);
             ppu->addr_latch = 0;
         }
         break;

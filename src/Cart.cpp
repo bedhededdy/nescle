@@ -244,14 +244,14 @@ uint8_t Cart::GetChrRomBlocks() {
 }
 
 size_t Cart::GetPrgRomBytes() {
-    return metadata.prg_rom_size * CART_PRG_ROM_CHUNK_SIZE;
+    return metadata.prg_rom_size * PRG_ROM_CHUNK_SIZE;
 }
 
 // This will return 8kb if the cart has no CHR ROM
 size_t Cart::GetChrRomBytes() {
     size_t sz = metadata.chr_rom_size == 0
         ? 1 : metadata.chr_rom_size;
-    return sz * CART_CHR_ROM_CHUNK_SIZE;
+    return sz * CHR_ROM_CHUNK_SIZE;
 }
 
 uint8_t Cart::ReadPrgRom(size_t off) {
@@ -283,6 +283,6 @@ const char* Cart::GetROMPath() {
 }
 
 void Cart::SetMapper(Mapper* mapper) {
-    mapper = mapper;
+    this->mapper = mapper;
 }
 }

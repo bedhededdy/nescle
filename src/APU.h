@@ -126,6 +126,8 @@ private:
     float master_volume;
 
 public:
+    static constexpr int SAMPLE_RATE = 44100;
+
     APU();
     ~APU();
     void PowerOn();

@@ -19,12 +19,14 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
 namespace NESCLE {
 class CPU {
 private:
+    // TODO: CHANGE TO UINT16_T (MAKES NO DIFF, BUT IS MORE CORRECT)
+    static constexpr int SP_BASE_ADDR = 0x100;
+
     enum class AddrMode {
         ACC,
         IMM,
@@ -60,6 +62,18 @@ private:
         TAX, TAY, TSX, TXA, TXS, TYA,
 
         INV
+    };
+
+    // FIXME: CHANGE TO ENUM CLASS
+    enum Status {
+        STATUS_CARRY = 0x01,
+        STATUS_ZERO = 0x02,
+        STATUS_IRQ = 0x04,
+        STATUS_DECIMAL = 0x08,
+        STATUS_BRK = 0x10,
+        STATUS_UNUSED = 0x20,
+        STATUS_OVERFLOW = 0x40,
+        STATUS_NEGATIVE = 0x80
     };
 
     struct Instr {

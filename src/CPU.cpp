@@ -24,6 +24,9 @@
 #include "PPU.h"
 #include "Util.h"
 
+// Returns if the operand is a negative 8-bit integer
+#define CPU_IS_NEG(x)       ((x) & (1 << 7))
+
 namespace NESCLE {
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
 //#define DISASSEMBLY_LOG
@@ -59,11 +62,11 @@ const CPU::Instr* CPU::Decode(uint8_t opcode) {
 /* Helper Functions */
 // Stack helper functions
 uint8_t CPU::StackPop() {
-    return Bus_Read(bus, CPU_SP_BASE_ADDR + ++sp);
+    return Bus_Read(bus, SP_BASE_ADDR + ++sp);
 }
 
 bool CPU::StackPush(uint8_t data) {
-    return Bus_Write(bus, CPU_SP_BASE_ADDR + sp--, data);
+    return Bus_Write(bus, SP_BASE_ADDR + sp--, data);
 }
 
 // Misc. helper functions
@@ -243,7 +246,7 @@ void CPU::Op_ADC() {
 
     // We could perform the addition in the 8-bit fashion, but that makes
     // it harder to determine the carry bit
-    int res = operand + a + (bool)(status & CPU_STATUS_CARRY);
+    int res = operand + a + (bool)(status & STATUS_CARRY);
 
     /*
      * To determine if overflow has occurred we need to examine the MSB of the
@@ -271,10 +274,10 @@ void CPU::Op_ADC() {
     // addition, regardless of overflow
     a = (uint8_t)res;
 
-    SetStatus(CPU_STATUS_OVERFLOW, ovr);
-    SetStatus(CPU_STATUS_CARRY, res > 0xff);
-    SetStatus(CPU_STATUS_ZERO, a == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_OVERFLOW, ovr);
+    SetStatus(STATUS_CARRY, res > 0xff);
+    SetStatus(STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
 }
 
 // A & M -> A
@@ -282,8 +285,8 @@ void CPU::Op_AND() {
     uint8_t operand = FetchOperand();
     a = a & operand;
 
-    SetStatus(CPU_STATUS_ZERO, a == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
 }
 
 // Left shift 1 bit, target depends on addressing mode
@@ -293,36 +296,36 @@ void CPU::Op_ASL() {
         bool carry = a & (1 << 7);
         a = a << 1;
 
-        SetStatus(CPU_STATUS_ZERO, a == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-        SetStatus(CPU_STATUS_CARRY, carry);
+        SetStatus(STATUS_ZERO, a == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+        SetStatus(STATUS_CARRY, carry);
     } else {
         uint8_t operand = FetchOperand();
         uint8_t res = operand << 1;
 
         Bus_Write(bus, addr_eff, res);
 
-        SetStatus(CPU_STATUS_ZERO, res == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
-        SetStatus(CPU_STATUS_CARRY, operand & (1 << 7));
+        SetStatus(STATUS_ZERO, res == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
+        SetStatus(STATUS_CARRY, operand & (1 << 7));
     }
 }
 
 // Branch on !STATUS_CARRY
 void CPU::Op_BCC() {
-    if (!(status & CPU_STATUS_CARRY))
+    if (!(status & STATUS_CARRY))
         Branch();
 }
 
 // Branch on STATUS_CARRY
 void CPU::Op_BCS() {
-    if (status & CPU_STATUS_CARRY)
+    if (status & STATUS_CARRY)
         Branch();
 }
 
 // Branch on STATUS_ZERO
 void CPU::Op_BEQ() {
-    if (status & CPU_STATUS_ZERO)
+    if (status & STATUS_ZERO)
         Branch();
 }
 
@@ -331,26 +334,26 @@ void CPU::Op_BIT() {
     uint8_t operand = FetchOperand();
     uint8_t res = a & operand;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(operand));
-    SetStatus(CPU_STATUS_ZERO, res == 0);
-    SetStatus(CPU_STATUS_OVERFLOW, operand & (1 << 6));
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(operand));
+    SetStatus(STATUS_ZERO, res == 0);
+    SetStatus(STATUS_OVERFLOW, operand & (1 << 6));
 }
 
 // Branch on STATUS_NEGATIVE
 void CPU::Op_BMI() {
-    if (status & CPU_STATUS_NEGATIVE)
+    if (status & STATUS_NEGATIVE)
         Branch();
 }
 
 // Branch on !STATUS_ZERO
 void CPU::Op_BNE() {
-    if (!(status & CPU_STATUS_ZERO))
+    if (!(status & STATUS_ZERO))
         Branch();
 }
 
 // Branch on !STATUS_NEGATIVE
 void CPU::Op_BPL() {
-    if (!(status & CPU_STATUS_NEGATIVE))
+    if (!(status & STATUS_NEGATIVE))
         Branch();
 }
 
@@ -366,14 +369,14 @@ void CPU::Op_BRK() {
     StackPush((uint8_t)pc);
 
     // Set break flag, push status register, and set IRQ flag
-    SetStatus(CPU_STATUS_BRK, true);
+    SetStatus(STATUS_BRK, true);
     StackPush(status);
-    SetStatus(CPU_STATUS_IRQ, true);
+    SetStatus(STATUS_IRQ, true);
 
     // FIXME: THIS MAY BE WRONG (OLC HAS IT, BUT INSTRUCTIONS DON'T)
     //        FORCING THIS OFF SHOULD BE HANDLED BY THE RTI, BUT NO GUARANTEE
     //        THAT THAT WAS ACTUALLY CALLED
-    SetStatus(CPU_STATUS_BRK, false);
+    SetStatus(STATUS_BRK, false);
 
     // Fetch and set PC from hard-coded location
     pc = Bus_Read16(bus, 0xfffe);
@@ -381,34 +384,34 @@ void CPU::Op_BRK() {
 
 // Branch on !STATUS_OVERFLOW
 void CPU::Op_BVC() {
-    if (!(status & CPU_STATUS_OVERFLOW))
+    if (!(status & STATUS_OVERFLOW))
         Branch();
 }
 
 // Branch on STATUS_OVERFLOW
 void CPU::Op_BVS() {
-    if (status & CPU_STATUS_OVERFLOW)
+    if (status & STATUS_OVERFLOW)
         Branch();
 }
 
 // Clear STATUS_CARRY
 void CPU::Op_CLC() {
-    SetStatus(CPU_STATUS_CARRY, false);
+    SetStatus(STATUS_CARRY, false);
 }
 
 // Clear STATUS_DECIMAL
 void CPU::Op_CLD() {
-    SetStatus(CPU_STATUS_DECIMAL, false);
+    SetStatus(STATUS_DECIMAL, false);
 }
 
 // Clear STATUS_INTERRUPT
 void CPU::Op_CLI() {
-    SetStatus(CPU_STATUS_IRQ, false);
+    SetStatus(STATUS_IRQ, false);
 }
 
 // Clear STATUS_OVERFLOW
 void CPU::Op_CLV() {
-    SetStatus(CPU_STATUS_OVERFLOW, false);
+    SetStatus(STATUS_OVERFLOW, false);
 }
 
 // A - M
@@ -416,9 +419,9 @@ void CPU::Op_CMP() {
     uint8_t operand = FetchOperand();
     uint8_t res = a - operand;
 
-    SetStatus(CPU_STATUS_CARRY, a >= operand);
-    SetStatus(CPU_STATUS_ZERO, res == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
+    SetStatus(STATUS_CARRY, a >= operand);
+    SetStatus(STATUS_ZERO, res == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
 }
 
 // X - M
@@ -426,9 +429,9 @@ void CPU::Op_CPX() {
     uint8_t operand = FetchOperand();
     uint8_t res = x - operand;
 
-    SetStatus(CPU_STATUS_CARRY, x >= operand);
-    SetStatus(CPU_STATUS_ZERO, res == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
+    SetStatus(STATUS_CARRY, x >= operand);
+    SetStatus(STATUS_ZERO, res == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
 }
 
 // Y - M
@@ -436,9 +439,9 @@ void CPU::Op_CPY() {
     uint8_t operand = FetchOperand();
     uint8_t res = y - operand;
 
-    SetStatus(CPU_STATUS_CARRY, y >= operand);
-    SetStatus(CPU_STATUS_ZERO, res == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
+    SetStatus(STATUS_CARRY, y >= operand);
+    SetStatus(STATUS_ZERO, res == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
 }
 
 // M - 1 -> M
@@ -448,24 +451,24 @@ void CPU::Op_DEC() {
 
     Bus_Write(bus, addr_eff, res);
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
-    SetStatus(CPU_STATUS_ZERO, res == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
+    SetStatus(STATUS_ZERO, res == 0);
 }
 
 // X - 1 -> X
 void CPU::Op_DEX() {
     x = x - 1;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(x));
-    SetStatus(CPU_STATUS_ZERO, x == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
+    SetStatus(STATUS_ZERO, x == 0);
 }
 
 // Y - 1 -> Y
 void CPU::Op_DEY() {
     y = y - 1;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(y));
-    SetStatus(CPU_STATUS_ZERO, y == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(y));
+    SetStatus(STATUS_ZERO, y == 0);
 }
 
 // A ^ M -> A
@@ -473,8 +476,8 @@ void CPU::Op_EOR() {
     uint8_t operand = FetchOperand();
     a = a ^ operand;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 // M + 1 -> M
@@ -484,24 +487,24 @@ void CPU::Op_INC() {
 
     Bus_Write(bus, addr_eff, res);
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
-    SetStatus(CPU_STATUS_ZERO, res == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
+    SetStatus(STATUS_ZERO, res == 0);
 }
 
 // X + 1 -> X
 void CPU::Op_INX() {
     x = x + 1;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(x));
-    SetStatus(CPU_STATUS_ZERO, x == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
+    SetStatus(STATUS_ZERO, x == 0);
 }
 
 // Y + 1 -> Y
 void CPU::Op_INY() {
     y = y + 1;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(y));
-    SetStatus(CPU_STATUS_ZERO, y == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(y));
+    SetStatus(STATUS_ZERO, y == 0);
 }
 
 // addr_eff -> pc
@@ -533,24 +536,24 @@ void CPU::Op_JSR() {
 void CPU::Op_LDA() {
     a = Bus_Read(bus, addr_eff);
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 // M -> X
 void CPU::Op_LDX() {
     x = Bus_Read(bus, addr_eff);
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(x));
-    SetStatus(CPU_STATUS_ZERO, x == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
+    SetStatus(STATUS_ZERO, x == 0);
 }
 
 // M -> Y
 void CPU::Op_LDY() {
     y = Bus_Read(bus, addr_eff);
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(y));
-    SetStatus(CPU_STATUS_ZERO, y == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(y));
+    SetStatus(STATUS_ZERO, y == 0);
 }
 
 // Shift right 1 bit, target depends on addressing mode
@@ -560,18 +563,18 @@ void CPU::Op_LSR() {
         bool carry = a & 1;
         a = a >> 1;
 
-        SetStatus(CPU_STATUS_NEGATIVE, false);
-        SetStatus(CPU_STATUS_ZERO, a == 0);
-        SetStatus(CPU_STATUS_CARRY, carry);
+        SetStatus(STATUS_NEGATIVE, false);
+        SetStatus(STATUS_ZERO, a == 0);
+        SetStatus(STATUS_CARRY, carry);
     } else {
         uint8_t operand = FetchOperand();
         uint8_t res = operand >> 1;
 
         Bus_Write(bus, addr_eff, res);
 
-        SetStatus(CPU_STATUS_NEGATIVE, false);
-        SetStatus(CPU_STATUS_ZERO, res == 0);
-        SetStatus(CPU_STATUS_CARRY, operand & 1);
+        SetStatus(STATUS_NEGATIVE, false);
+        SetStatus(STATUS_ZERO, res == 0);
+        SetStatus(STATUS_CARRY, operand & 1);
     }
 }
 
@@ -583,8 +586,8 @@ void CPU::Op_ORA() {
     uint8_t operand = FetchOperand();
     a = a | operand;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 // A -> M(SP)   SP - 1 -> SP
@@ -597,10 +600,10 @@ void CPU::Op_PHA() {
 // Push status to the stack
 void CPU::Op_PHP() {
     // Break flag gets set before push
-    SetStatus(CPU_STATUS_BRK, true);
+    SetStatus(STATUS_BRK, true);
     StackPush(status);
     // Clear the break flag because we didn't break
-    SetStatus(CPU_STATUS_BRK, false);
+    SetStatus(STATUS_BRK, false);
 }
 
 // SP + 1 -> SP     M(SP) -> A
@@ -608,8 +611,8 @@ void CPU::Op_PHP() {
 void CPU::Op_PLA() {
     a = StackPop();
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 // SP + 1 -> SP     M(SP) -> P
@@ -619,7 +622,7 @@ void CPU::Op_PLP() {
 
     // If popping the status from an accumulator push, we must force these
     // flags to the proper status
-    SetStatus(CPU_STATUS_BRK, false);
+    SetStatus(STATUS_BRK, false);
     SetStatus(1 << 5, true);
 }
 
@@ -629,21 +632,21 @@ void CPU::Op_ROL() {
     if (instr->opcode == 0x2a) {
         bool hiset = a & (1 << 7);
         a = a << 1;
-        a = a | ((status & CPU_STATUS_CARRY) == CPU_STATUS_CARRY);
+        a = a | ((status & STATUS_CARRY) == STATUS_CARRY);
 
-        SetStatus(CPU_STATUS_CARRY, hiset);
-        SetStatus(CPU_STATUS_ZERO, a == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
+        SetStatus(STATUS_CARRY, hiset);
+        SetStatus(STATUS_ZERO, a == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
     } else {
         uint8_t operand = FetchOperand();
         uint8_t res = operand << 1;
-        res = res | ((status & CPU_STATUS_CARRY) == CPU_STATUS_CARRY);
+        res = res | ((status & STATUS_CARRY) == STATUS_CARRY);
 
         Bus_Write(bus, addr_eff, res);
 
-        SetStatus(CPU_STATUS_CARRY, operand & (1 << 7));
-        SetStatus(CPU_STATUS_ZERO, res == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
+        SetStatus(STATUS_CARRY, operand & (1 << 7));
+        SetStatus(STATUS_ZERO, res == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
     }
 }
 
@@ -653,21 +656,21 @@ void CPU::Op_ROR() {
     if (instr->opcode == 0x6a) {
         bool loset = a & 1;
         a = a >> 1;
-        a = a | (((status & CPU_STATUS_CARRY) == CPU_STATUS_CARRY) << 7);
+        a = a | (((status & STATUS_CARRY) == STATUS_CARRY) << 7);
 
-        SetStatus(CPU_STATUS_CARRY, loset);
-        SetStatus(CPU_STATUS_ZERO, a == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
+        SetStatus(STATUS_CARRY, loset);
+        SetStatus(STATUS_ZERO, a == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
     } else {
         uint8_t operand = FetchOperand();
         uint8_t res = operand >> 1;
-        res = res | (((status & CPU_STATUS_CARRY) == CPU_STATUS_CARRY) << 7);
+        res = res | (((status & STATUS_CARRY) == STATUS_CARRY) << 7);
 
         Bus_Write(bus, addr_eff, res);
 
-        SetStatus(CPU_STATUS_CARRY, operand & 1);
-        SetStatus(CPU_STATUS_ZERO, res == 0);
-        SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(res));
+        SetStatus(STATUS_CARRY, operand & 1);
+        SetStatus(STATUS_ZERO, res == 0);
+        SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
     }
 }
 
@@ -677,7 +680,7 @@ void CPU::Op_RTI() {
 
     // If popping the status from an accumulator push, we must force these
     // flags to the proper status
-    SetStatus(CPU_STATUS_BRK, false);
+    SetStatus(STATUS_BRK, false);
     SetStatus(1 << 5, true);
 
     pc = StackPop();
@@ -716,30 +719,30 @@ void CPU::Op_SBC() {
      * without assuming 2's complement (which nearly every computer uses).
      */
     operand = ~operand;
-    int res = a + operand + (bool)(status & CPU_STATUS_CARRY);
+    int res = a + operand + (bool)(status & STATUS_CARRY);
     bool ovr = ~(a ^ operand) & (a ^ res) & (1 << 7);
 
     a = (uint8_t)res;
 
-    SetStatus(CPU_STATUS_OVERFLOW, ovr);
-    SetStatus(CPU_STATUS_CARRY, res > 0xff);
-    SetStatus(CPU_STATUS_ZERO, a == 0);
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_OVERFLOW, ovr);
+    SetStatus(STATUS_CARRY, res > 0xff);
+    SetStatus(STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
 }
 
 // Set STATUS_CARRY
 void CPU::Op_SEC() {
-    SetStatus(CPU_STATUS_CARRY, true);
+    SetStatus(STATUS_CARRY, true);
 }
 
 // Set STATUS_DECIMAL
 void CPU::Op_SED() {
-    SetStatus(CPU_STATUS_DECIMAL, true);
+    SetStatus(STATUS_DECIMAL, true);
 }
 
 // Set STATUS_INTERRUPT
 void CPU::Op_SEI() {
-    SetStatus(CPU_STATUS_IRQ, true);
+    SetStatus(STATUS_IRQ, true);
 }
 
 // A -> M
@@ -761,32 +764,32 @@ void CPU::Op_STY() {
 void CPU::Op_TAX() {
     x = a;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(x));
-    SetStatus(CPU_STATUS_ZERO, x == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
+    SetStatus(STATUS_ZERO, x == 0);
 }
 
 // A -> Y
 void CPU::Op_TAY() {
     y = a;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(y));
-    SetStatus(CPU_STATUS_ZERO, y == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(y));
+    SetStatus(STATUS_ZERO, y == 0);
 }
 
 // SP -> X
 void CPU::Op_TSX() {
     x = sp;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(x));
-    SetStatus(CPU_STATUS_ZERO, x == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
+    SetStatus(STATUS_ZERO, x == 0);
 }
 
 // X -> A
 void CPU::Op_TXA() {
     a = x;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 // X -> S
@@ -798,8 +801,8 @@ void CPU::Op_TXS() {
 void CPU::Op_TYA() {
     a = y;
 
-    SetStatus(CPU_STATUS_NEGATIVE, CPU_IS_NEG(a));
-    SetStatus(CPU_STATUS_ZERO, a == 0);
+    SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
+    SetStatus(STATUS_ZERO, a == 0);
 }
 
 CPU::CPU() {}
@@ -841,20 +844,20 @@ void CPU::Clock() {
 // FIXME: WE MAY WANT THE IRQ TO BE SET BEFORE PUSHING
 // FIXME: TECHNICALLY 0X00 SHOULD BE LOADED INTO THE OPCODE REG
 void CPU::IRQ() {
-    if (!(status & CPU_STATUS_IRQ)) {
+    if (!(status & STATUS_IRQ)) {
         // Push PC (MSB first) onto the stack
         StackPush(pc >> 8);
         StackPush((uint8_t)pc);
 
         // Set BRK flag
-        SetStatus(CPU_STATUS_BRK, false);
+        SetStatus(STATUS_BRK, false);
         // This should never be off, but this is something to investigate
         // reenabling if bugs are encountered
         //set_status(cpu, 1 << 5, true);
 
         // Push status register onto the stack
         StackPush(status);
-        SetStatus(CPU_STATUS_IRQ, true);
+        SetStatus(STATUS_IRQ, true);
 
         // Load PC from hard-coded address
         pc = Bus_Read16(bus, 0xfffe);
@@ -872,14 +875,14 @@ void CPU::NMI() {
     StackPush((uint8_t)pc);
 
     // Set status flags
-    SetStatus(CPU_STATUS_BRK, false);
+    SetStatus(STATUS_BRK, false);
     // This should never be off, but this is something to investigate
     // reenabling if bugs are encountered
     //set_status(cpu, 1 << 5, true);     // this should already have been set
 
     // Push status register onto the stack
     StackPush(status);
-    SetStatus(CPU_STATUS_IRQ, true);
+    SetStatus(STATUS_IRQ, true);
 
     // Load pc from hard-coded address
     pc = Bus_Read16(bus, 0xfffa);
@@ -913,7 +916,7 @@ void CPU::Reset() {
      * Since the state of status after a reset is irrelevant
      * to the emulation, we accept the slight emulation inaccuracy.
      */
-    status = CPU_STATUS_IRQ | (1 << 5);
+    status = STATUS_IRQ | (1 << 5);
 
     // FIXME: THIS MAY VERY WELL CAUSE BUGS LATER WHEN APU IS ADDED
     Bus_Write(bus, 0x4015, 0x00);
@@ -999,6 +1002,7 @@ void CPU::Execute() {
 // TODO: MAKE THIS RETURN A STD::STRING
 // Returns a string of the disassembled instruction at addr
 // Call before clocking
+// FIXME: SHADOW WARNINGS HERE PROBABLY BORKE SOMETHING
 char* CPU::DisassembleString(uint16_t addr) {
     // Map OpType to string
     static const char* op_names[(int)OpType::INV+1] = {
@@ -1238,7 +1242,7 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
     // but probably better to just release lock later
     // Since there is low contention for locks, this
     // probably performs better as well
-    uint16_t pc = pc;
+    uint16_t pc = this->pc;
 
     // Fill with first 27 instructions
     for (int i = 0; i < ret_len; i++) {

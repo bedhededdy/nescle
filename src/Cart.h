@@ -18,7 +18,6 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
 
 namespace NESCLE {
@@ -55,6 +54,9 @@ private:
     // Bus* bus
 
 public:
+    static constexpr int CHR_ROM_CHUNK_SIZE = 0x2000;
+    static constexpr int PRG_ROM_CHUNK_SIZE = 0x4000;
+
     Cart();
     ~Cart();
 

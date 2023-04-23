@@ -15,12 +15,23 @@
  */
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
-#include "NESCLEConstants.h"
 #include "NESCLETypes.h"
+
+#define BUS_RAM_SIZE    (1024 * 2)
+
+#define BUS_CONTROLLER_A        (1 << 0)
+#define BUS_CONTROLLER_B        (1 << 1)
+#define BUS_CONTROLLER_SELECT   (1 << 2)
+#define BUS_CONTROLLER_START    (1 << 3)
+#define BUS_CONTROLLER_UP       (1 << 4)
+#define BUS_CONTROLLER_DOWN     (1 << 5)
+#define BUS_CONTROLLER_LEFT     (1 << 6)
+#define BUS_CONTROLLER_RIGHT    (1 << 7)
+
+#define BUS_CLOCK_FREQ          (5369318.0)
 
 namespace NESCLE {
 /*

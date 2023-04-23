@@ -275,7 +275,7 @@ void EmulationWindow::SetupMainFrame() {
     // Setup empty image
     // FIXME: WE WILL PROBABLY HAVE TO EITHER USE A GL_TEXTURE_RECTANGLE
     //        OR PAD THE DATA WITH CRAP IN ORDER TO DISPLAY PROPERLY
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, PPU::RESOLUTION_X, PPU::RESOLUTION_Y,
         0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -544,7 +544,7 @@ void EmulationWindow::Loop() {
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_2)) {
-                        sprintf(path_to_save, "%ssaves/%sslot2.sav", game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->user_data_path, game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_3)) {
@@ -868,8 +868,8 @@ void EmulationWindow::Show(Emulator* emu) {
     SDL_LockMutex(emulator->nes_state_lock);
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
-    uint32_t* ppu_framebuffer = new uint32_t[PPU_RESOLUTION_X * PPU_RESOLUTION_Y];
-    memcpy(ppu_framebuffer, bus->ppu->GetFramebuffer(), PPU_RESOLUTION_X * PPU_RESOLUTION_Y * sizeof(uint32_t));
+    uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
+    memcpy(ppu_framebuffer, bus->ppu->GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
 
     // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
     // should 0 out the first 8 pixels of each scanline
@@ -880,7 +880,7 @@ void EmulationWindow::Show(Emulator* emu) {
     // SDL_Log("cycles taken: %llu", SDL_GetPerformanceCounter() - t0);
 
     // THIS CALL CAN BE BLOCKING
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU_RESOLUTION_X, PPU_RESOLUTION_Y,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU::RESOLUTION_X, PPU::RESOLUTION_Y,
         GL_BGRA, GL_UNSIGNED_BYTE, ppu_framebuffer);
     delete[] ppu_framebuffer;
 
