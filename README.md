@@ -9,17 +9,6 @@
 NESCLE (pronounced like Nestlé) is a free and open-source NES (Nintendo Entertainment System) emulator written in the C programming language, with the front-end writen in C++. It uses SDL2 for audio and input, OpenGL 3.3+ for graphics, and Dear ImGui for the graphical user interface. NESCLE will eventually provide a
 terminal user interface for users who prefer using the command line.
 
-### Why C?
-Most popular NES emulators are almost exclusively written in C++, and many newer, lesser used emulators are
-written in Rust. Knowing little (modern) C++ and no Rust, but still requiring the high-performance of those languages,
-I chose to rely on an old friend, C. This makes NESCLE unique among the existing NES emulators, as the code (mostly)
-maintains the readability of C code compared to the often hard to parse C++ code.
-I do not claim to be the only person to write a NES emulator in C,
-but I do claim that popular forms of such emulators are rare.
-As SDL and OpenGL are C libraries,
-choosing to write the entire project in C++ would lead to even more clumsy integration between the C and C++ code than there already is.
-Even the C++ code in NESCLE is mostly written like C code as much as possible. This is because C++, specifically modern C++, contains many
-
 ## Requirements and Dependencies
 As of now, NESCLE has not been packaged for any operating system. This means that you have to compile it yourself from the source code.
 To build the code you need a C compiler that supports the C11 and C++11
