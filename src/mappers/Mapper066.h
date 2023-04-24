@@ -23,7 +23,7 @@ private:
     uint8_t bank_select;
 
 public:
-    Mapper066(Cart* cart, MapperBase::MirrorMode mirror)
+    Mapper066(Cart& cart, MapperBase::MirrorMode mirror)
         : MapperBase(cart, mirror), bank_select(0) {}
 
     void Reset() override;

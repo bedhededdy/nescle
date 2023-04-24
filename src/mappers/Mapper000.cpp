@@ -18,23 +18,23 @@
 
 namespace NESCLE {
 uint8_t Mapper000::MapCPURead(uint16_t addr) {
-    addr %= cart->GetPrgRomBlocks() > 1 ? 0x8000 : 0x4000;
-    return cart->ReadPrgRom(addr);
+    addr %= cart.GetPrgRomBlocks() > 1 ? 0x8000 : 0x4000;
+    return cart.ReadPrgRom(addr);
 }
 
 bool Mapper000::MapCPUWrite(uint16_t addr, uint8_t data) {
-    addr %= cart->GetPrgRomBlocks() > 1 ? 0x8000 : 0x4000;
-    cart->WritePrgRom(addr, data);
+    addr %= cart.GetPrgRomBlocks() > 1 ? 0x8000 : 0x4000;
+    cart.WritePrgRom(addr, data);
     return true;
 }
 
 uint8_t Mapper000::MapPPURead(uint16_t addr) {
-    return cart->ReadChrRom(addr);
+    return cart.ReadChrRom(addr);
 }
 
 bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (cart->GetChrRomBlocks() == 0) {
-        cart->WriteChrRom(addr, data);
+    if (cart.GetChrRomBlocks() == 0) {
+        cart.WriteChrRom(addr, data);
         return true;
     }
     return false;

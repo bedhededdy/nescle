@@ -155,7 +155,7 @@ bool Cart::LoadROM(const char* path) {
     // We must check NULL return from Mapper_Create, as failing to allocate
     // the mapper is not a critical error
     delete mapper;
-    mapper = new Mapper(mapper_id, this, mirror_mode);
+    mapper = new Mapper(mapper_id, *this, mirror_mode);
     if (mapper == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed to create mapper\n");

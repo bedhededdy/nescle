@@ -30,11 +30,11 @@ public:
     };
 
 protected:
-    Cart *cart;
+    Cart& cart;
     MirrorMode mirror_mode;
 
 public:
-    MapperBase(Cart* _cart, MirrorMode _mirror)
+    MapperBase(Cart& _cart, MirrorMode _mirror)
         : cart(_cart), mirror_mode(_mirror) {}
     virtual ~MapperBase() = default;
 

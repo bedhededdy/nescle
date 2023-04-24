@@ -26,7 +26,7 @@
 #include "mappers/Mapper066.h"
 
 namespace NESCLE {
-Mapper::Mapper(uint8_t _id, Cart* cart, MapperBase::MirrorMode mirror) {
+Mapper::Mapper(uint8_t _id, Cart& cart, MapperBase::MirrorMode mirror) {
     Mapper* mapper = this;
     id = _id;
 

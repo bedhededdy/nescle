@@ -40,8 +40,8 @@ void Mapper004::Reset() {
 
     prg_banks[0] = 0;
     prg_banks[1] = 0x2000;
-    prg_banks[2] = (cart->GetPrgRomBlocks() * 2 - 2) * 0x2000;
-    prg_banks[3] = (cart->GetPrgRomBlocks() * 2 - 1) * 0x2000;
+    prg_banks[2] = (cart.GetPrgRomBlocks() * 2 - 2) * 0x2000;
+    prg_banks[3] = (cart.GetPrgRomBlocks() * 2 - 1) * 0x2000;
 }
 
 uint8_t Mapper004::MapCPURead(uint16_t addr) {
@@ -51,7 +51,7 @@ uint8_t Mapper004::MapCPURead(uint16_t addr) {
     // Each bank in prg banks is 2k, so the index into it would be
     // (addr - 0x8000) / 0x2000 and then the offset from that would be
     // addr % 0x2000 (no subtraction needed as 0x8000 is a multiple of 0x2000)
-    return cart->ReadPrgRom(prg_banks[(addr - 0x8000) / 0x2000] + (addr % 0x2000));
+    return cart.ReadPrgRom(prg_banks[(addr - 0x8000) / 0x2000] + (addr % 0x2000));
 }
 
 bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
@@ -92,14 +92,14 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
 
             if (prg_bank_mode) {
                 prg_banks[2] = (registers[6] & 0x3f) * 0x2000;
-                prg_banks[0] = (cart->GetPrgRomBlocks() * 2 - 2) * 0x2000;
+                prg_banks[0] = (cart.GetPrgRomBlocks() * 2 - 2) * 0x2000;
             } else {
                 prg_banks[0] = (registers[6] & 0x3f) * 0x2000;
-                prg_banks[2] = (cart->GetPrgRomBlocks() * 2 - 2) * 0x2000;
+                prg_banks[2] = (cart.GetPrgRomBlocks() * 2 - 2) * 0x2000;
             }
 
             prg_banks[1] = (registers[7] & 0x3f) * 0x2000;
-            prg_banks[3] = (cart->GetPrgRomBlocks() * 2 - 1) * 0x2000;
+            prg_banks[3] = (cart.GetPrgRomBlocks() * 2 - 1) * 0x2000;
         }
         return true;
     }
@@ -139,12 +139,12 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
 uint8_t Mapper004::MapPPURead(uint16_t addr) {
     // Each one of these blocks points to 1k, so addr / 0x400 is the index
     // and addr % 0x400 is the offset
-    return cart->ReadChrRom(chr_banks[addr / 0x400] + (addr % 0x400));
+    return cart.ReadChrRom(chr_banks[addr / 0x400] + (addr % 0x400));
 }
 
 bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (cart->GetChrRomBlocks() == 0) {
-        cart->WriteChrRom(chr_banks[addr / 0x400] + (addr % 0x400), data);
+    if (cart.GetChrRomBlocks() == 0) {
+        cart.WriteChrRom(chr_banks[addr / 0x400] + (addr % 0x400), data);
         return true;
     }
 

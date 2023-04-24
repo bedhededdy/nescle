@@ -348,7 +348,7 @@ bool Emulator::LoadState(const char* path) {
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
     // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    bus->GetCart().SetMapper(new Mapper(mapper_id, &bus->GetCart(), (MapperBase::MirrorMode)0));
+    bus->GetCart().SetMapper(new Mapper(mapper_id, bus->GetCart(), (MapperBase::MirrorMode)0));
     bus->GetCart().GetMapper()->LoadState(savestate);
 
     bus->GetPPU().LoadState(savestate);

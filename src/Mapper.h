@@ -29,7 +29,7 @@ private:
     MapperBase* mapper_class;
 
 public:
-    Mapper(uint8_t _id, Cart* cart, MapperBase::MirrorMode mirror);
+    Mapper(uint8_t _id, Cart& cart, MapperBase::MirrorMode mirror);
     ~Mapper();
 
     void Reset();

@@ -24,7 +24,7 @@ uint8_t Mapper007::MapCPURead(uint16_t addr) {
     addr %= 0x8000;
     // use bottom 3 bits for bank selecrt
     uint8_t select = bank_select & 0x07;
-    return cart->ReadPrgRom((size_t)((select << 15) | addr));
+    return cart.ReadPrgRom((size_t)((select << 15) | addr));
 }
 
 bool Mapper007::MapCPUWrite(uint16_t addr, uint8_t data) {
@@ -35,12 +35,12 @@ bool Mapper007::MapCPUWrite(uint16_t addr, uint8_t data) {
 }
 
 uint8_t Mapper007::MapPPURead(uint16_t addr) {
-    return cart->ReadChrRom(addr);
+    return cart.ReadChrRom(addr);
 }
 
 bool Mapper007::MapPPUWrite(uint16_t addr, uint8_t data) {
-    if (cart->GetChrRomBlocks() == 0) {
-        cart->WriteChrRom(addr, data);
+    if (cart.GetChrRomBlocks() == 0) {
+        cart.WriteChrRom(addr, data);
         return true;
     }
     return false;
