@@ -16,7 +16,6 @@
 #pragma once
 
 namespace NESCLE {
-typedef struct bus Bus;
 typedef struct mapper Mapper;
 
 // Forward decl for objs
@@ -25,4 +24,5 @@ class Cart;
 class CPU;
 class Emulator;
 class PPU;
+class Bus;
 }

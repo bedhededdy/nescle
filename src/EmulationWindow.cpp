@@ -150,9 +150,9 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->cart->GetROMPath() != NULL)) {
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->GetCart()->GetROMPath() != NULL)) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
+                        const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
                         emu->SaveState(path);
                         emu->used_saveslots[i] = true;
@@ -169,7 +169,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->used_saveslots[i])) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
+                        const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
                         emu->LoadState(path);
                         NESCLENotification::MakeNotification("Loaded state");
@@ -182,14 +182,14 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         }
         if (ImGui::BeginMenu("NES")) {
            if (ImGui::MenuItem("Reset", "Ctrl+R"))
-               Bus_Reset(bus);
+               bus->Reset();
            if (ImGui::MenuItem("Play/Pause", "Ctrl+P"))
                emu->run_emulation = !emu->run_emulation;
 
            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            bool cart_loaded = bus->cart->GetROMPath() != NULL;
+            bool cart_loaded = bus->GetCart()->GetROMPath() != NULL;
             ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
                 cart_loaded);
             ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
@@ -226,7 +226,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         ImGui::Separator();
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            if (bus->cart->GetROMPath() != NULL)
+            if (bus->GetCart()->GetROMPath() != NULL)
                 emu->run_emulation = true;
             ImGui::CloseCurrentPopup();
         }
@@ -390,8 +390,8 @@ EmulationWindow::EmulationWindow(int w, int h) {
     for (size_t i = 0; i < WindowType::COUNT; i++)
         sub_windows[i] = nullptr;
 
-    Bus_PowerOn(bus);
-    Bus_SetSampleFrequency(bus, 44100);
+    bus->PowerOn();
+    bus->SetSampleFrequency(44100);
 
     NFD_Init();
 
@@ -464,7 +464,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 void EmulationWindow::Loop() {
     Emulator* emu = emulator;
     Bus *bus = emulator->nes;
-    PPU* ppu = bus->ppu;
+    PPU* ppu = bus->GetPPU();
 
     while (!emulator->quit) {
         uint64_t t0 = SDL_GetTicks64();
@@ -512,8 +512,8 @@ void EmulationWindow::Loop() {
             }
         }
 
-        uint8_t prev_controller1 = bus->controller1;
-        bus->controller1 = 0;
+        uint8_t prev_controller1 = bus->GetController1();
+        bus->SetController1(0);
         emu->keys = SDL_GetKeyboardState(NULL);
 
         uint32_t window_flags = SDL_GetWindowFlags(window);
@@ -533,7 +533,7 @@ void EmulationWindow::Loop() {
                     // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
                     // BEFORE CALLING LOAD STATE?
                     char path_to_save[1024];
-                    const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
+                    const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
 
                     if (emu->KeyPushed(SDLK_0)) {
                         sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->user_data_path, game_name);
@@ -579,7 +579,7 @@ void EmulationWindow::Loop() {
                 } else {
                     char path_to_save[1024];
                     // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
-                    const char* game_name = Util_GetFileName(bus->cart->GetROMPath());
+                    const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
 
                     // only process one of these if multiple are pressed
                     if (emu->KeyPushed(SDLK_o)) {
@@ -588,7 +588,7 @@ void EmulationWindow::Loop() {
                     } else if (emu->KeyPushed(SDLK_p)) {
                         emu->run_emulation = !emu->run_emulation;
                     } else if (emu->KeyPushed(SDLK_r)) {
-                        Bus_Reset(bus);
+                        bus->Reset();
                     } else if (emu->KeyPushed(SDLK_f)) {
                         show_frametime = !show_frametime;
                     } else if (emu->KeyPushed(SDLK_0)) {
@@ -650,26 +650,27 @@ void EmulationWindow::Loop() {
                 emu->aturbo = emu->KeyHeld(btn_map->aturbo);
                 emu->bturbo = emu->KeyHeld(btn_map->bturbo);
                 if (emu->aturbo)
-                    bus->controller1 |= prev_controller1 & BUS_CONTROLLER_A;
+                    bus->SetController1(bus->GetController1()
+                        | (prev_controller1 & Bus::BUS_CONTROLLER_A));
                 if (emu->bturbo)
-                    bus->controller1 |= prev_controller1 & BUS_CONTROLLER_B;
-
+                    bus->SetController1(bus->GetController1()
+                        | (prev_controller1 & Bus::BUS_CONTROLLER_B));
                 if (emu->KeyHeld(btn_map->up))
-                    bus->controller1 |= BUS_CONTROLLER_UP;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_UP);
                 if (emu->KeyHeld(btn_map->left))
-                    bus->controller1 |= BUS_CONTROLLER_LEFT;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_LEFT);
                 if (emu->KeyHeld(btn_map->down))
-                    bus->controller1 |= BUS_CONTROLLER_DOWN;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_DOWN);
                 if (emu->KeyHeld(btn_map->right))
-                    bus->controller1 |= BUS_CONTROLLER_RIGHT;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_RIGHT);
                 if (emu->KeyHeld(btn_map->b))
-                    bus->controller1 |= BUS_CONTROLLER_B;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_B);
                 if (emu->KeyHeld(btn_map->a))
-                    bus->controller1 |= BUS_CONTROLLER_A;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_A);
                 if (emu->KeyHeld(btn_map->select))
-                    bus->controller1 |= BUS_CONTROLLER_SELECT;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_SELECT);
                 if (emu->KeyHeld(btn_map->start))
-                    bus->controller1 |= BUS_CONTROLLER_START;
+                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_START);
             }
         }
 
@@ -869,7 +870,7 @@ void EmulationWindow::Show(Emulator* emu) {
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
     uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
-    memcpy(ppu_framebuffer, bus->ppu->GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
+    memcpy(ppu_framebuffer, bus->GetPPU()->GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
 
     // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
     // should 0 out the first 8 pixels of each scanline
@@ -944,7 +945,7 @@ void EmulationWindow::Show(Emulator* emu) {
 
     // set window title
     // FIXME: VERY UNSAFE
-    const char* rom_path = bus->cart->GetROMPath();
+    const char* rom_path = bus->GetCart()->GetROMPath();
     const char* game_name = NULL;
     if (rom_path != NULL) {
         game_name = strrchr(rom_path, '/') + 1;

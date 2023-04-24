@@ -40,7 +40,9 @@ private:
     ~NESCLENotification();
 
 public:
+    static void Init();
     static void MakeNotification(const char* text, int duration = 3000);
     static void ShowNotifications();
+    static void Shutdown();
 };
 }

@@ -17,6 +17,7 @@
 #include "Bus.h"
 
 #include <cstring>
+#include <algorithm>
 
 #include "APU.h"
 #include "CPU.h"
@@ -28,53 +29,32 @@
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-/* Constructors/Destructors */
-Bus* Bus_Create(void) {
-    return (Bus*)Util_SafeMalloc(sizeof(Bus));
-}
-
-void Bus_Destroy(Bus* bus) {
-    Util_SafeFree(bus);
-}
-
-Bus* Bus_CreateNES(void) {
-    Bus* bus = Bus_Create();
-    CPU* cpu = new CPU();
-    PPU* ppu = new PPU();
-    Cart* cart = new Cart();
-    APU* apu = new APU();
-
-    if (bus == NULL || cpu == NULL || ppu == NULL || cart == NULL) {
-        printf("Bus_CreateNES: alloc failed\n");
-        return NULL;
-    }
-
-    bus->cpu = cpu;
+Bus::Bus() {
+    Bus* bus = this;
+    bus->cpu = new CPU();
+    bus->ppu = new PPU();
+    bus->cart = new Cart();
+    bus->apu = new APU();
     cpu->LinkBus(bus);
-    bus->ppu = ppu;
     ppu->LinkBus(bus);
-    bus->cart = cart;
-
-    bus->apu = apu;
     apu->LinkBus(bus);
-
-    return bus;
 }
 
-void Bus_DestroyNES(Bus* bus) {
+Bus::~Bus() {
+    Bus* bus = this;
     delete bus->cpu;
     delete bus->ppu;
     delete bus->cart;
     delete bus->apu;
-    Bus_Destroy(bus);
 }
 
 /* R/W */
-void Bus_ClearMem(Bus* bus) {
-    memset(bus->ram, 0, sizeof(bus->ram));
+void Bus::ClearMem() {
+    std::fill(std::begin(ram), std::end(ram), 0);
 }
 
-uint8_t Bus_Read(Bus* bus, uint16_t addr) {
+uint8_t Bus::Read(uint16_t addr) {
+    Bus* bus = this;
     //if (addr == 0x0776 && bus->ram[addr] == 1)
         //printf("paused\n");
 
@@ -125,7 +105,8 @@ uint8_t Bus_Read(Bus* bus, uint16_t addr) {
     return 0;
 }
 
-bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
+bool Bus::Write(uint16_t addr, uint8_t data) {
+    Bus* bus = this;
     //if (addr == 0x0776 && data == 1)
         //printf("pausing\n");
     if (addr >= 0 && addr < 0x2000) {
@@ -178,17 +159,18 @@ bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data) {
     return false;
 }
 
-uint16_t Bus_Read16(Bus* bus, uint16_t addr) {
-    return (Bus_Read(bus, addr + 1) << 8) | Bus_Read(bus, addr);
+uint16_t Bus::Read16(uint16_t addr) {
+    return (Read(addr + 1) << 8) | Read(addr);
 }
 
-bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data) {
-    return Bus_Write(bus, addr, (uint8_t)data)
-        && Bus_Write(bus, addr, data >> 8);
+bool Bus::Write16(uint16_t addr, uint16_t data) {
+    return Write(addr, (uint8_t)data)
+        && Write(addr, data >> 8);
 }
 
 /* NES functions */
-bool Bus_Clock(Bus* bus) {
+bool Bus::Clock() {
+    Bus* bus = this;
     // PPU runs 3x faster than the CPU
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
@@ -208,10 +190,8 @@ bool Bus_Clock(Bus* bus) {
             else {
                 // Read on even cycles, write on odd cycles
                 if (bus->clocks_count % 2 == 0) {
-                    bus->dma_data = Bus_Read(bus,
-                        (bus->dma_page << 8) | bus->dma_addr);
-                }
-                else {
+                    bus->dma_data = Read((bus->dma_page << 8) | bus->dma_addr);
+                } else {
                     // DMA transfers 256 bytes to the OAM at once,
                     // so we auto-increment the address
                     // TODO: TRY PUTTING THE ++ IN THE FUNC CALL
@@ -259,9 +239,10 @@ bool Bus_Clock(Bus* bus) {
     return audio_ready;
 }
 
-void Bus_PowerOn(Bus* bus) {
+void Bus::PowerOn() {
+    Bus* bus = this;
     // Contents of RAM are initialized at powerup
-    Bus_ClearMem(bus);
+    ClearMem();
     // Mapper* mapper = Cart_GetMapper(bus->cart);
     // if (mapper != NULL)
     //     Mapper_Reset(mapper);
@@ -284,7 +265,8 @@ void Bus_PowerOn(Bus* bus) {
     bus->audio_time = 0.0;
 }
 
-void Bus_Reset(Bus* bus) {
+void Bus::Reset() {
+    Bus* bus = this;
     // Contents of RAM do not clear on reset
     Mapper* mapper = bus->cart->GetMapper();
     if (mapper != NULL)
@@ -300,12 +282,13 @@ void Bus_Reset(Bus* bus) {
     bus->dma_dummy = true;
 }
 
-int Bus_SaveState(Bus* bus, FILE* file) {
-    return fwrite(bus, sizeof(Bus), 1, file) == 1;
+int Bus::SaveState(FILE* file) {
+    return fwrite(this, sizeof(Bus), 1, file) == 1;
 }
 
-int Bus_LoadState(Bus* bus, FILE* file) {
+int Bus::LoadState(FILE* file) {
     // Bus
+    Bus* bus = this;
     CPU* cpu_addr = bus->cpu;
     PPU* ppu_addr = bus->ppu;
     Cart* cart_addr = bus->cart;
@@ -321,8 +304,9 @@ int Bus_LoadState(Bus* bus, FILE* file) {
     return res;
 }
 
-void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_frequency) {
+void Bus::SetSampleFrequency(uint32_t sample_frequency) {
+    Bus* bus = this;
     bus->time_per_sample = 1.0 / (double)sample_frequency;
-    bus->time_per_clock = 1.0 / BUS_CLOCK_FREQ;
+    bus->time_per_clock = 1.0 / CLOCK_FREQ;
 }
 }

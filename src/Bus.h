@@ -20,19 +20,6 @@
 
 #include "NESCLETypes.h"
 
-#define BUS_RAM_SIZE    (1024 * 2)
-
-#define BUS_CONTROLLER_A        (1 << 0)
-#define BUS_CONTROLLER_B        (1 << 1)
-#define BUS_CONTROLLER_SELECT   (1 << 2)
-#define BUS_CONTROLLER_START    (1 << 3)
-#define BUS_CONTROLLER_UP       (1 << 4)
-#define BUS_CONTROLLER_DOWN     (1 << 5)
-#define BUS_CONTROLLER_LEFT     (1 << 6)
-#define BUS_CONTROLLER_RIGHT    (1 << 7)
-
-#define BUS_CLOCK_FREQ          (5369318.0)
-
 namespace NESCLE {
 /*
  * The NES Bus connects the various components of the NES together.
@@ -40,8 +27,12 @@ namespace NESCLE {
  * references to the various components of the NES, and calling
  * a function like Bus_Clock clocks all the relevant components.
  */
-struct bus {
-    uint8_t ram[BUS_RAM_SIZE];
+class Bus {
+private:
+    static constexpr int RAM_SIZE = 1024 * 2;
+    static constexpr double CLOCK_FREQ = 5369318.0;
+
+    uint8_t ram[RAM_SIZE];
 
     uint8_t controller1;
     uint8_t controller2;
@@ -68,30 +59,50 @@ struct bus {
 
     // How many system ticks have elapsed (PPU clocks at the same rate as the Bus)
     uint64_t clocks_count;
+
+public:
+    // TODO: MAKE ENUM CLASS
+    enum NESButtons {
+        BUS_CONTROLLER_A = 0x1,
+        BUS_CONTROLLER_B = 0x2,
+        BUS_CONTROLLER_SELECT = 0X4,
+        BUS_CONTROLLER_START = 0x8,
+        BUS_CONTROLLER_UP = 0x10,
+        BUS_CONTROLLER_DOWN = 0x20,
+        BUS_CONTROLLER_LEFT = 0x40,
+        BUS_CONTROLLER_RIGHT = 0x80
+    };
+
+    Bus();
+    ~Bus();
+
+    /* Read/Write */
+    void ClearMem();        // Sets contents of RAM to a deterministic value
+    void ClearMemRand();
+    uint8_t Read(uint16_t addr);
+    bool Write(uint16_t addr, uint8_t data);
+    uint16_t Read16(uint16_t addr);
+    bool Write16(uint16_t addr, uint16_t data);
+
+    /* NES functions */
+    bool Clock();   // Tells the entire system to advance one tick
+    void PowerOn(); // Sets entire system to powerup state
+    void Reset();   // Equivalent to pushing the RESET button on a NES
+
+    int SaveState(FILE* file);
+    int LoadState(FILE* file);
+
+    void SetSampleFrequency(uint32_t sample_rate);
+
+    // Getters and Setters
+    APU* GetAPU() { return apu; }
+    PPU* GetPPU() { return ppu; }
+    CPU* GetCPU() { return cpu; }
+    Cart* GetCart() { return cart; }
+
+    uint8_t GetController1() { return controller1; }
+    void SetController1(uint8_t data) { controller1 = data; }
+    uint8_t GetController2() { return controller2; }
+    void SetController2(uint8_t data) { controller2 = data; }
 };
-
-/* Constructors/Destructors */
-Bus* Bus_Create(void);
-void Bus_Destroy(Bus* bus);
-
-Bus* Bus_CreateNES(void);       // Creates a Bus with connected components
-void Bus_DestroyNES(Bus* bus);  // Deallocates memory for Bus and connected components
-
-/* Read/Write */
-void Bus_ClearMem(Bus* bus);        // Sets contents of RAM to a deterministic value
-void Bus_ClearMemRand(Bus* bus);
-uint8_t Bus_Read(Bus* bus, uint16_t addr);
-bool Bus_Write(Bus* bus, uint16_t addr, uint8_t data);
-uint16_t Bus_Read16(Bus* bus, uint16_t addr);
-bool Bus_Write16(Bus* bus, uint16_t addr, uint16_t data);
-
-/* NES functions */
-bool Bus_Clock(Bus* bus);   // Tells the entire system to advance one tick
-void Bus_PowerOn(Bus* bus); // Sets entire system to powerup state
-void Bus_Reset(Bus* bus);   // Equivalent to pushing the RESET button on a NES
-
-int Bus_SaveState(Bus* bus, FILE* file);
-int Bus_LoadState(Bus* bus, FILE* file);
-
-void Bus_SetSampleFrequency(Bus* bus, uint32_t sample_rate);
 }
