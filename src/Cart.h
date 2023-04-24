@@ -49,9 +49,6 @@ private:
 
     Mapper* mapper;
 
-    // uint8_t* prg_rom;
-    // uint8_t* chr_rom;
-
     std::vector<uint8_t> prg_rom;
     std::vector<uint8_t> chr_rom;
 

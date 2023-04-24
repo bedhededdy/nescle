@@ -18,7 +18,7 @@
 #include <SDL_log.h>
 
 #include <cassert>
-#include <cstring>
+#include <cstdlib>
 #include <cstring>
 
 #include "PPU.h"
