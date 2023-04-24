@@ -205,7 +205,7 @@ Emulator::~Emulator() {
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
 bool Emulator::SaveState(const char* path) {
-    if (nes->GetCart()->GetROMPath() == NULL) {
+    if (nes->GetCart().GetROMPath() == NULL) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
@@ -221,21 +221,21 @@ bool Emulator::SaveState(const char* path) {
     if (!nes->SaveState(savestate))
         printf("bus too short");
 
-    if (!bus->GetCPU()->SaveState(savestate))
+    if (!bus->GetCPU().SaveState(savestate))
         printf("cpu too short");
 
-    if (!bus->GetAPU()->SaveState(savestate))
+    if (!bus->GetAPU().SaveState(savestate))
         printf("apu too short");
 
-    if (!bus->GetCart()->SaveState(savestate))
+    if (!bus->GetCart().SaveState(savestate))
         printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
-    if (fwrite(bus->GetCart()->GetMapper(), sizeof(Mapper), 1, savestate) < 1)
+    if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
         printf("mapper too short");
-    bus->GetCart()->GetMapper()->SaveState(savestate);
+    bus->GetCart().GetMapper()->SaveState(savestate);
 
-    if (!bus->GetPPU()->SaveState(savestate))
+    if (!bus->GetPPU().SaveState(savestate))
         printf("ppu too short");
 
     fclose(savestate);
@@ -329,29 +329,29 @@ bool Emulator::LoadState(const char* path) {
     bus->LoadState(savestate);
 
     // CPU
-    bus->GetCPU()->LoadState(savestate);
+    bus->GetCPU().LoadState(savestate);
 
     // APU
-    bus->GetAPU()->LoadState(savestate);
+    bus->GetAPU().LoadState(savestate);
 
     // Cart
-    Mapper* mapper_addr = bus->GetCart()->GetMapper();
-    bus->GetCart()->LoadState(savestate);
+    Mapper* mapper_addr = bus->GetCart().GetMapper();
+    bus->GetCart().LoadState(savestate);
 
     // Mapper
-    bus->GetCart()->SetMapper(mapper_addr);
-    if (bus->GetCart()->GetMapper() != NULL) {
+    bus->GetCart().SetMapper(mapper_addr);
+    if (bus->GetCart().GetMapper() != NULL) {
         // Mapper_Destroy(bus->GetCart()->GetMapper());
-        delete bus->GetCart()->GetMapper();
+        delete bus->GetCart().GetMapper();
     }
     uint8_t dummy_buf[sizeof(Mapper)];
     fread(dummy_buf, sizeof(Mapper), 1, savestate);
     uint8_t mapper_id = dummy_buf[0];
     // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    bus->GetCart()->SetMapper(new Mapper(mapper_id, bus->GetCart(), (MapperBase::MirrorMode)0));
-    bus->GetCart()->GetMapper()->LoadState(savestate);
+    bus->GetCart().SetMapper(new Mapper(mapper_id, &bus->GetCart(), (MapperBase::MirrorMode)0));
+    bus->GetCart().GetMapper()->LoadState(savestate);
 
-    bus->GetPPU()->LoadState(savestate);
+    bus->GetPPU().LoadState(savestate);
 
     fclose(savestate);
 
@@ -459,8 +459,8 @@ void Emulator::SetDefaultSettings() {
 
 float Emulator::EmulateSample() {
     while (!nes->Clock()) {
-        if (nes->GetPPU()->GetFrameComplete()) {
-            nes->GetPPU()->ClearFrameComplete();
+        if (nes->GetPPU().GetFrameComplete()) {
+            nes->GetPPU().ClearFrameComplete();
 
             // After we emulate a sample, we will check to see
             // if a frame has been rendered
@@ -481,11 +481,11 @@ float Emulator::EmulateSample() {
         }
     }
 
-    APU* apu = nes->GetAPU();
-    float p1 = apu->GetPulse1Sample() * settings.p1_vol;
-    float p2 = apu->GetPulse2Sample() * settings.p2_vol;
-    float tri = apu->GetTriangleSample() * settings.tri_vol;
-    float noise = apu->GetNoiseSample() * settings.noise_vol;
+    auto apu = nes->GetAPU();
+    float p1 = apu.GetPulse1Sample() * settings.p1_vol;
+    float p2 = apu.GetPulse2Sample() * settings.p2_vol;
+    float tri = apu.GetTriangleSample() * settings.tri_vol;
+    float noise = apu.GetNoiseSample() * settings.noise_vol;
 
     return 0.25f * (p1 + p2 + tri + noise) * settings.master_vol;
 }
@@ -563,9 +563,9 @@ nfdresult_t Emulator::LoadROM() {
         SDL_Log("Error opening file: %s\n", NFD_GetError());
     }
 
-    if (!bus->GetCart()->LoadROM((const char*)rom)) {
+    if (!bus->GetCart().LoadROM((const char*)rom)) {
         run_emulation = cancelled;
-        if (bus->GetCart()->GetROMPath() == NULL)
+        if (bus->GetCart().GetROMPath() == NULL)
             run_emulation = false;
         if (!cancelled)
             result = NFD_ERROR;
@@ -614,7 +614,7 @@ const char* Emulator::GetButtonName(ControllerButton btn) {
 }
 
 bool Emulator::ROMInserted() {
-    return nes->GetCart()->GetROMPath() != NULL;
+    return nes->GetCart().GetROMPath() != NULL;
 }
 
 int Emulator::LockNESState() {
@@ -622,7 +622,7 @@ int Emulator::LockNESState() {
 }
 
 int Emulator::UnlockNESState() {
-    SDL_UnlockMutex(nes_state_lock);
+    return SDL_UnlockMutex(nes_state_lock);
 }
 
 void Emulator::RefreshKeyboardState() {

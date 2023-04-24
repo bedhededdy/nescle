@@ -150,9 +150,9 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->GetCart()->GetROMPath() != NULL)) {
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->GetCart().GetROMPath() != NULL)) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
+                        const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath(), game_name, i);
                         emu->SaveState(path);
                         emu->GetUsedSaveSlots()[i] = true;
@@ -169,7 +169,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->GetUsedSaveSlots()[i])) {
                         char path[1024];
-                        const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
+                        const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath());
                         sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath(), game_name, i);
                         emu->LoadState(path);
                         NESCLENotification::MakeNotification("Loaded state");
@@ -189,7 +189,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Debug")) {
-            bool cart_loaded = bus->GetCart()->GetROMPath() != NULL;
+            bool cart_loaded = bus->GetCart().GetROMPath() != NULL;
             ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
                 cart_loaded);
             ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
@@ -226,7 +226,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         ImGui::Separator();
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            if (bus->GetCart()->GetROMPath() != NULL)
+            if (bus->GetCart().GetROMPath() != NULL)
                 emu->SetRunEmulation(true);
             ImGui::CloseCurrentPopup();
         }
@@ -464,7 +464,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 void EmulationWindow::Loop() {
     Emulator* emu = emulator;
     Bus *bus = emulator->GetNES();
-    PPU* ppu = bus->GetPPU();
+    auto ppu = bus->GetPPU();
 
     while (!emulator->GetQuit()) {
         uint64_t t0 = SDL_GetTicks64();
@@ -533,7 +533,7 @@ void EmulationWindow::Loop() {
                     // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
                     // BEFORE CALLING LOAD STATE?
                     char path_to_save[1024];
-                    const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
+                    const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath());
 
                     if (emu->KeyPushed(SDLK_0)) {
                         sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->GetUserDataPath(), game_name);
@@ -579,7 +579,7 @@ void EmulationWindow::Loop() {
                 } else {
                     char path_to_save[1024];
                     // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
-                    const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
+                    const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath());
 
                     // only process one of these if multiple are pressed
                     if (emu->KeyPushed(SDLK_o)) {
@@ -870,7 +870,7 @@ void EmulationWindow::Show(Emulator* emu) {
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
     uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
-    memcpy(ppu_framebuffer, bus->GetPPU()->GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
+    memcpy(ppu_framebuffer, bus->GetPPU().GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
 
     // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
     // should 0 out the first 8 pixels of each scanline
@@ -945,7 +945,7 @@ void EmulationWindow::Show(Emulator* emu) {
 
     // set window title
     // FIXME: VERY UNSAFE
-    const char* rom_path = bus->GetCart()->GetROMPath();
+    const char* rom_path = bus->GetCart().GetROMPath();
     const char* game_name = NULL;
     if (rom_path != NULL) {
         game_name = strrchr(rom_path, '/') + 1;

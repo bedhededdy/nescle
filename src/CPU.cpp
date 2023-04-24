@@ -894,7 +894,7 @@ void CPU::NMI() {
 // https://www.nesdev.org/wiki/CPU_power_up_state
 void CPU::Reset() {
     // Set internal state to hard-coded reset values
-    if (bus->GetCart()->GetMapper() != NULL)
+    if (bus->GetCart().GetMapper() != NULL)
         pc = bus->Read16(0xfffc);
 
     /*
@@ -1095,7 +1095,7 @@ char* CPU::DisassembleString(uint16_t addr) {
             addr_eff = (b3 << 8) | b2;
             if (addr_eff >= 0x2000 && addr_eff < 0x4000)
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
-                    bus->GetPPU()->RegisterInspect(addr_eff));
+                    bus->GetPPU().RegisterInspect(addr_eff));
             else
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
                     bus->Read((b3 << 8) | b2));

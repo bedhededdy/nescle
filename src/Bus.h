@@ -15,8 +15,14 @@
  */
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
+
+#include "APU.h"
+#include "CPU.h"
+#include "Cart.h"
+#include "PPU.h"
 
 #include "NESCLETypes.h"
 
@@ -29,10 +35,10 @@ namespace NESCLE {
  */
 class Bus {
 private:
-    static constexpr int RAM_SIZE = 1024 * 2;
+    static constexpr size_t RAM_SIZE = 1024 * 2;
     static constexpr double CLOCK_FREQ = 5369318.0;
 
-    uint8_t ram[RAM_SIZE];
+    std::array<uint8_t, RAM_SIZE> ram;
 
     uint8_t controller1;
     uint8_t controller2;
@@ -47,10 +53,10 @@ private:
     bool dma_transfer;
     bool dma_dummy;
 
-    CPU* cpu;
-    PPU* ppu;
-    Cart* cart;
-    APU* apu;
+    CPU cpu;
+    PPU ppu;
+    Cart cart;
+    APU apu;
 
     // Audio info
     double time_per_sample;
@@ -95,10 +101,10 @@ public:
     void SetSampleFrequency(uint32_t sample_rate);
 
     // Getters and Setters
-    APU* GetAPU() { return apu; }
-    PPU* GetPPU() { return ppu; }
-    CPU* GetCPU() { return cpu; }
-    Cart* GetCart() { return cart; }
+    APU& GetAPU() { return apu; }
+    PPU& GetPPU() { return ppu; }
+    CPU& GetCPU() { return cpu; }
+    Cart& GetCart() { return cart; }
 
     uint8_t GetController1() { return controller1; }
     void SetController1(uint8_t data) { controller1 = data; }

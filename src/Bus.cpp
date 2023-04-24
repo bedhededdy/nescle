@@ -16,8 +16,8 @@
 // TODO: OBJECTIFY THIS
 #include "Bus.h"
 
-#include <cstring>
 #include <algorithm>
+#include <cstring>
 
 #include "APU.h"
 #include "CPU.h"
@@ -31,21 +31,17 @@
 namespace NESCLE {
 Bus::Bus() {
     Bus* bus = this;
-    bus->cpu = new CPU();
-    bus->ppu = new PPU();
-    bus->cart = new Cart();
-    bus->apu = new APU();
-    cpu->LinkBus(bus);
-    ppu->LinkBus(bus);
-    apu->LinkBus(bus);
+    cpu.LinkBus(bus);
+    ppu.LinkBus(bus);
+    apu.LinkBus(bus);
 }
 
 Bus::~Bus() {
-    Bus* bus = this;
-    delete bus->cpu;
-    delete bus->ppu;
-    delete bus->cart;
-    delete bus->apu;
+    // Bus* bus = this;
+    // delete bus->cpu;
+    // delete bus->ppu;
+    // delete bus->cart;
+    // delete bus->apu;
 }
 
 /* R/W */
@@ -54,7 +50,6 @@ void Bus::ClearMem() {
 }
 
 uint8_t Bus::Read(uint16_t addr) {
-    Bus* bus = this;
     //if (addr == 0x0776 && bus->ram[addr] == 1)
         //printf("paused\n");
 
@@ -63,14 +58,14 @@ uint8_t Bus::Read(uint16_t addr) {
         // The system reserves the first 0x2000 bytes of addressable memory
         // for RAM; however, the NES only has 2kb of RAM, so we map all
         // addresses to be within the range of 2kb
-        return bus->ram[addr % 0x800];
+        return ram[addr % 0x800];
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         /* PPU Registers */
-        return bus->ppu->RegisterRead(addr);
+        return ppu.RegisterRead(addr);
     }
     else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
-        return bus->apu->Read(addr);
+        return apu.Read(addr);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -84,12 +79,12 @@ uint8_t Bus::Read(uint16_t addr) {
         uint8_t ret;
         if (addr == 0x4016) {
             // Only want the value of the LSB
-            ret = bus->controller1_shifter & 1;
-            bus->controller1_shifter >>= 1;
+            ret = controller1_shifter & 1;
+            controller1_shifter >>= 1;
         }
         else {
-            ret = bus->controller2_shifter & 1;
-            bus->controller2_shifter >>= 1;
+            ret = controller2_shifter & 1;
+            controller2_shifter >>= 1;
         }
         return ret;
     }
@@ -97,7 +92,7 @@ uint8_t Bus::Read(uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        Mapper* mapper = bus->cart->GetMapper();
+        Mapper* mapper = cart.GetMapper();
         return mapper->MapCPURead(addr);
     }
 
@@ -119,7 +114,7 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         /* PPU Registers */
-        return bus->ppu->RegisterWrite(addr, data);
+        return ppu.RegisterWrite(addr, data);
     }
     else if (addr == 0x4014) {
         /* DMA (Direct Memory Access) */
@@ -129,12 +124,12 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
         //        AT THE END ITS VALUE MUST REMAIN IN TACT
         bus->dma_page = data;
         bus->dma_addr = 0;
-        bus->dma_2003_off = bus->ppu->RegisterRead(0x2003);
+        bus->dma_2003_off = ppu.RegisterRead(0x2003);
         bus->dma_transfer = true;
     }
     // FIXME: CONFLICT BETWEEN CONTROLLER 2 AND APU
     else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
-        return bus->apu->Write(addr, data);
+        return apu.Write(addr, data);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
         /* Controller */
@@ -151,7 +146,7 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        Mapper* mapper = bus->cart->GetMapper();
+        Mapper* mapper = cart.GetMapper();
         return mapper->MapCPUWrite(addr, data);
     }
 
@@ -175,12 +170,12 @@ bool Bus::Clock() {
     // FIXME: MAY WANNA REMOVE THE COUNTER BEING A LONG AND JUST HAVE IT RESET
     //        EACH 3, SINCE LONG CAN OVERFLOW AND CAUSE ISSUES
 
-    bus->ppu->Clock();
-    bus->apu->Clock();
+    ppu.Clock();
+    apu.Clock();
 
-    if (bus->clocks_count % 3 == 0) {
+    if (clocks_count % 3 == 0) {
         // CPU completely halts if DMA is occuring
-        if (bus->dma_transfer) {
+        if (dma_transfer) {
             // DMA takes some time, so we may have some dummy cycles
             if (bus->dma_dummy) {
                 // Sync on odd clock cycles
@@ -195,8 +190,8 @@ bool Bus::Clock() {
                     // DMA transfers 256 bytes to the OAM at once,
                     // so we auto-increment the address
                     // TODO: TRY PUTTING THE ++ IN THE FUNC CALL
-                    bus->ppu->WriteOAM(bus->dma_addr, bus->dma_data);
-                    bus->dma_addr++;
+                    ppu.WriteOAM(bus->dma_addr, bus->dma_data);
+                    dma_addr++;
 
                     // If we overflow, we know that the transfer is done
                     if (bus->dma_addr == 0) {
@@ -207,7 +202,7 @@ bool Bus::Clock() {
             }
         }
         else {
-            bus->cpu->Clock();
+            cpu.Clock();
         }
     }
 
@@ -225,14 +220,14 @@ bool Bus::Clock() {
 
     // PPU can optionally emit a NMI to the CPU upon entering the vertical
     // blank state
-    if (bus->ppu->GetNMIStatus()) {
-        bus->ppu->ClearNMIStatus();
-        bus->cpu->NMI();
+    if (ppu.GetNMIStatus()) {
+        ppu.ClearNMIStatus();
+        cpu.NMI();
     }
 
-    if (bus->cart->GetMapper()->GetIRQStatus()) {
-        bus->cart->GetMapper()->ClearIRQStatus();
-        bus->cpu->IRQ();
+    if (cart.GetMapper()->GetIRQStatus()) {
+        cart.GetMapper()->ClearIRQStatus();
+        cpu.IRQ();
     }
 
     bus->clocks_count++;
@@ -246,9 +241,9 @@ void Bus::PowerOn() {
     // Mapper* mapper = Cart_GetMapper(bus->cart);
     // if (mapper != NULL)
     //     Mapper_Reset(mapper);
-    bus->ppu->PowerOn();
-    bus->cpu->PowerOn();
-    bus->apu->PowerOn();
+    ppu.PowerOn();
+    cpu.PowerOn();
+    apu.PowerOn();
     bus->controller1 = 0;
     bus->controller2 = 0;
     bus->controller1_shifter = 0;
@@ -268,12 +263,12 @@ void Bus::PowerOn() {
 void Bus::Reset() {
     Bus* bus = this;
     // Contents of RAM do not clear on reset
-    Mapper* mapper = bus->cart->GetMapper();
+    Mapper* mapper = cart.GetMapper();
     if (mapper != NULL)
         mapper->Reset();
-    bus->ppu->Reset();
-    bus->cpu->Reset();
-    bus->apu->Reset();
+    ppu.Reset();
+    cpu.Reset();
+    apu.Reset();
     bus->clocks_count = 0;
     bus->dma_page = 0;
     bus->dma_addr = 0;
@@ -289,10 +284,10 @@ int Bus::SaveState(FILE* file) {
 int Bus::LoadState(FILE* file) {
     // Bus
     Bus* bus = this;
-    CPU* cpu_addr = bus->cpu;
-    PPU* ppu_addr = bus->ppu;
-    Cart* cart_addr = bus->cart;
-    APU* apu_addr = bus->apu;
+    auto cpu_addr = bus->cpu;
+    auto ppu_addr = bus->ppu;
+    auto cart_addr = bus->cart;
+    auto apu_addr = bus->apu;
 
     bool res = fread(bus, sizeof(Bus), 1, file);
 

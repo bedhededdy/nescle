@@ -92,8 +92,8 @@ void PatternWindow::Show(Emulator* emu) {
     // HOWEVER, IF YOU EVENTUALLY ALLOW WRITES TO THE PATTERN MEMORY FROM A
     // TILE EDITOR, YOU GOTTA LOCK HERE
     // FIXME: ALLOW CHANGING PALETTE
-    uint32_t* tbl1 = bus->GetPPU()->GetPatternTable(0, (uint8_t)palette);
-    uint32_t* tbl2 = bus->GetPPU()->GetPatternTable(1, (uint8_t)palette);
+    uint32_t* tbl1 = bus->GetPPU().GetPatternTable(0, (uint8_t)palette);
+    uint32_t* tbl2 = bus->GetPPU().GetPatternTable(1, (uint8_t)palette);
 
     // to do this showing the palettes basically make the 1 texture bigger
     // then draw the palette colors, then the pattern table and change the

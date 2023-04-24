@@ -17,8 +17,8 @@
 # Require version 3.15 for generator expressions
 cmake_minimum_required(VERSION 3.15)
 
-# Force C/C++ verison globally to ISO Standard C11+ and C++11+
-set(CMAKE_CXX_VERSION 11)
+# Force C/C++ verison globally to ISO Standard C11+ and C++14+
+set(CMAKE_CXX_VERSION 14)
 set(CMAKE_CXX_VERSION_REQUIRED true)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
