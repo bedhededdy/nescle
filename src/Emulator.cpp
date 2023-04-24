@@ -616,4 +616,20 @@ const char* Emulator::GetButtonName(ControllerButton btn) {
 bool Emulator::ROMInserted() {
     return nes->GetCart()->GetROMPath() != NULL;
 }
+
+int Emulator::LockNESState() {
+    return SDL_LockMutex(nes_state_lock);
+}
+
+int Emulator::UnlockNESState() {
+    SDL_UnlockMutex(nes_state_lock);
+}
+
+void Emulator::RefreshKeyboardState() {
+    keys = SDL_GetKeyboardState(NULL);
+}
+
+void Emulator::RefreshPrevKeys() {
+    memcpy(prev_keys, keys, sizeof(uint8_t) * sizeof(nkeys));
+}
 }

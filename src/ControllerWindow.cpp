@@ -26,9 +26,9 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
     if (ImGui::BeginPopup("Set Key")) {
         // FIXME: THERE WILL BE PROBLEMS IF USER TRIES TO MAP ESC TO SOMETHING
         if (ImGui::IsWindowFocused()) {
-            if (emu->most_recent_key_this_frame != SDLK_ESCAPE &&
-                emu->most_recent_key_this_frame != SDLK_UNKNOWN)
-                last_keypress = emu->most_recent_key_this_frame;
+            if (emu->GetMostRecentKeyThisFrame() != SDLK_ESCAPE &&
+                emu->GetMostRecentKeyThisFrame() != SDLK_UNKNOWN)
+                last_keypress = emu->GetMostRecentKeyThisFrame();
         }
         if (last_keypress == SDLK_UNKNOWN)
             ImGui::Text("Press a key to map button");

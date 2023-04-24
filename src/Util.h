@@ -15,9 +15,8 @@
  */
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define UTIL_WINDOWS

@@ -29,10 +29,6 @@
 
 namespace NESCLE {
 class Emulator {
-private:
-
-    void LogKeymaps();
-
 public:
     enum class SyncType {
         AUDIO,
@@ -89,7 +85,7 @@ public:
         // bool cart_inserted;
     };
 
-    // FIXME: MAKE THESE PRIVATE
+private:
     Bus* nes;
     SDL_mutex* nes_state_lock;
 
@@ -114,6 +110,9 @@ public:
     bool quit;
     bool run_emulation;
 
+    void LogKeymaps();
+
+public:
     Emulator(const char* settings_path);
     ~Emulator();
 
@@ -139,5 +138,36 @@ public:
     bool MapButton(ControllerButton button, SDL_KeyCode key);
 
     bool ROMInserted();
+
+    SDL_KeyCode GetMostRecentKeyThisFrame() { return most_recent_key_this_frame; }
+    void SetMostRecentKeyThisFrame(SDL_KeyCode key) { most_recent_key_this_frame = key; }
+
+    Settings* GetSettings() { return &settings; }
+
+    bool GetRunEmulation() { return run_emulation; }
+    void SetRunEmulation(bool run) { run_emulation = run; }
+
+    bool GetQuit() { return quit; }
+    void SetQuit(bool quit) { quit = quit; }
+
+    Bus* GetNES() { return nes; }
+
+    const char* GetUserDataPath() { return user_data_path; }
+    const char* GetExePath() { return exe_path; }
+
+    bool* GetUsedSaveSlots() { return used_saveslots; }
+
+    int LockNESState();
+    int UnlockNESState();
+
+    void SetATurbo(bool turbo) { aturbo = turbo; }
+    void SetBTurbo(bool turbo) { bturbo = turbo; }
+    bool GetATurbo() { return aturbo; }
+    bool GetBTurbo() { return bturbo; }
+
+    void RefreshKeyboardState();
+    void RefreshPrevKeys();
+
+    SDL_AudioDeviceID GetAudioDevice() { return audio_device; }
 };
 }

@@ -22,7 +22,7 @@ namespace NESCLE {
 void SettingsWindow::Show(Emulator* emu) {
     // Wanna be able to set vsync and change sync to audio/video
     bool show_popup = false;
-    Emulator::Settings* settings = &emu->settings;
+    Emulator::Settings* settings = emu->GetSettings();
     if (ImGui::Begin("Settings", show)) {
         // Have to create this dummy var because casting Emulator_SyncType*
         // to int* is considered unsafe as technically in C an enum does
@@ -54,7 +54,7 @@ void SettingsWindow::Show(Emulator* emu) {
 
     if (show_popup) {
         ImGui::OpenPopup("Sync Changed");
-        emu->run_emulation = false;
+        emu->SetRunEmulation(false);
     }
 
     if (ImGui::BeginPopupModal("Sync Changed", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -67,7 +67,7 @@ void SettingsWindow::Show(Emulator* emu) {
         float x_space = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(x_space / 2.0f - 60.0f);
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            emu->run_emulation = true;
+            emu->SetRunEmulation(true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

@@ -131,7 +131,7 @@
 namespace NESCLE {
 void EmulationWindow::RenderMainGUI(Emulator* emu) {
     // ImGui::Shortcut()
-    Bus* bus = emu->nes;
+    Bus* bus = emu->GetNES();
 
     bool show_popup = false;
     if (ImGui::BeginMainMenuBar()) {
@@ -153,9 +153,9 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, bus->GetCart()->GetROMPath() != NULL)) {
                         char path[1024];
                         const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
-                        sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
+                        sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath(), game_name, i);
                         emu->SaveState(path);
-                        emu->used_saveslots[i] = true;
+                        emu->GetUsedSaveSlots()[i] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     }
                 }
@@ -167,10 +167,10 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[13];
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->used_saveslots[i])) {
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->GetUsedSaveSlots()[i])) {
                         char path[1024];
                         const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
-                        sprintf(path, "%ssaves/%sslot%d.sav", emu->user_data_path, game_name, i);
+                        sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath(), game_name, i);
                         emu->LoadState(path);
                         NESCLENotification::MakeNotification("Loaded state");
                     }
@@ -184,7 +184,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
            if (ImGui::MenuItem("Reset", "Ctrl+R"))
                bus->Reset();
            if (ImGui::MenuItem("Play/Pause", "Ctrl+P"))
-               emu->run_emulation = !emu->run_emulation;
+               emu->SetRunEmulation(!emu->GetRunEmulation());
 
            ImGui::EndMenu();
         }
@@ -227,7 +227,7 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
             if (bus->GetCart()->GetROMPath() != NULL)
-                emu->run_emulation = true;
+                emu->SetRunEmulation(true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -385,7 +385,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // BECAUSE ALTHOUGH SDL_malloc IS A MACRO TO MALLOC
     // IT JUST PLAIN SUBSTITUES THE REGULAR MALLOC AND NOT THE DEBUG
     // VERSION OF MALLOC THAT ALLOWS US TO TRACK MEMORY LEAKS
-    Bus* bus = emulator->nes;
+    Bus* bus = emulator->GetNES();
 
     for (size_t i = 0; i < WindowType::COUNT; i++)
         sub_windows[i] = nullptr;
@@ -415,7 +415,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 
     // FIXME: BUG, SOMEHOW VSYNC IS GETTING DISABLED BEFORE WE GET HERE
     // REGARDLESS OF THE SETTING
-    if (emulator->settings.vsync) {
+    if (emulator->GetSettings()->vsync) {
         SDL_Log("Vsync enabled\n");
         SDL_GL_SetSwapInterval(1);
     } else {
@@ -463,15 +463,15 @@ EmulationWindow::EmulationWindow(int w, int h) {
 
 void EmulationWindow::Loop() {
     Emulator* emu = emulator;
-    Bus *bus = emulator->nes;
+    Bus *bus = emulator->GetNES();
     PPU* ppu = bus->GetPPU();
 
-    while (!emulator->quit) {
+    while (!emulator->GetQuit()) {
         uint64_t t0 = SDL_GetTicks64();
 
-        emu->most_recent_key_this_frame = SDLK_UNKNOWN;
+        emu->SetMostRecentKeyThisFrame(SDLK_UNKNOWN);
         SDL_Event event;
-        if (SDL_LockMutex(emulator->nes_state_lock) < 0) {
+        if (emulator->LockNESState() < 0) {
             SDL_Log("Failed to lock mutex\n");
             continue;
         }
@@ -480,17 +480,17 @@ void EmulationWindow::Loop() {
 
             switch (event.type) {
             case SDL_QUIT:
-                emulator->quit = true;
+                emu->SetQuit(true);
                 break;
             case SDL_KEYDOWN:
-                emu->most_recent_key_this_frame =
-                    static_cast<SDL_KeyCode>(event.key.keysym.sym);
+                emu->SetMostRecentKeyThisFrame(
+                    static_cast<SDL_KeyCode>(event.key.keysym.sym));
             case SDL_WINDOWEVENT:
                 switch (event.window.event)
                 {
                 case SDL_WINDOWEVENT_CLOSE:
                     if (event.window.windowID == GetWindowID())
-                        emulator->quit = true;
+                        emu->SetQuit(true);
                     break;
                 case SDL_WINDOWEVENT_FOCUS_LOST:
                     // FIXME: WOULD NEED TO CHECK IF RUN EMULATION WAS
@@ -514,7 +514,7 @@ void EmulationWindow::Loop() {
 
         uint8_t prev_controller1 = bus->GetController1();
         bus->SetController1(0);
-        emu->keys = SDL_GetKeyboardState(NULL);
+        emu->RefreshKeyboardState();
 
         uint32_t window_flags = SDL_GetWindowFlags(window);
         bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
@@ -526,7 +526,7 @@ void EmulationWindow::Loop() {
             if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
                 imgui_inactive = false;
 
-        emu->aturbo = emu->bturbo = false;
+        emu->SetATurbo(false); emu->SetBTurbo(false);
         if (emulation_window_active && imgui_inactive) {
             if (emu->KeyHeld(SDLK_LCTRL) || emu->KeyHeld(SDLK_RCTRL)) {
                 if (emu->KeyHeld(SDLK_LSHIFT) || emu->KeyHeld(SDLK_RSHIFT)) {
@@ -536,43 +536,43 @@ void EmulationWindow::Loop() {
                     const char* game_name = Util_GetFileName(bus->GetCart()->GetROMPath());
 
                     if (emu->KeyPushed(SDLK_0)) {
-                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_1)) {
-                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_2)) {
-                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_3)) {
-                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_4)) {
-                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_5)) {
-                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_6)) {
-                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_7)) {
-                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_8)) {
-                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     } else if (emu->KeyPushed(SDLK_9)) {
-                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->GetUserDataPath(), game_name);
                         emu->LoadState(path_to_save);
                         NESCLENotification::MakeNotification("Loaded state");
                     }
@@ -586,73 +586,73 @@ void EmulationWindow::Loop() {
                         emu->LoadROM();
                         // TODO: SHOW POPUP
                     } else if (emu->KeyPushed(SDLK_p)) {
-                        emu->run_emulation = !emu->run_emulation;
+                        emu->SetRunEmulation(!emu->GetRunEmulation());
                     } else if (emu->KeyPushed(SDLK_r)) {
                         bus->Reset();
                     } else if (emu->KeyPushed(SDLK_f)) {
                         show_frametime = !show_frametime;
                     } else if (emu->KeyPushed(SDLK_0)) {
-                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[0] = true;
+                        emu->GetUsedSaveSlots()[0] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_1)) {
-                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[1] = true;
+                        emu->GetUsedSaveSlots()[1] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_2)) {
-                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[2] = true;
+                        emu->GetUsedSaveSlots()[2] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_3)) {
-                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[3] = true;
+                        emu->GetUsedSaveSlots()[3] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_4)) {
-                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[4] = true;
+                        emu->GetUsedSaveSlots()[4] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_5)) {
-                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[5] = true;
+                        emu->GetUsedSaveSlots()[5] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_6)) {
-                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->GetUserDataPath(), game_name);
                         // FIXME: HAVE TO CHECK THAT SAVE WAS SUCCESSFUL
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[6] = true;
+                        emu->GetUsedSaveSlots()[6] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_7)) {
-                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[7] = true;
+                        emu->GetUsedSaveSlots()[7] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_8)) {
-                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[8] = true;
+                        emu->GetUsedSaveSlots()[8] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     } else if (emu->KeyPushed(SDLK_9)) {
-                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->user_data_path, game_name);
+                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->GetUserDataPath(), game_name);
                         emu->SaveState(path_to_save);
-                        emu->used_saveslots[9] = true;
+                        emu->GetUsedSaveSlots()[9] = true;
                         NESCLENotification::MakeNotification("Saved state");
                     }
                 }
             } else {
-                const Emulator::Controller* btn_map = &emu->settings.controller1;
+                const Emulator::Controller* btn_map = &emu->GetSettings()->controller1;
 
-                emu->aturbo = emu->KeyHeld(btn_map->aturbo);
-                emu->bturbo = emu->KeyHeld(btn_map->bturbo);
-                if (emu->aturbo)
+                emu->SetATurbo(emu->KeyHeld(btn_map->aturbo));
+                emu->SetBTurbo(emu->KeyHeld(btn_map->bturbo));
+                if (emu->GetATurbo())
                     bus->SetController1(bus->GetController1()
                         | (prev_controller1 & Bus::BUS_CONTROLLER_A));
-                if (emu->bturbo)
+                if (emu->GetBTurbo())
                     bus->SetController1(bus->GetController1()
                         | (prev_controller1 & Bus::BUS_CONTROLLER_B));
                 if (emu->KeyHeld(btn_map->up))
@@ -681,11 +681,11 @@ void EmulationWindow::Loop() {
         // THE AUDIO THREAD MAY BE SPINNING WAITING FOR THE LOCK
         Show(emulator);
 
-        memcpy(emu->prev_keys, emu->keys, sizeof(uint8_t) * emu->nkeys);
+        emulator->RefreshPrevKeys();
 
         // Need to sleep (8ms is good because it ensures we will see new frame)
         // to avoid starving the audio thread
-        if (emulator->settings.vsync == false && emulator->settings.sync == Emulator::SyncType::AUDIO)
+        if (emulator->GetSettings()->vsync == false && emulator->GetSettings()->sync == Emulator::SyncType::AUDIO)
             SDL_Delay(8);
 
         frametime = SDL_GetTicks64() - t0;
@@ -718,7 +718,7 @@ EmulationWindow::~EmulationWindow() {
 }
 
 void EmulationWindow::Show(Emulator* emu) {
-    Bus* bus = emu->nes;
+    Bus* bus = emu->GetNES();
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -727,7 +727,7 @@ void EmulationWindow::Show(Emulator* emu) {
     ImGuiIO& io = ImGui::GetIO();
 
     // emulate before drawing anything, because glTexSubImage2D is blocking
-    if (emu->settings.sync == Emulator::SyncType::VIDEO) {
+    if (emu->GetSettings()->sync == Emulator::SyncType::VIDEO) {
         // FIXME: TO DO THIS FOR ANY REFRESH RATE, WHAT WE NEED TO DO IS
         // FIGURE OUT HOW MANY SAMPLES ARE IN A FRAME AND THEN ADD X SAMPLES
         // EVERY Y FRAMES
@@ -757,7 +757,7 @@ void EmulationWindow::Show(Emulator* emu) {
         emu->AudioCallback(emu, reinterpret_cast<uint8_t*>(stream),
             sizeof(stream));
 
-        if (SDL_QueueAudio(emu->audio_device, stream, sizeof(stream)) < 0)
+        if (SDL_QueueAudio(emu->GetAudioDevice(), stream, sizeof(stream)) < 0)
             SDL_Log("SDL_QueueAudio failed: %s", SDL_GetError());
     }
 
@@ -776,7 +776,7 @@ void EmulationWindow::Show(Emulator* emu) {
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
-    SDL_UnlockMutex(emulator->nes_state_lock);
+    emu->UnlockNESState();
 
     // Rest in dark
     ImGui::StyleColorsDark();
@@ -866,7 +866,7 @@ void EmulationWindow::Show(Emulator* emu) {
     // the only time it should shoot up is when there is contention for the
     // lock (or a cache miss)
     // uint64_t t0 = SDL_GetPerformanceCounter();
-    SDL_LockMutex(emulator->nes_state_lock);
+    emu->LockNESState();
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
     uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
@@ -877,7 +877,7 @@ void EmulationWindow::Show(Emulator* emu) {
     //for (int i = 0; i < PPU_RESOLUTION_Y; i++) {
     //    memset(ppu_framebuffer + i * PPU_RESOLUTION_X, 0, 8 * sizeof(uint32_t));
     //}
-    SDL_UnlockMutex(emulator->nes_state_lock);
+    emu->UnlockNESState();
     // SDL_Log("cycles taken: %llu", SDL_GetPerformanceCounter() - t0);
 
     // THIS CALL CAN BE BLOCKING
