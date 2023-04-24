@@ -148,7 +148,7 @@ public:
     void SetRunEmulation(bool run) { run_emulation = run; }
 
     bool GetQuit() { return quit; }
-    void SetQuit(bool quit) { quit = quit; }
+    void SetQuit(bool _quit) { quit = _quit; }
 
     Bus* GetNES() { return nes; }
 
