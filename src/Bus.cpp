@@ -98,7 +98,7 @@ uint8_t Bus::Read(uint16_t addr) {
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
         Mapper* mapper = bus->cart->GetMapper();
-        return Mapper_MapCPURead(mapper, addr);
+        return mapper->MapCPURead(addr);
     }
 
     // Return 0 on failed read
@@ -152,7 +152,7 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
         Mapper* mapper = bus->cart->GetMapper();
-        return Mapper_MapCPUWrite(mapper, addr, data);
+        return mapper->MapCPUWrite(addr, data);
     }
 
     // Return false on failed read
@@ -230,8 +230,8 @@ bool Bus::Clock() {
         bus->cpu->NMI();
     }
 
-    if (Mapper_GetIRQStatus(bus->cart->GetMapper())) {
-        Mapper_ClearIRQStatus(bus->cart->GetMapper());
+    if (bus->cart->GetMapper()->GetIRQStatus()) {
+        bus->cart->GetMapper()->ClearIRQStatus();
         bus->cpu->IRQ();
     }
 
@@ -270,7 +270,7 @@ void Bus::Reset() {
     // Contents of RAM do not clear on reset
     Mapper* mapper = bus->cart->GetMapper();
     if (mapper != NULL)
-        Mapper_Reset(mapper);
+        mapper->Reset();
     bus->ppu->Reset();
     bus->cpu->Reset();
     bus->apu->Reset();

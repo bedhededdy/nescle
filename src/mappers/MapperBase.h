@@ -18,16 +18,23 @@
 #include <cstdio>
 
 #include "../Cart.h"
-#include "../Mapper.h"
 
 namespace NESCLE {
 class MapperBase {
+public:
+    enum MirrorMode {
+        MAPPER_MIRRORMODE_HORZ,   // Horizontal
+        MAPPER_MIRRORMODE_VERT,       // Vertical
+        MAPPER_MIRRORMODE_OSLO,       // One-Screen lo
+        MAPPER_MIRRORMODE_OSHI        // One-Screen hi
+    };
+
 protected:
     Cart *cart;
-    Mapper_MirrorMode mirror_mode;
+    MirrorMode mirror_mode;
 
 public:
-    MapperBase(Cart* _cart, Mapper_MirrorMode _mirror)
+    MapperBase(Cart* _cart, MirrorMode _mirror)
         : cart(_cart), mirror_mode(_mirror) {}
     virtual ~MapperBase() = default;
 
@@ -45,6 +52,6 @@ public:
     virtual bool GetIRQStatus() { return false; }
     virtual void ClearIRQStatus() {}
 
-    Mapper_MirrorMode GetMirrorMode() { return mirror_mode; }
+    MirrorMode GetMirrorMode() { return mirror_mode; }
 };
 }

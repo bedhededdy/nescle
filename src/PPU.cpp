@@ -787,7 +787,7 @@ break;
     // Properly increment the cycle and scanline
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
-            Mapper_CountdownScanline(ppu->bus->GetCart()->GetMapper());
+            ppu->bus->GetCart()->GetMapper()->CountdownScanline();
         }
     }
     ppu->cycle++;
@@ -909,15 +909,15 @@ uint8_t PPU::Read(uint16_t addr) {
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
         Mapper* mapper = bus->GetCart()->GetMapper();
-        return Mapper_MapPPURead(mapper, addr);
+        return mapper->MapPPURead(addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(bus->GetCart()->GetMapper());
+        MapperBase::MirrorMode mirror_mode = bus->GetCart()->GetMapper()->GetMirrorMode();
 
-        if (mirror_mode == MAPPER_MIRRORMODE_HORZ) {
+        if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_HORZ) {
             // see vertical comments for explanation
             if (addr >= 0 && addr < 0x800)
                 return ppu->nametbl[0][addr % 0x400];
@@ -925,7 +925,7 @@ uint8_t PPU::Read(uint16_t addr) {
                 return ppu->nametbl[1][addr % 0x400];
 
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_VERT) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_VERT) {
             // notice how two different address ranges map to the same thing
             // this is because each of the two nametables each contain 1kb of data
             // and we mirror vertically for the remaining parts of the address range
@@ -938,10 +938,10 @@ uint8_t PPU::Read(uint16_t addr) {
             else if (addr >= 0xc00 && addr < 0x1000)
                 return ppu->nametbl[1][addr % 0x400];
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_OSLO) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_OSLO) {
             return ppu->nametbl[0][addr % 0x400];
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_OSHI) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_OSHI) {
             return ppu->nametbl[1][addr % 0x400];
         }
         else {
@@ -1015,16 +1015,16 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
         Mapper* mapper = bus->GetCart()->GetMapper();
-        return Mapper_MapPPUWrite(mapper, addr, data);
+        return mapper->MapPPUWrite(addr, data);
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
         //printf("writing to naemtable\n");
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper_MirrorMode mirror_mode = Mapper_GetMirrorMode(bus->GetCart()->GetMapper());
+        MapperBase::MirrorMode mirror_mode = bus->GetCart()->GetMapper()->GetMirrorMode();
         //printf("writing nametable\n");
-        if (mirror_mode == MAPPER_MIRRORMODE_HORZ) {
+        if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_HORZ) {
             if (addr >= 0 && addr < 0x800) {
                 ppu->nametbl[0][addr % 0x400] = data;
                 return true;
@@ -1035,7 +1035,7 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
                 return true;
             }
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_VERT) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_VERT) {
             if (addr >= 0 && addr < 0x400) {
                 ppu->nametbl[0][addr % 0x400] = data;
                 return true;
@@ -1053,11 +1053,11 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
                 return true;
             }
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_OSLO) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_OSLO) {
             ppu->nametbl[0][addr % 0x400] = data;
             return true;
         }
-        else if (mirror_mode == MAPPER_MIRRORMODE_OSHI) {
+        else if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_OSHI) {
             ppu->nametbl[1][addr % 0x400] = data;
             return true;
         }

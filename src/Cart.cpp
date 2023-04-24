@@ -34,7 +34,7 @@ Cart::Cart() {
 }
 
 Cart::~Cart() {
-    Mapper_Destroy(mapper);
+    delete mapper;
     free(rom_path);
     free(prg_rom);
     free(chr_rom);
@@ -146,16 +146,16 @@ bool Cart::LoadROM(const char* path) {
         "Cart_LoadROM: mapper id %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    Mapper_MirrorMode mirror_mode = (header->mapper1 & 1) ?
-        MAPPER_MIRRORMODE_VERT : MAPPER_MIRRORMODE_HORZ;
+    MapperBase::MirrorMode mirror_mode = (header->mapper1 & 1) ?
+        MapperBase::MAPPER_MIRRORMODE_VERT : MapperBase::MAPPER_MIRRORMODE_HORZ;
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Cart_LoadROM: mirror mode %d\n", mirror_mode);
 
     // Initialize cart's mapper (mapper destroy is safe to pass NULL to)
     // We must check NULL return from Mapper_Create, as failing to allocate
     // the mapper is not a critical error
-    Mapper_Destroy(mapper);
-    mapper = Mapper_Create(mapper_id, this, mirror_mode);
+    delete mapper;
+    mapper = new Mapper(mapper_id, this, mirror_mode);
     if (mapper == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed to create mapper\n");

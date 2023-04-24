@@ -26,9 +26,9 @@
 #include "mappers/Mapper066.h"
 
 namespace NESCLE {
-Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
-    Mapper* mapper = (Mapper*)malloc(sizeof(Mapper));
-    mapper->id = id;
+Mapper::Mapper(uint8_t _id, Cart* cart, MapperBase::MirrorMode mirror) {
+    Mapper* mapper = this;
+    id = _id;
 
     switch (id) {
     case 0:
@@ -57,66 +57,56 @@ Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror) {
         mapper->mapper_class = NULL;
         break;
     }
-
-    if (mapper->mapper_class == NULL) {
-        free(mapper);
-        mapper = NULL;
-    }
-
-    return mapper;
 }
 
-void Mapper_Destroy(Mapper* mapper) {
-    if (mapper != NULL) {
-        delete static_cast<MapperBase*>(mapper->mapper_class);
-        free(mapper);
-    }
+Mapper::~Mapper() {
+    delete static_cast<MapperBase*>(mapper_class);
 }
 
-void Mapper_Reset(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->Reset();
+void Mapper::Reset() {
+    static_cast<MapperBase*>(mapper_class)->Reset();
 }
 
-uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->MapCPURead(addr);
+uint8_t Mapper::MapCPURead(uint16_t addr) {
+    return static_cast<MapperBase*>(mapper_class)->MapCPURead(addr);
 }
 
-bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+bool Mapper::MapCPUWrite(uint16_t addr, uint8_t data) {
     return static_cast<MapperBase*>
-        (mapper->mapper_class)->MapCPUWrite(addr, data);
+        (mapper_class)->MapCPUWrite(addr, data);
 }
 
-uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr) {
+uint8_t Mapper::MapPPURead(uint16_t addr) {
     return static_cast<MapperBase*>
-        (mapper->mapper_class)->MapPPURead(addr);
+        (mapper_class)->MapPPURead(addr);
 }
 
-bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data) {
+bool Mapper::MapPPUWrite(uint16_t addr, uint8_t data) {
     return static_cast<MapperBase*>
-        (mapper->mapper_class)->MapPPUWrite(addr, data);
+        (mapper_class)->MapPPUWrite(addr, data);
 }
 
-bool Mapper_SaveState(Mapper* mapper, FILE* file) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->SaveState(file);
+bool Mapper::SaveState(FILE* file) {
+    return static_cast<MapperBase*>(mapper_class)->SaveState(file);
 }
 
-bool Mapper_LoadState(Mapper* mapper, FILE* file) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->LoadState(file);
+bool Mapper::LoadState(FILE* file) {
+    return static_cast<MapperBase*>(mapper_class)->LoadState(file);
 }
 
-void Mapper_CountdownScanline(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->CountdownScanline();
+void Mapper::CountdownScanline() {
+    static_cast<MapperBase*>(mapper_class)->CountdownScanline();
 }
 
-bool Mapper_GetIRQStatus(Mapper* mapper) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->GetIRQStatus();
+bool Mapper::GetIRQStatus() {
+    return static_cast<MapperBase*>(mapper_class)->GetIRQStatus();
 }
 
-void Mapper_ClearIRQStatus(Mapper* mapper) {
-    static_cast<MapperBase*>(mapper->mapper_class)->ClearIRQStatus();
+void Mapper::ClearIRQStatus() {
+    static_cast<MapperBase*>(mapper_class)->ClearIRQStatus();
 }
 
-Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper) {
-    return static_cast<MapperBase*>(mapper->mapper_class)->GetMirrorMode();
+MapperBase::MirrorMode Mapper::GetMirrorMode() {
+    return static_cast<MapperBase*>(mapper_class)->GetMirrorMode();
 }
 }

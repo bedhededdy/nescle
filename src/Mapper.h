@@ -15,41 +15,37 @@
  */
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
+
+#include "mappers/MapperBase.h"
 
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-typedef enum mapper_mirror_mode {
-    MAPPER_MIRRORMODE_HORZ,   // Horizontal
-    MAPPER_MIRRORMODE_VERT,   // Vertical
-    MAPPER_MIRRORMODE_OSLO,   // One-Screen lo
-    MAPPER_MIRRORMODE_OSHI    // One-Screen hi
-} Mapper_MirrorMode;
-
-struct mapper {
+class Mapper {
+private:
     uint8_t id;
-    void* mapper_class;
+    MapperBase* mapper_class;
+
+public:
+    Mapper(uint8_t _id, Cart* cart, MapperBase::MirrorMode mirror);
+    ~Mapper();
+
+    void Reset();
+
+    uint8_t MapCPURead(uint16_t addr);
+    bool MapCPUWrite(uint16_t addr, uint8_t data);
+    uint8_t MapPPURead(uint16_t addr);
+    bool MapPPUWrite(uint16_t addr, uint8_t data);
+
+    bool SaveState(FILE* file);
+    bool LoadState(FILE* file);
+
+    void CountdownScanline();
+    bool GetIRQStatus();
+    void ClearIRQStatus();
+
+    MapperBase::MirrorMode GetMirrorMode();
 };
-
-Mapper* Mapper_Create(uint8_t id, Cart* cart, Mapper_MirrorMode mirror);
-void Mapper_Destroy(Mapper* mapper);
-
-void Mapper_Reset(Mapper* mapper);
-
-uint8_t Mapper_MapCPURead(Mapper* mapper, uint16_t addr);
-bool Mapper_MapCPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
-uint8_t Mapper_MapPPURead(Mapper* mapper, uint16_t addr);
-bool Mapper_MapPPUWrite(Mapper* mapper, uint16_t addr, uint8_t data);
-
-bool Mapper_SaveState(Mapper* mapper, FILE* file);
-bool Mapper_LoadState(Mapper* mapper, FILE* file);
-
-void Mapper_CountdownScanline(Mapper* mapper);
-bool Mapper_GetIRQStatus(Mapper* mapper);
-void Mapper_ClearIRQStatus(Mapper* mapper);
-
-Mapper_MirrorMode Mapper_GetMirrorMode(Mapper* mapper);
 }
