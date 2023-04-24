@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <string>
 
 #include "NESCLETypes.h"
 
@@ -43,7 +44,7 @@ private:
 
     ROMHeader metadata;
     FileType file_type;
-    char* rom_path;
+    std::string rom_path;
 
     Mapper* mapper;
 
@@ -67,7 +68,7 @@ public:
     void SetMapper(Mapper* mapper);
     Mapper* GetMapper();
 
-    const char* GetROMPath();
+    const std::string& GetROMPath();
 
     uint8_t GetPrgRomBlocks();
     size_t GetPrgRomBytes();

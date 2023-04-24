@@ -205,7 +205,7 @@ Emulator::~Emulator() {
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
 bool Emulator::SaveState(const char* path) {
-    if (nes->GetCart().GetROMPath() == NULL) {
+    if (!ROMInserted()) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
@@ -565,7 +565,7 @@ nfdresult_t Emulator::LoadROM() {
 
     if (!bus->GetCart().LoadROM((const char*)rom)) {
         run_emulation = cancelled;
-        if (bus->GetCart().GetROMPath() == NULL)
+        if (!ROMInserted())
             run_emulation = false;
         if (!cancelled)
             result = NFD_ERROR;
@@ -614,7 +614,7 @@ const char* Emulator::GetButtonName(ControllerButton btn) {
 }
 
 bool Emulator::ROMInserted() {
-    return nes->GetCart().GetROMPath() != NULL;
+    return !nes->GetCart().GetROMPath().empty();
 }
 
 int Emulator::LockNESState() {

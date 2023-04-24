@@ -30,12 +30,10 @@ Cart::Cart() {
     mapper = nullptr;
     prg_rom = nullptr;
     chr_rom = nullptr;
-    rom_path = nullptr;
 }
 
 Cart::~Cart() {
     delete mapper;
-    free(rom_path);
     free(prg_rom);
     free(chr_rom);
 }
@@ -164,12 +162,7 @@ bool Cart::LoadROM(const char* path) {
 
     // Free previous path if it exists and copy it into the cart
     size_t path_len = strlen(path) + 1;
-    rom_path = (char*)realloc(rom_path, path_len);
-    if (rom_path == NULL) {
-        printf("Cart_LoadROM: alloc rom_path\n");
-        return false;
-    }
-    memcpy(rom_path, path, path_len);
+    rom_path = path;
 
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Cart_LoadROM: prg_ram_size %d\n", metadata.prg_ram_size);
@@ -186,9 +179,9 @@ bool Cart::SaveState(FILE* file) {
     // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
     // SCENARIO WHERE THERE IS NO ROM LOADED
     bool b1 = fwrite(this, sizeof(Cart), 1, file) == 1;
-    size_t rom_path_len = strlen(rom_path) + 1;
+    size_t rom_path_len = rom_path.size() + 1;
     bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
-    bool b3 = fwrite(rom_path, sizeof(char), rom_path_len, file) == 1;
+    bool b3 = fwrite(rom_path.c_str(), sizeof(char), rom_path_len, file) == 1;
     bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
     bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
     return b1 && b2 && b3 && b4 && b5;
@@ -199,7 +192,6 @@ bool Cart::LoadState(FILE* file) {
     // SCENARIO WHERE THERE IS NO ROM LOADED
 
     // Free the old addresses
-    free(rom_path);
     free(prg_rom);
     free(chr_rom);
 
@@ -207,13 +199,10 @@ bool Cart::LoadState(FILE* file) {
     size_t rom_path_len;
     bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
 
-    rom_path = (char*)malloc(sizeof(char) * rom_path_len);
-    if (rom_path == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadState: alloc rom_path\n");
-        return false;
-    }
-    bool b3 = fread(rom_path, sizeof(char), rom_path_len, file) == 1;
+    char* tmp = (char*)malloc(rom_path_len);
+    bool b3 = fread(tmp, sizeof(char), rom_path_len, file) == 1;
+    rom_path = tmp;
+    free(tmp);
 
     prg_rom = (uint8_t*)malloc(GetPrgRomBytes());
     if (prg_rom == NULL) {
@@ -278,7 +267,7 @@ Mapper* Cart::GetMapper() {
     return mapper;
 }
 
-const char* Cart::GetROMPath() {
+const std::string& Cart::GetROMPath() {
     return rom_path;
 }
 
