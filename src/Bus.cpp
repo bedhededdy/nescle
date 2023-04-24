@@ -277,11 +277,11 @@ void Bus::Reset() {
     bus->dma_dummy = true;
 }
 
-int Bus::SaveState(FILE* file) {
+bool Bus::SaveState(FILE* file) {
     return fwrite(this, sizeof(Bus), 1, file) == 1;
 }
 
-int Bus::LoadState(FILE* file) {
+bool Bus::LoadState(FILE* file) {
     // Bus
     Bus* bus = this;
     auto cpu_addr = bus->cpu;

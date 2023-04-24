@@ -95,8 +95,8 @@ public:
     void PowerOn(); // Sets entire system to powerup state
     void Reset();   // Equivalent to pushing the RESET button on a NES
 
-    int SaveState(FILE* file);
-    int LoadState(FILE* file);
+    bool SaveState(FILE* file);
+    bool LoadState(FILE* file);
 
     void SetSampleFrequency(uint32_t sample_rate);
 

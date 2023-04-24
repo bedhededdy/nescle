@@ -630,6 +630,6 @@ void Emulator::RefreshKeyboardState() {
 }
 
 void Emulator::RefreshPrevKeys() {
-    memcpy(prev_keys, keys, sizeof(uint8_t) * sizeof(nkeys));
+    memcpy(prev_keys, keys, sizeof(uint8_t) * nkeys);
 }
 }
