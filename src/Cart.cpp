@@ -17,9 +17,9 @@
 
 #include <SDL_log.h>
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
+#include <cstring>
 
 #include "PPU.h"
 #include "Mapper.h"
@@ -28,14 +28,10 @@
 namespace NESCLE {
 Cart::Cart() {
     mapper = nullptr;
-    prg_rom = nullptr;
-    chr_rom = nullptr;
 }
 
 Cart::~Cart() {
     delete mapper;
-    free(prg_rom);
-    free(chr_rom);
 }
 
 bool Cart::LoadROM(const char* path) {
@@ -105,13 +101,10 @@ bool Cart::LoadROM(const char* path) {
     // Recall that Util_Safe* is just a wrapper around stdlib functions that
     // will exit the program if the allocation fails
     const size_t prg_rom_nbytes = Cart::GetPrgRomBytes();
-    prg_rom = (uint8_t*)realloc(prg_rom, prg_rom_nbytes);
-    if (prg_rom == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: failed alloc\n");
-        return false;
-    }
-    if (fread(prg_rom, sizeof(uint8_t), prg_rom_nbytes, rom)
+    prg_rom.resize(prg_rom_nbytes);
+    prg_rom.shrink_to_fit();
+    // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
+    if (fread(&prg_rom[0], sizeof(uint8_t), prg_rom_nbytes, rom)
         != prg_rom_nbytes) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed reading prg_rom\n");
@@ -122,13 +115,11 @@ bool Cart::LoadROM(const char* path) {
     // is used as RAM. GetChrRomBytes will return 8kb in this case, so we
     // must use GetChrRomBlocks to check if there is RAM or not
     const size_t chr_rom_nbytes = Cart::GetChrRomBytes();
-    chr_rom = (uint8_t*)realloc(chr_rom, chr_rom_nbytes);
-    if (chr_rom == NULL) {
-        printf("Cart_LoadROM: alloc chr_ram\n");
-        return false;
-    }
+    chr_rom.resize(chr_rom_nbytes);
+    chr_rom.shrink_to_fit();
     if (GetChrRomBlocks() > 0) {
-        if (fread(chr_rom, sizeof(uint8_t), chr_rom_nbytes, rom)
+        // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
+        if (fread(&chr_rom[0], sizeof(uint8_t), chr_rom_nbytes, rom)
             != chr_rom_nbytes) {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                 "Cart_LoadROM: failed reading chr_rom\n");
@@ -182,18 +173,14 @@ bool Cart::SaveState(FILE* file) {
     size_t rom_path_len = rom_path.size() + 1;
     bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
     bool b3 = fwrite(rom_path.c_str(), sizeof(char), rom_path_len, file) == 1;
-    bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
-    return b1 && b2 && b3 && b4 && b5;
+    // bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
+    // bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
+    return b1 && b2 && b3; //&& b4 && b5;
 }
 
 bool Cart::LoadState(FILE* file) {
     // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
     // SCENARIO WHERE THERE IS NO ROM LOADED
-
-    // Free the old addresses
-    free(prg_rom);
-    free(chr_rom);
 
     bool b1 = fread(this, sizeof(Cart), 1, file) == 1;
     size_t rom_path_len;
@@ -204,23 +191,15 @@ bool Cart::LoadState(FILE* file) {
     rom_path = tmp;
     free(tmp);
 
-    prg_rom = (uint8_t*)malloc(GetPrgRomBytes());
-    if (prg_rom == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadState: alloc prg_rom\n");
-        return false;
-    }
-    bool b4 = fread(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    chr_rom = (uint8_t*)malloc(GetChrRomBytes());
-    if (chr_rom == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadState: alloc chr_rom\n");
-        return false;
-    }
-    bool b5 = fread(chr_rom, GetChrRomBytes(), 1, file) == 1;
+    prg_rom.resize(GetPrgRomBytes());
+    prg_rom.shrink_to_fit();
+    // bool b4 = fread(prg_rom, GetPrgRomBytes(), 1, file) == 1;
+    chr_rom.resize(GetChrRomBytes());
+    chr_rom.shrink_to_fit();
+    // bool b5 = fread(chr_rom, GetChrRomBytes(), 1, file) == 1;
 
     // Let the caller handle the mapper too
-    return b1 && b2 && b3 && b4 && b5;
+    return b1 && b2 && b3; //&& b4 && b5;
 }
 
 uint8_t Cart::GetPrgRomBlocks() {

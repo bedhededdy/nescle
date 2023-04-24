@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "NESCLETypes.h"
 
@@ -48,8 +49,11 @@ private:
 
     Mapper* mapper;
 
-    uint8_t* prg_rom;
-    uint8_t* chr_rom;
+    // uint8_t* prg_rom;
+    // uint8_t* chr_rom;
+
+    std::vector<uint8_t> prg_rom;
+    std::vector<uint8_t> chr_rom;
 
     // TODO: NEED TO ADD THIS
     // Bus* bus
