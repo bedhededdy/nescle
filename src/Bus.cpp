@@ -286,14 +286,14 @@ bool Bus::LoadState(FILE* file) {
     Bus* bus = this;
     auto cpu_addr = bus->cpu;
     auto ppu_addr = bus->ppu;
-    auto cart_addr = bus->cart;
+    // auto cart_addr = bus->cart;
     auto apu_addr = bus->apu;
 
     bool res = fread(bus, sizeof(Bus), 1, file);
 
     bus->cpu = cpu_addr;
     bus->ppu = ppu_addr;
-    bus->cart = cart_addr;
+    // bus->cart = cart_addr;
     bus->apu = apu_addr;
 
     return res;

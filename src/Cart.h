@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -47,7 +48,7 @@ private:
     FileType file_type;
     std::string rom_path;
 
-    Mapper* mapper;
+    std::unique_ptr<Mapper> mapper;
 
     std::vector<uint8_t> prg_rom;
     std::vector<uint8_t> chr_rom;
@@ -66,7 +67,7 @@ public:
     bool SaveState(FILE* file);
     bool LoadState(FILE* file);
 
-    void SetMapper(Mapper* mapper);
+    void SetMapper(std::unique_ptr<Mapper> mapper);
     Mapper* GetMapper();
 
     const std::string& GetROMPath();

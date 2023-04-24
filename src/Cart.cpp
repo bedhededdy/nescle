@@ -31,7 +31,6 @@ Cart::Cart() {
 }
 
 Cart::~Cart() {
-    delete mapper;
 }
 
 bool Cart::LoadROM(const char* path) {
@@ -143,9 +142,8 @@ bool Cart::LoadROM(const char* path) {
     // Initialize cart's mapper (mapper destroy is safe to pass NULL to)
     // We must check NULL return from Mapper_Create, as failing to allocate
     // the mapper is not a critical error
-    delete mapper;
-    mapper = new Mapper(mapper_id, *this, mirror_mode);
-    if (mapper == NULL) {
+    mapper = std::make_unique<Mapper>(mapper_id, *this, mirror_mode);
+    if (mapper == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed to create mapper\n");
         return false;
@@ -243,14 +241,14 @@ void Cart::WriteChrRom(size_t off, uint8_t val) {
 }
 
 Mapper* Cart::GetMapper() {
-    return mapper;
+    return mapper.get();
 }
 
 const std::string& Cart::GetROMPath() {
     return rom_path;
 }
 
-void Cart::SetMapper(Mapper* mapper) {
-    this->mapper = mapper;
+void Cart::SetMapper(std::unique_ptr<Mapper> mapper) {
+    this->mapper = std::move(mapper);
 }
 }
