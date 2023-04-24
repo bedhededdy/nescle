@@ -16,12 +16,24 @@
 #pragma once
 
 namespace NESCLE {
-// Forward decl for objs
+// Mappers
+class Mapper;
+class MapperBase;
+
+// Windows
+class NESCLEWindow;
+class WindowManager;
+
+// Other GUI
+class NESCLENotification;
+class NESCLETexture;
+class RetroText;
+
+// Emulation
 class APU;
+class Bus;
 class Cart;
 class CPU;
 class Emulator;
 class PPU;
-class Bus;
-class Mapper;
 }
