@@ -48,15 +48,17 @@ bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-bool Mapper003::SaveState(FILE* file) {
-    bool b1 = fwrite(&mirror_mode, sizeof(bank_select), 1, file) == 1;
-    bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
-    return b1 && b2;
+bool Mapper003::SaveState(std::ofstream& file) {
+    // bool b1 = fwrite(&mirror_mode, sizeof(bank_select), 1, file) == 1;
+    // bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
+    // return b1 && b2;
+    return false;
 }
 
-bool Mapper003::LoadState(FILE* file) {
-    bool b1 = fread(&mirror_mode, sizeof(bank_select), 1, file) == 1;
-    bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
-    return b1 && b2;
+bool Mapper003::LoadState(std::ifstream& file) {
+//    bool b1 = fread(&mirror_mode, sizeof(bank_select), 1, file) == 1;
+//    bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
+//    return b1 && b2;
+    return false;
 }
 }

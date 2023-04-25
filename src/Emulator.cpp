@@ -233,7 +233,7 @@ bool Emulator::SaveState(const char* path) {
     // Save Mapper state (deepcopying mapper_class)
     if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
         printf("mapper too short");
-    bus->GetCart().GetMapper()->SaveState(savestate);
+    // bus->GetCart().GetMapper()->SaveState(savestate);
 
     if (!bus->GetPPU().SaveState(savestate))
         printf("ppu too short");
@@ -349,7 +349,7 @@ bool Emulator::LoadState(const char* path) {
     uint8_t mapper_id = dummy_buf[0];
     // fine to give dummy mirror_mode, since it's overwritten by LoadState
     bus->GetCart().SetMapper(mapper_id, (Mapper::MirrorMode)0);
-    bus->GetCart().GetMapper()->LoadState(savestate);
+    // bus->GetCart().GetMapper()->LoadState(savestate);
 
     bus->GetPPU().LoadState(savestate);
 

@@ -184,33 +184,35 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-bool Mapper001::SaveState(FILE* file) {
-    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
-    bool b3 = fwrite(&load, sizeof(load), 1, file) == 1;
-    bool b4 = fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
-    bool b5 = fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
-    bool b6 = fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
-    bool b7 = fwrite(&chr_select8, sizeof(chr_select8), 1, file) == 1;
-    bool b8 = fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
-    bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
-    bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
-    bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
+bool Mapper001::SaveState(std::ofstream& file) {
+    // bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
+    // bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
+    // bool b3 = fwrite(&load, sizeof(load), 1, file) == 1;
+    // bool b4 = fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
+    // bool b5 = fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
+    // bool b6 = fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
+    // bool b7 = fwrite(&chr_select8, sizeof(chr_select8), 1, file) == 1;
+    // bool b8 = fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
+    // bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
+    // bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
+    // bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
+    // return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
+    return false;
 }
 
-bool Mapper001::LoadState(FILE* file) {
-    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    bool b2 = fread(&ctrl, sizeof(ctrl), 1, file) == 1;
-    bool b3 = fread(&load, sizeof(load), 1, file) == 1;
-    bool b4 = fread(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
-    bool b5 = fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
-    bool b6 = fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
-    bool b7 = fread(&chr_select8, sizeof(chr_select8), 1, file) == 1;
-    bool b8 = fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
-    bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
-    bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
-    bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
-    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
+bool Mapper001::LoadState(std::ifstream& file) {
+    // bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
+    // bool b2 = fread(&ctrl, sizeof(ctrl), 1, file) == 1;
+    // bool b3 = fread(&load, sizeof(load), 1, file) == 1;
+    // bool b4 = fread(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
+    // bool b5 = fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
+    // bool b6 = fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
+    // bool b7 = fread(&chr_select8, sizeof(chr_select8), 1, file) == 1;
+    // bool b8 = fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
+    // bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
+    // bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
+    // bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
+    // return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
+    return false;
 }
 }

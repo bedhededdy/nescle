@@ -154,38 +154,40 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 // FIXME: MIRRORING IS BUSTED
-bool Mapper004::SaveState(FILE* file) {
-    bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    bool b2 = fwrite(&registers, sizeof(registers), 1, file) == 1;
-    bool b3 = fwrite(&chr_banks, sizeof(chr_banks), 1, file) == 1;
-    bool b4 = fwrite(&prg_banks, sizeof(prg_banks), 1, file) == 1;
-    bool b5 = fwrite(&target_register, sizeof(target_register), 1, file) == 1;
-    bool b6 = fwrite(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
-    bool b7 = fwrite(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
-    bool b8 = fwrite(&irq_active, sizeof(irq_active), 1, file) == 1;
-    bool b9 = fwrite(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
-    bool b10 = fwrite(&irq_update, sizeof(irq_update), 1, file) == 1;
-    bool b11 = fwrite(&irq_counter, sizeof(irq_counter), 1, file) == 1;
-    bool b12 = fwrite(&irq_reload, sizeof(irq_reload), 1, file) == 1;
-    bool b13 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
+bool Mapper004::SaveState(std::ofstream& file) {
+    //bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
+    //bool b2 = fwrite(&registers, sizeof(registers), 1, file) == 1;
+    //bool b3 = fwrite(&chr_banks, sizeof(chr_banks), 1, file) == 1;
+    //bool b4 = fwrite(&prg_banks, sizeof(prg_banks), 1, file) == 1;
+    //bool b5 = fwrite(&target_register, sizeof(target_register), 1, file) == 1;
+    //bool b6 = fwrite(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
+    //bool b7 = fwrite(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
+    //bool b8 = fwrite(&irq_active, sizeof(irq_active), 1, file) == 1;
+    //bool b9 = fwrite(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
+    //bool b10 = fwrite(&irq_update, sizeof(irq_update), 1, file) == 1;
+    //bool b11 = fwrite(&irq_counter, sizeof(irq_counter), 1, file) == 1;
+    //bool b12 = fwrite(&irq_reload, sizeof(irq_reload), 1, file) == 1;
+    //bool b13 = fwrite(sram, sizeof(sram), 1, file) == 1;
+    //return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
+    return false;
 }
 
-bool Mapper004::LoadState(FILE* file) {
-    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    bool b2 = fread(&registers, sizeof(registers), 1, file) == 1;
-    bool b3 = fread(&chr_banks, sizeof(chr_banks), 1, file) == 1;
-    bool b4 = fread(&prg_banks, sizeof(prg_banks), 1, file) == 1;
-    bool b5 = fread(&target_register, sizeof(target_register), 1, file) == 1;
-    bool b6 = fread(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
-    bool b7 = fread(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
-    bool b8 = fread(&irq_active, sizeof(irq_active), 1, file) == 1;
-    bool b9 = fread(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
-    bool b10 = fread(&irq_update, sizeof(irq_update), 1, file) == 1;
-    bool b11 = fread(&irq_counter, sizeof(irq_counter), 1, file) == 1;
-    bool b12 = fread(&irq_reload, sizeof(irq_reload), 1, file) == 1;
-    bool b13 = fread(sram, sizeof(sram), 1, file) == 1;
-    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
+bool Mapper004::LoadState(std::ifstream& file) {
+//    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
+//    bool b2 = fread(&registers, sizeof(registers), 1, file) == 1;
+//    bool b3 = fread(&chr_banks, sizeof(chr_banks), 1, file) == 1;
+//    bool b4 = fread(&prg_banks, sizeof(prg_banks), 1, file) == 1;
+//    bool b5 = fread(&target_register, sizeof(target_register), 1, file) == 1;
+//    bool b6 = fread(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
+//    bool b7 = fread(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
+//    bool b8 = fread(&irq_active, sizeof(irq_active), 1, file) == 1;
+//    bool b9 = fread(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
+//    bool b10 = fread(&irq_update, sizeof(irq_update), 1, file) == 1;
+//    bool b11 = fread(&irq_counter, sizeof(irq_counter), 1, file) == 1;
+//    bool b12 = fread(&irq_reload, sizeof(irq_reload), 1, file) == 1;
+//    bool b13 = fread(sram, sizeof(sram), 1, file) == 1;
+//    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
+    return false;
 }
 
 void Mapper004::CountdownScanline() {
