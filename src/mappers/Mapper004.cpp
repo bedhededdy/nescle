@@ -20,6 +20,7 @@
 // IS FUCKED
 // FIXME: SOME GAMES DON'T EVEN BOOT, THIS IS DEFINITELY FISHY
 #include "Mapper004.h"
+#include "../Cart.h"
 
 namespace NESCLE {
 void Mapper004::Reset() {

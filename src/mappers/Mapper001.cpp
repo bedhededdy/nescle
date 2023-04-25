@@ -46,6 +46,7 @@
 // IE, SHOULD GOING TO 8KB CHR MODE CHANGE THE HI POINTER AT ALL? OR EVEN
 // THE LO POINTER?
 #include "Mapper001.h"
+#include "../Cart.h"
 
 #include <SDL_log.h>
 

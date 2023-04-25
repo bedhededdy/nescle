@@ -16,8 +16,9 @@
 #pragma once
 
 #include <cstdio>
+#include <cstdint>
 
-#include "../Cart.h"
+#include "../NESCLETypes.h"
 
 namespace NESCLE {
 class MapperBase {

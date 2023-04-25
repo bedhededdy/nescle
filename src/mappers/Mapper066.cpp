@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "Mapper066.h"
+#include "../Cart.h"
 
 namespace NESCLE {
 void Mapper066::Reset() {

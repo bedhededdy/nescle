@@ -15,6 +15,7 @@
  */
 // https://nesdev.org/wiki/NROM
 #include "Mapper000.h"
+#include "../Cart.h"
 
 namespace NESCLE {
 uint8_t Mapper000::MapCPURead(uint16_t addr) {

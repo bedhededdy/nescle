@@ -27,11 +27,9 @@
 
 namespace NESCLE {
 Cart::Cart() {
-    mapper = nullptr;
 }
 
 Cart::~Cart() {
-    delete mapper;
 }
 
 bool Cart::LoadROM(const char* path) {
@@ -143,13 +141,10 @@ bool Cart::LoadROM(const char* path) {
     // Initialize cart's mapper (mapper destroy is safe to pass NULL to)
     // We must check NULL return from Mapper_Create, as failing to allocate
     // the mapper is not a critical error
-    delete mapper;
-    mapper = new Mapper(mapper_id, *this, mirror_mode);
-    if (mapper == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: failed to create mapper\n");
-        return false;
-    }
+    // SetMapper(Mapper(mapper_id, *this, mirror_mode));
+    // mapper = Mapper(mapper_id, *this, mirror_mode);
+    mapper.SetID(mapper_id);
+    mapper.MakeMapperFromID(*this, mirror_mode);
 
     // Free previous path if it exists and copy it into the cart
     size_t path_len = strlen(path) + 1;
@@ -242,7 +237,7 @@ void Cart::WriteChrRom(size_t off, uint8_t val) {
     chr_rom[off] = val;
 }
 
-Mapper* Cart::GetMapper() {
+Mapper& Cart::GetMapper() {
     return mapper;
 }
 
@@ -250,7 +245,9 @@ const std::string& Cart::GetROMPath() {
     return rom_path;
 }
 
-void Cart::SetMapper(Mapper* mapper) {
-    this->mapper = mapper;
+void Cart::SetMapper(uint8_t _id, Cart& _cart, MapperBase::MirrorMode _mode) {
+    // this->mapper = Mapper(_id, _cart, _mode);
+    mapper.SetID(_id);
+    mapper.MakeMapperFromID(_cart, _mode);
 }
 }

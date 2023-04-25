@@ -787,7 +787,7 @@ break;
     // Properly increment the cycle and scanline
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
-            ppu->bus->GetCart().GetMapper()->CountdownScanline();
+            ppu->bus->GetCart().GetMapper().CountdownScanline();
         }
     }
     ppu->cycle++;
@@ -908,14 +908,14 @@ uint8_t PPU::Read(uint16_t addr) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->GetCart().GetMapper();
-        return mapper->MapPPURead(addr);
+        Mapper& mapper = bus->GetCart().GetMapper();
+        return mapper.MapPPURead(addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        MapperBase::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
+        MapperBase::MirrorMode mirror_mode = bus->GetCart().GetMapper().GetMirrorMode();
 
         if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_HORZ) {
             // see vertical comments for explanation
@@ -1014,15 +1014,15 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->GetCart().GetMapper();
-        return mapper->MapPPUWrite(addr, data);
+        Mapper& mapper = bus->GetCart().GetMapper();
+        return mapper.MapPPUWrite(addr, data);
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
         //printf("writing to naemtable\n");
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        MapperBase::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
+        MapperBase::MirrorMode mirror_mode = bus->GetCart().GetMapper().GetMirrorMode();
         //printf("writing nametable\n");
         if (mirror_mode == MapperBase::MAPPER_MIRRORMODE_HORZ) {
             if (addr >= 0 && addr < 0x800) {
