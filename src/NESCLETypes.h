@@ -18,7 +18,13 @@
 namespace NESCLE {
 // Mappers
 class Mapper;
-class MapperBase;
+class Mapper000;
+class Mapper001;
+class Mapper002;
+class Mapper003;
+class Mapper004;
+class Mapper007;
+class Mapper066;
 
 // Windows
 class NESCLEWindow;

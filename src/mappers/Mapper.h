@@ -17,6 +17,7 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <memory>
 
 #include "../NESCLETypes.h"
 
@@ -37,6 +38,9 @@ protected:
 public:
     Mapper(Cart& _cart, MirrorMode _mirror)
         : cart(_cart), mirror_mode(_mirror) {}
+
+    static std::unique_ptr<Mapper> CreateMapperFromID(uint8_t id, Cart& cart, Mapper::MirrorMode mirror_mode);
+
     virtual ~Mapper() = default;
 
     virtual void Reset() {}

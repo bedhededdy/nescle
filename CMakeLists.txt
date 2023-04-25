@@ -133,7 +133,7 @@ set(NESCLE_SRC Bus.cpp Cart.cpp CPU.cpp Emulator.cpp RetroText.cpp NESCLETexture
       DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
       MixerWindow.cpp Util.cpp NESCLENotification.cpp)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
-        Mapper004.cpp Mapper007.cpp Mapper066.cpp)
+        Mapper004.cpp Mapper007.cpp Mapper066.cpp Mapper.cpp)
 
 PREPEND(NESCLE_SRC ${NESCLE_SRC_DIR} ${NESCLE_SRC})
 PREPEND(MAPPER_SRC ${MAPPER_SRC_DIR} ${MAPPER_SRC})

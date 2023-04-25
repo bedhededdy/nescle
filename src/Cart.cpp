@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "mappers/MapperFactory.h"
+#include "mappers/Mapper.h"
 #include "PPU.h"
 #include "Util.h"
 
@@ -252,6 +252,6 @@ void Cart::SetMapper(uint8_t _id, Mapper::MirrorMode _mode) {
     // // this->mapper = Mapper(_id, _cart, _mode);
     // mapper.SetID(_id);
     // mapper.MakeMapperFromID(_cart, _mode);
-    mapper = MapperFactory::CreateMapperFromID(_id, *this, _mode);
+    mapper = Mapper::CreateMapperFromID(_id, *this, _mode);
 }
 }
