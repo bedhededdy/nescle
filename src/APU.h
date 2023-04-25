@@ -16,7 +16,7 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdio>
+#include <fstream>
 
 #include "NESCLETypes.h"
 
@@ -58,7 +58,6 @@ private:
     struct PulseChannel {
         bool enable;
         float sample;
-        float prev_sample;
         bool halt;
         uint8_t length;
         float volume;
@@ -108,36 +107,35 @@ private:
     uint8_t GetLength(int index);
     int GetDuty(int seq, int off);
 
-    void ClockSweeper(PulseChannel* pulse);
-    void ClockPulse(PulseChannel* pulse);
-    void ClockNoise(NoiseChannel* noise);
-    void ClockTriangle(TriangleChannel* triangle);
-    void ClockEnvelope(Envelope* envelope, bool halt);
+    void ClockSweeper(PulseChannel& pulse);
+    void ClockPulse(PulseChannel& pulse);
+    void ClockNoise();
+    void ClockTriangle();
+    void ClockEnvelope(Envelope& envelope, bool halt);
 
-    Bus* bus;
     PulseChannel pulse1;
     PulseChannel pulse2;
     TriangleChannel triangle;
     NoiseChannel noise;
     SampleChannel sample;
+
     uint64_t clock_count;
     uint64_t frame_clock_count;
-    // FIXME: MOVE TO THE EMULATOR
-    float master_volume;
 
 public:
     static constexpr int SAMPLE_RATE = 44100;
 
-    APU();
-    ~APU();
     void PowerOn();
     void Reset();
+
     uint8_t Read(uint16_t addr);
     bool Write(uint16_t addr, uint8_t data);
+
     void Clock();
-    bool SaveState(FILE* file);
-    bool LoadState(FILE* file);
-    void LinkBus(Bus* bus);
+
+    bool SaveState(std::ofstream& file);
+    bool LoadState(std::ifstream& file);
+
     float GetPulse1Sample();
     float GetPulse2Sample();
     float GetTriangleSample();

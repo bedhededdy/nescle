@@ -33,7 +33,6 @@ Bus::Bus() {
     Bus* bus = this;
     cpu.LinkBus(bus);
     ppu.LinkBus(bus);
-    apu.LinkBus(bus);
 }
 
 Bus::~Bus() {

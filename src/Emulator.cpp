@@ -224,8 +224,8 @@ bool Emulator::SaveState(const char* path) {
     if (!bus->GetCPU().SaveState(savestate))
         printf("cpu too short");
 
-    if (!bus->GetAPU().SaveState(savestate))
-        printf("apu too short");
+    // if (!bus->GetAPU().SaveState(savestate))
+        // printf("apu too short");
 
     if (!bus->GetCart().SaveState(savestate))
         printf("cart too short");
@@ -332,7 +332,7 @@ bool Emulator::LoadState(const char* path) {
     bus->GetCPU().LoadState(savestate);
 
     // APU
-    bus->GetAPU().LoadState(savestate);
+    // bus->GetAPU().LoadState(savestate);
 
     // Cart
     // Mapper* mapper_addr = bus->GetCart().GetMapper();
