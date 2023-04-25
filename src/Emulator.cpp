@@ -382,7 +382,7 @@ bool Emulator::SaveSettings(const char* path) {
     json_object_set_new(controller1, "left", json_integer(settings.controller1.left));
     json_object_set_new(controller1, "right", json_integer(settings.controller1.right));
     json_object_set_new(controller1, "aturbo", json_integer(settings.controller1.aturbo));
-    json_object_set_new(controller1, "aturbo", json_integer(settings.controller1.bturbo));
+    json_object_set_new(controller1, "bturbo", json_integer(settings.controller1.bturbo));
 
     json_object_set_new(root, "controller1", controller1);
 
