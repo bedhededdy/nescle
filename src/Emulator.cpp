@@ -467,16 +467,16 @@ float Emulator::EmulateSample() {
             // if it has and we are pressing the turbo button, we will
             // flip the state of the bit that corresponds to that turbo button
             if (aturbo) {
-                if (nes->GetController1() & (int)Bus::NESButtons::BUS_CONTROLLER_A)
-                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::BUS_CONTROLLER_A);
+                if (nes->GetController1() & (int)Bus::NESButtons::A)
+                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::A);
                 else
-                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_A);
+                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::A);
             }
             if (bturbo) {
-                if (nes->GetController1() & (int)Bus::NESButtons::BUS_CONTROLLER_B)
-                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::BUS_CONTROLLER_B);
+                if (nes->GetController1() & (int)Bus::NESButtons::B)
+                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::B);
                 else
-                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_B);
+                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::B);
             }
         }
     }

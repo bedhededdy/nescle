@@ -67,14 +67,14 @@ private:
 
 public:
     enum class NESButtons : uint8_t {
-        BUS_CONTROLLER_A = 0x1,
-        BUS_CONTROLLER_B = 0x2,
-        BUS_CONTROLLER_SELECT = 0X4,
-        BUS_CONTROLLER_START = 0x8,
-        BUS_CONTROLLER_UP = 0x10,
-        BUS_CONTROLLER_DOWN = 0x20,
-        BUS_CONTROLLER_LEFT = 0x40,
-        BUS_CONTROLLER_RIGHT = 0x80
+        A = 0x1,
+        B = 0x2,
+        SELECT = 0X4,
+        START = 0x8,
+        UP = 0x10,
+        DOWN = 0x20,
+        LEFT = 0x40,
+        RIGHT = 0x80
     };
 
     Bus();
