@@ -42,7 +42,7 @@ bool Cart::LoadROM(const char* path) {
     // CART INSERTED
 
     // Check for NULL path or empty string
-    if (path == NULL || path[0] == '\0') {
+    if (path == NULL || path == nullptr || path[0] == '\0') {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid path\n");
         return false;
     }
@@ -56,17 +56,16 @@ bool Cart::LoadROM(const char* path) {
     }
 
     // Open ROM file in read-binary mode
-    FILE* rom;
-    if (fopen_s(&rom, path, "rb") != 0) {
+    std::ifstream rom(path, std::ios::binary);
+    if (!rom.is_open()) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: Unable to open file %s\n", path);
         return false;
     }
 
-    if (fread(&metadata, sizeof(uint8_t), sizeof(ROMHeader), rom)
-        != sizeof(ROMHeader)) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: invalid header\n");
+    rom.read(reinterpret_cast<char*>(&metadata), sizeof(ROMHeader));
+    if (rom.gcount() != sizeof(ROMHeader)) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid header\n");
         return false;
     }
 
@@ -79,7 +78,8 @@ bool Cart::LoadROM(const char* path) {
 
     // Skip trainer data if present
     if (header->mapper1 & 0x04) {
-        if (fseek(rom, 512, SEEK_CUR) != 0) {
+        rom.ignore(512);
+        if (false) {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                 "Cart_LoadROM: error parsing trainer data\n");
             return false;
@@ -102,8 +102,8 @@ bool Cart::LoadROM(const char* path) {
     prg_rom.resize(prg_rom_nbytes);
     prg_rom.shrink_to_fit();
     // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
-    if (fread(&prg_rom[0], sizeof(uint8_t), prg_rom_nbytes, rom)
-        != prg_rom_nbytes) {
+    rom.read(reinterpret_cast<char*>(&prg_rom[0]), prg_rom_nbytes);
+    if (rom.gcount() != static_cast<std::streamsize>(prg_rom_nbytes)) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
             "Cart_LoadROM: failed reading prg_rom\n");
         return false;
@@ -117,8 +117,8 @@ bool Cart::LoadROM(const char* path) {
     chr_rom.shrink_to_fit();
     if (GetChrRomBlocks() > 0) {
         // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
-        if (fread(&chr_rom[0], sizeof(uint8_t), chr_rom_nbytes, rom)
-            != chr_rom_nbytes) {
+        rom.read(reinterpret_cast<char*>(&chr_rom[0]), chr_rom_nbytes);
+        if (rom.gcount() != static_cast<std::streamsize>(chr_rom_nbytes)) {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                 "Cart_LoadROM: failed reading chr_rom\n");
             return false;
@@ -148,8 +148,7 @@ bool Cart::LoadROM(const char* path) {
 
     SetMapper(mapper_id, mirror_mode);
 
-    // Free previous path if it exists and copy it into the cart
-    size_t path_len = strlen(path) + 1;
+    // Copy the given path to a std::string for later use
     rom_path = path;
 
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
@@ -159,44 +158,47 @@ bool Cart::LoadROM(const char* path) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Cart_LoadROM: chr_rom_size %d\n", metadata.chr_rom_size);
 
-    fclose(rom);
+    // don't need to call close because ifstream dtor does it for us
+    // rom.close();
     return true;
 }
 
-bool Cart::SaveState(FILE* file) {
+bool Cart::SaveState(std::ofstream& file) {
     // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
     // SCENARIO WHERE THERE IS NO ROM LOADED
-    bool b1 = fwrite(this, sizeof(Cart), 1, file) == 1;
-    size_t rom_path_len = rom_path.size() + 1;
-    bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
-    bool b3 = fwrite(rom_path.c_str(), sizeof(char), rom_path_len, file) == 1;
-    // bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    // bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
-    return b1 && b2 && b3; //&& b4 && b5;
+    // bool b1 = fwrite(this, sizeof(Cart), 1, file) == 1;
+    // size_t rom_path_len = rom_path.size() + 1;
+    // bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
+    // bool b3 = fwrite(rom_path.c_str(), sizeof(char), rom_path_len, file) == 1;
+    // // bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
+    // // bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
+    // return b1 && b2 && b3; //&& b4 && b5;
+    return false;
 }
 
-bool Cart::LoadState(FILE* file) {
+bool Cart::LoadState(std::ifstream& file) {
     // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
     // SCENARIO WHERE THERE IS NO ROM LOADED
 
-    bool b1 = fread(this, sizeof(Cart), 1, file) == 1;
-    size_t rom_path_len;
-    bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
+    // bool b1 = fread(this, sizeof(Cart), 1, file) == 1;
+    // size_t rom_path_len;
+    // bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
 
-    char* tmp = (char*)malloc(rom_path_len);
-    bool b3 = fread(tmp, sizeof(char), rom_path_len, file) == 1;
-    rom_path = tmp;
-    free(tmp);
+    // char* tmp = (char*)malloc(rom_path_len);
+    // bool b3 = fread(tmp, sizeof(char), rom_path_len, file) == 1;
+    // rom_path = tmp;
+    // free(tmp);
 
-    prg_rom.resize(GetPrgRomBytes());
-    prg_rom.shrink_to_fit();
-    // bool b4 = fread(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    chr_rom.resize(GetChrRomBytes());
-    chr_rom.shrink_to_fit();
-    // bool b5 = fread(chr_rom, GetChrRomBytes(), 1, file) == 1;
+    // prg_rom.resize(GetPrgRomBytes());
+    // prg_rom.shrink_to_fit();
+    // // bool b4 = fread(prg_rom, GetPrgRomBytes(), 1, file) == 1;
+    // chr_rom.resize(GetChrRomBytes());
+    // chr_rom.shrink_to_fit();
+    // // bool b5 = fread(chr_rom, GetChrRomBytes(), 1, file) == 1;
 
-    // Let the caller handle the mapper too
-    return b1 && b2 && b3; //&& b4 && b5;
+    // // Let the caller handle the mapper too
+    // return b1 && b2 && b3; //&& b4 && b5;
+    return false;
 }
 
 uint8_t Cart::GetPrgRomBlocks() {

@@ -227,8 +227,8 @@ bool Emulator::SaveState(const char* path) {
     // if (!bus->GetAPU().SaveState(savestate))
         // printf("apu too short");
 
-    if (!bus->GetCart().SaveState(savestate))
-        printf("cart too short");
+    // if (!bus->GetCart().SaveState(savestate))
+        // printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
     if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
@@ -336,7 +336,7 @@ bool Emulator::LoadState(const char* path) {
 
     // Cart
     // Mapper* mapper_addr = bus->GetCart().GetMapper();
-    bus->GetCart().LoadState(savestate);
+    // bus->GetCart().LoadState(savestate);
 
     // Mapper
     // bus->GetCart().SetMapper(mapper_addr);

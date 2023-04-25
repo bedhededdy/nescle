@@ -69,7 +69,7 @@ public:
     enum class NESButtons : uint8_t {
         A = 0x1,
         B = 0x2,
-        SELECT = 0X4,
+        SELECT = 0x4,
         START = 0x8,
         UP = 0x10,
         DOWN = 0x20,

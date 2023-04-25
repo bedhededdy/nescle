@@ -16,7 +16,7 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdio>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -66,8 +66,8 @@ public:
     ~Cart();
 
     bool LoadROM(const char* path);
-    bool SaveState(FILE* file);
-    bool LoadState(FILE* file);
+    bool SaveState(std::ofstream& file);
+    bool LoadState(std::ifstream& file);
 
     void SetMapper(uint8_t _id, Mapper::MirrorMode mirror);
     // TODO: THIS SHOULD BE MARKED CONST
