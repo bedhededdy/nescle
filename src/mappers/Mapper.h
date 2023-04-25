@@ -32,14 +32,16 @@ public:
     };
 
 protected:
+    uint8_t id;
     Cart& cart;
     MirrorMode mirror_mode;
-    Mapper(Cart& _cart, MirrorMode _mirror)
-        : cart(_cart), mirror_mode(_mirror) {}
+
+    Mapper(uint8_t _id, Cart& _cart, MirrorMode _mirror)
+        : id(_id), cart(_cart), mirror_mode(_mirror) {}
 
 public:
-    static std::unique_ptr<Mapper> CreateMapperFromID(uint8_t id, Cart& cart,
-        MirrorMode mirror_mode);
+    static std::unique_ptr<Mapper>
+    CreateMapperFromID(uint8_t id, Cart& cart, MirrorMode mirror_mode);
 
     virtual ~Mapper() = default;
 

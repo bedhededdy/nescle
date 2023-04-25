@@ -21,8 +21,8 @@
 namespace NESCLE {
 class Mapper000 : public Mapper {
 public:
-    Mapper000(Cart& cart, Mapper::MirrorMode mirror)
-        : Mapper(cart, mirror) {}
+    Mapper000(uint8_t id, Cart& cart, Mapper::MirrorMode mirror)
+        : Mapper(id, cart, mirror) {}
 
     uint8_t MapCPURead(uint16_t addr) override;
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;
