@@ -869,8 +869,9 @@ void EmulationWindow::Show(Emulator* emu) {
     emu->LockNESState();
     // TODO: MAKE THIS A MEMBER OF THE EMULATION WINDOW SO WE DON'T HAVE TO
     // NEW AND DELETE ON EVERY FRAME
-    uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
-    memcpy(ppu_framebuffer, bus->GetPPU().GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
+    // uint32_t* ppu_framebuffer = new uint32_t[PPU::RESOLUTION_X * PPU::RESOLUTION_Y];
+    std::array<uint32_t, PPU::RESOLUTION_X * PPU::RESOLUTION_Y> ppu_framebuffer;
+    memcpy(ppu_framebuffer.data(), bus->GetPPU().GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
 
     // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
     // should 0 out the first 8 pixels of each scanline
@@ -882,8 +883,8 @@ void EmulationWindow::Show(Emulator* emu) {
 
     // THIS CALL CAN BE BLOCKING
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU::RESOLUTION_X, PPU::RESOLUTION_Y,
-        GL_BGRA, GL_UNSIGNED_BYTE, ppu_framebuffer);
-    delete[] ppu_framebuffer;
+        GL_BGRA, GL_UNSIGNED_BYTE, ppu_framebuffer.data());
+    // delete[] ppu_framebuffer;
 
     glBindVertexArray(main_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

@@ -34,11 +34,15 @@ FetchContent_Declare(nativefiledialog
 )
 FetchContent_MakeAvailable(nativefiledialog)
 
-FetchContent_Declare(jansson
-  GIT_REPOSITORY https://github.com/akheron/jansson.git
-  GIT_TAG master
-)
-FetchContent_MakeAvailable(jansson)
+# FetchContent_Declare(jansson
+#   GIT_REPOSITORY https://github.com/akheron/jansson.git
+#   GIT_TAG master
+# )
+# FetchContent_MakeAvailable(jansson)
+# Docs say to do it this weird way instead of the normal way
+FetchContent_Declare(json
+   URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+FetchContent_MakeAvailable(json)
 
 # Figure out what compiler we are using
 # TODO: CHANGE TO USE GENERATOR EXPRESSIONS
@@ -149,7 +153,7 @@ add_executable(nescle ${SRC})
 target_include_directories(imgui PRIVATE ${SDL2_INCLUDE_DIRECTORIES}
                                  PUBLIC ${IMGUI_INC})
 target_include_directories(glad PUBLIC ${GLAD_INC})
-target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC} ${JANSSON_INCLUDE_DIRS})
+target_include_directories(nescle PRIVATE ${INC} ${GLAD_INC})
 
 # Set compile options for each library
 set(mycc undefined)
@@ -188,5 +192,5 @@ endif()
 # Link libraries
 target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} opengl32)
 target_link_libraries(glad PRIVATE opengl32)
-target_link_libraries(nescle PRIVATE glad nfd ${JANSSON_LIBRARIES}
+target_link_libraries(nescle PRIVATE glad nfd nlohmann_json::nlohmann_json
    PUBLIC imgui ${SDL2_LIBRARIES} opengl32)

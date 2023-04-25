@@ -17,7 +17,7 @@
 // AND ALLOWING USER TO EDIT THE FILE MANUALLY IF NECESSARY
 #include "Emulator.h"
 
-#include <jansson.h>
+#include <nlohmann/json.hpp>
 
 #include <SDL_log.h>
 #include <SDL_filesystem.h>
@@ -360,73 +360,68 @@ bool Emulator::LoadState(const char* path) {
 }
 
 bool Emulator::SaveSettings(const char* path) {
-    // TODO: SHOULD CHECK FOR NULL ALLOCS, EVEN THOUGH IT SHOULD NEVER HAPPEN
-    json_t* root = json_object();
+    nlohmann::json j = {
+        {"sync", settings.sync},
+        {"next_sync", settings.next_sync},
+        {"vsync", settings.vsync},
+        {"p1_vol", settings.p1_vol},
+        {"p2_vol", settings.p2_vol},
+        {"tri_vol", settings.tri_vol},
+        {"noise_vol", settings.noise_vol},
+        {"master_vol", settings.master_vol},
 
-    json_object_set_new(root, "sync", json_integer((long long)settings.sync));
-    json_object_set_new(root, "next_sync", json_integer((long long)settings.next_sync));
-    json_object_set_new(root, "vsync", json_boolean(settings.vsync));
-    json_object_set_new(root, "p1_vol", json_real(settings.p1_vol));
-    json_object_set_new(root, "p2_vol", json_real(settings.p2_vol));
-    json_object_set_new(root, "tri_vol", json_real(settings.tri_vol));
-    json_object_set_new(root, "noise_vol", json_real(settings.noise_vol));
-    json_object_set_new(root, "master_vol", json_real(settings.master_vol));
+        // Optionally I could make this struct serializable, but it's not
+        // worth the effort
+        {"controller1", {
+            {"a", settings.controller1.a},
+            {"b", settings.controller1.b},
+            {"start", settings.controller1.start},
+            {"select", settings.controller1.select},
+            {"up", settings.controller1.up},
+            {"down", settings.controller1.down},
+            {"left", settings.controller1.left},
+            {"right", settings.controller1.right},
+            {"aturbo", settings.controller1.aturbo},
+            {"bturbo", settings.controller1.bturbo}
+        }},
+    };
 
-    json_t* controller1 = json_object();
-    json_object_set_new(controller1, "a", json_integer(settings.controller1.a));
-    json_object_set_new(controller1, "b", json_integer(settings.controller1.b));
-    json_object_set_new(controller1, "select", json_integer(settings.controller1.select));
-    json_object_set_new(controller1, "start", json_integer(settings.controller1.start));
-    json_object_set_new(controller1, "up", json_integer(settings.controller1.up));
-    json_object_set_new(controller1, "down", json_integer(settings.controller1.down));
-    json_object_set_new(controller1, "left", json_integer(settings.controller1.left));
-    json_object_set_new(controller1, "right", json_integer(settings.controller1.right));
-    json_object_set_new(controller1, "aturbo", json_integer(settings.controller1.aturbo));
-    json_object_set_new(controller1, "bturbo", json_integer(settings.controller1.bturbo));
-
-    json_object_set_new(root, "controller1", controller1);
-
-    bool res = true;
-    if (json_dump_file(root, path, JSON_INDENT(4)) < 0)
-        res = false;
-    json_decref(root);
-
-    return res;
+    std::ofstream json_file(path);
+    if (!json_file.is_open())
+        return false;
+    json_file << j;
+    return !json_file.fail();
 }
 
 bool Emulator::LoadSettings(const char* path) {
-    json_error_t err;
-    json_t* root = json_load_file(path, 0, &err);
-    if (root == NULL)
+    std::ifstream json_file(path);
+    if (!json_file.is_open())
+        return false;
+    nlohmann::json j;
+    json_file >> j;
+
+    if (j.is_null())
         return false;
 
-    // TODO: CHECK FOR PARSE ERRORS
-    settings.sync = (SyncType)json_integer_value(json_object_get(root, "sync"));
-    settings.next_sync = (SyncType)json_integer_value(json_object_get(root, "next_sync"));
-    settings.vsync = json_boolean_value(json_object_get(root, "vsync"));
-    settings.p1_vol = json_real_value(json_object_get(root, "p1_vol"));
-    settings.p2_vol = json_real_value(json_object_get(root, "p2_vol"));
-    settings.tri_vol = json_real_value(json_object_get(root, "tri_vol"));
-    settings.noise_vol = json_real_value(json_object_get(root, "noise_vol"));
-    settings.master_vol = json_real_value(json_object_get(root, "master_vol"));
-
-    json_t* controller1 = json_object_get(root, "controller1");
-    settings.controller1.b = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "b"));
-    settings.controller1.a = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "a"));
-    settings.controller1.select = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "select"));
-    settings.controller1.start = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "start"));
-    settings.controller1.up = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "up"));
-    settings.controller1.down = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "down"));
-    settings.controller1.left = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "left"));
-    settings.controller1.right = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "right"));
-    settings.controller1.aturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "aturbo"));
-    settings.controller1.bturbo = (SDL_KeyCode)json_integer_value(json_object_get(controller1, "bturbo"));
-
-    // Since changes don't take effect on changing sync type on restart
-    // we must set sync to next_sync
-    settings.sync = settings.next_sync;
-    json_decref(root);
-
+    // FIXME: YOU SHOULD CHECK THAT THESE FIELDS EXIST BEFORE ACCESSING THEM
+    settings.sync = (SyncType)j["sync"];
+    settings.next_sync = (SyncType)j["next_sync"];
+    settings.vsync = j["vsync"];
+    settings.p1_vol = j["p1_vol"];
+    settings.p2_vol = j["p2_vol"];
+    settings.tri_vol = j["tri_vol"];
+    settings.noise_vol = j["noise_vol"];
+    settings.master_vol = j["master_vol"];
+    settings.controller1.a = j["controller1"]["a"];
+    settings.controller1.b = j["controller1"]["b"];
+    settings.controller1.start = j["controller1"]["start"];
+    settings.controller1.select = j["controller1"]["select"];
+    settings.controller1.up = j["controller1"]["up"];
+    settings.controller1.down = j["controller1"]["down"];
+    settings.controller1.left = j["controller1"]["left"];
+    settings.controller1.right = j["controller1"]["right"];
+    settings.controller1.aturbo = j["controller1"]["aturbo"];
+    settings.controller1.bturbo = j["controller1"]["bturbo"];
     return true;
 }
 
