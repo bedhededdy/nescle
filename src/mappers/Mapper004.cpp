@@ -20,6 +20,9 @@
 // IS FUCKED
 // FIXME: SOME GAMES DON'T EVEN BOOT, THIS IS DEFINITELY FISHY
 #include "Mapper004.h"
+
+#include <SDL_log.h>
+
 #include "../Cart.h"
 
 namespace NESCLE {
@@ -149,7 +152,8 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
         return true;
     }
 
-    printf("ERR: ATTEMPT TO WRITE TO PPU RAM\n");
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+        "ERR: ATTEMPT TO WRITE TO PPU RAM\n");
     return false;
 }
 

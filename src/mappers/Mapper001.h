@@ -15,6 +15,8 @@
  */
 #pragma once
 
+#include <array>
+
 #include "Mapper.h"
 
 namespace NESCLE {
@@ -38,7 +40,7 @@ private:
 
     // Since we may not know what the size of the prg ram is from
     // the iNES header, we must allocate the maximum possible amount of 32kb
-    uint8_t sram[0x8000];
+    std::array<uint8_t, 0x8000> sram;
 
 public:
     Mapper001(uint8_t id, Cart& cart, Mapper::MirrorMode mirror)

@@ -15,12 +15,15 @@
  */
 #pragma once
 
+#include <array>
+
 #include "Mapper.h"
 
 namespace NESCLE {
 class Mapper004 : public Mapper {
 private:
     // FIXME: SHOULDN'T THESE BE 8 BYTES
+    // FIXME: CONVERT THESE TO std::arrays
     uint32_t registers[8];
     uint32_t chr_banks[8];
     uint32_t prg_banks[4];
@@ -35,7 +38,7 @@ private:
     uint16_t irq_counter;
     uint16_t irq_reload;
 
-    uint8_t sram[0x8000];
+    std::array<uint8_t, 0x8000> sram;
 
 public:
     Mapper004(uint8_t id, Cart& cart, Mapper::MirrorMode mirror)
