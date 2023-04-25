@@ -133,8 +133,8 @@ bool Cart::LoadROM(const char* path) {
         "Cart_LoadROM: mapper id %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    Mapper::MirrorMode mirror_mode = (header->mapper1 & 1) ?
-        Mapper::MAPPER_MIRRORMODE_VERT : Mapper::MAPPER_MIRRORMODE_HORZ;
+    auto mirror_mode = (header->mapper1 & 1) ? Mapper::MirrorMode::VERTICAL
+        : Mapper::MirrorMode::HORIZONTAL;
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Cart_LoadROM: mirror mode %d\n", mirror_mode);
 

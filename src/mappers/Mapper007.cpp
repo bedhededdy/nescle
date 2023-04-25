@@ -30,8 +30,8 @@ uint8_t Mapper007::MapCPURead(uint16_t addr) {
 
 bool Mapper007::MapCPUWrite(uint16_t addr, uint8_t data) {
     bank_select = data;
-    mirror_mode = (data & 0x10) ? MAPPER_MIRRORMODE_OSHI :
-        MAPPER_MIRRORMODE_OSLO;
+    mirror_mode = (data & 0x10) ? Mapper::MirrorMode::ONESCREEN_HI :
+        Mapper::MirrorMode::ONESCREEN_LO;
     return true;
 }
 

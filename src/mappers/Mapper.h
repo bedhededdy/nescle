@@ -24,22 +24,22 @@
 namespace NESCLE {
 class Mapper {
 public:
-    enum MirrorMode {
-        MAPPER_MIRRORMODE_HORZ,   // Horizontal
-        MAPPER_MIRRORMODE_VERT,       // Vertical
-        MAPPER_MIRRORMODE_OSLO,       // One-Screen lo
-        MAPPER_MIRRORMODE_OSHI        // One-Screen hi
+    enum class MirrorMode {
+        HORIZONTAL,
+        VERTICAL,
+        ONESCREEN_LO,
+        ONESCREEN_HI
     };
 
 protected:
     Cart& cart;
     MirrorMode mirror_mode;
-
-public:
     Mapper(Cart& _cart, MirrorMode _mirror)
         : cart(_cart), mirror_mode(_mirror) {}
 
-    static std::unique_ptr<Mapper> CreateMapperFromID(uint8_t id, Cart& cart, Mapper::MirrorMode mirror_mode);
+public:
+    static std::unique_ptr<Mapper> CreateMapperFromID(uint8_t id, Cart& cart,
+        MirrorMode mirror_mode);
 
     virtual ~Mapper() = default;
 

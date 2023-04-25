@@ -917,7 +917,7 @@ uint8_t PPU::Read(uint16_t addr) {
 
         Mapper::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
 
-        if (mirror_mode == Mapper::MAPPER_MIRRORMODE_HORZ) {
+        if (mirror_mode == Mapper::MirrorMode::HORIZONTAL) {
             // see vertical comments for explanation
             if (addr >= 0 && addr < 0x800)
                 return ppu->nametbl[0][addr % 0x400];
@@ -925,7 +925,7 @@ uint8_t PPU::Read(uint16_t addr) {
                 return ppu->nametbl[1][addr % 0x400];
 
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_VERT) {
+        else if (mirror_mode == Mapper::MirrorMode::VERTICAL) {
             // notice how two different address ranges map to the same thing
             // this is because each of the two nametables each contain 1kb of data
             // and we mirror vertically for the remaining parts of the address range
@@ -938,10 +938,10 @@ uint8_t PPU::Read(uint16_t addr) {
             else if (addr >= 0xc00 && addr < 0x1000)
                 return ppu->nametbl[1][addr % 0x400];
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_OSLO) {
+        else if (mirror_mode == Mapper::MirrorMode::ONESCREEN_LO) {
             return ppu->nametbl[0][addr % 0x400];
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_OSHI) {
+        else if (mirror_mode == Mapper::MirrorMode::ONESCREEN_HI) {
             return ppu->nametbl[1][addr % 0x400];
         }
         else {
@@ -1024,7 +1024,7 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
 
         Mapper::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
         //printf("writing nametable\n");
-        if (mirror_mode == Mapper::MAPPER_MIRRORMODE_HORZ) {
+        if (mirror_mode == Mapper::MirrorMode::HORIZONTAL) {
             if (addr >= 0 && addr < 0x800) {
                 ppu->nametbl[0][addr % 0x400] = data;
                 return true;
@@ -1035,7 +1035,7 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
                 return true;
             }
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_VERT) {
+        else if (mirror_mode == Mapper::MirrorMode::VERTICAL) {
             if (addr >= 0 && addr < 0x400) {
                 ppu->nametbl[0][addr % 0x400] = data;
                 return true;
@@ -1053,11 +1053,11 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
                 return true;
             }
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_OSLO) {
+        else if (mirror_mode == Mapper::MirrorMode::ONESCREEN_LO) {
             ppu->nametbl[0][addr % 0x400] = data;
             return true;
         }
-        else if (mirror_mode == Mapper::MAPPER_MIRRORMODE_OSHI) {
+        else if (mirror_mode == Mapper::MirrorMode::ONESCREEN_HI) {
             ppu->nametbl[1][addr % 0x400] = data;
             return true;
         }

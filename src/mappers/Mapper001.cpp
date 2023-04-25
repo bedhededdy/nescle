@@ -67,7 +67,7 @@ void Mapper001::Reset() {
     load = 0;
     load_reg_ct = 0;
 
-    mirror_mode = MAPPER_MIRRORMODE_HORZ;
+    mirror_mode = Mapper::MirrorMode::HORIZONTAL;
 }
 
 uint8_t Mapper001::MapCPURead(uint16_t addr) {
@@ -114,16 +114,16 @@ bool Mapper001::MapCPUWrite(uint16_t addr, uint8_t data) {
                 ctrl = load & 0x1f;
                 switch (ctrl & 3) {
                 case 0:
-                    mirror_mode = MAPPER_MIRRORMODE_OSLO;
+                    mirror_mode = Mapper::MirrorMode::ONESCREEN_LO;
                     break;
                 case 1:
-                    mirror_mode = MAPPER_MIRRORMODE_OSHI;
+                    mirror_mode = Mapper::MirrorMode::ONESCREEN_HI;
                     break;
                 case 2:
-                    mirror_mode = MAPPER_MIRRORMODE_VERT;
+                    mirror_mode = Mapper::MirrorMode::VERTICAL;
                     break;
                 case 3:
-                    mirror_mode = MAPPER_MIRRORMODE_HORZ;
+                    mirror_mode = Mapper::MirrorMode::HORIZONTAL;
                     break;
                 }
             } else if (target == 1) {

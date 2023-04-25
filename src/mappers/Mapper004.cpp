@@ -27,7 +27,7 @@ void Mapper004::Reset() {
     target_register = 0;
     prg_bank_mode = false;
     chr_inversion = false;
-    mirror_mode = MAPPER_MIRRORMODE_HORZ;
+    mirror_mode = Mapper::MirrorMode::HORIZONTAL;
     irq_active = false;
     irq_enabled = false;
     irq_update = false;
@@ -107,9 +107,9 @@ bool Mapper004::MapCPUWrite(uint16_t addr, uint8_t data) {
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         if (!(addr & 1)) {
             if (data & 1)
-                mirror_mode = MAPPER_MIRRORMODE_HORZ;
+                mirror_mode = Mapper::MirrorMode::HORIZONTAL;
             else
-                mirror_mode = MAPPER_MIRRORMODE_VERT;
+                mirror_mode = Mapper::MirrorMode::VERTICAL;
         } else {
             // prg ram protect
             // TODO:
