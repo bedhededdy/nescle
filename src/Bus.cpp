@@ -22,7 +22,7 @@
 #include "APU.h"
 #include "CPU.h"
 #include "Cart.h"
-#include "Mapper.h"
+#include "mappers/Mapper.h"
 #include "PPU.h"
 #include "Util.h"
 
@@ -92,8 +92,8 @@ uint8_t Bus::Read(uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        Mapper& mapper = cart.GetMapper();
-        return mapper.MapCPURead(addr);
+        Mapper* mapper = cart.GetMapper();
+        return mapper->MapCPURead(addr);
     }
 
     // Return 0 on failed read
@@ -146,8 +146,8 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        Mapper& mapper = cart.GetMapper();
-        return mapper.MapCPUWrite(addr, data);
+        Mapper* mapper = cart.GetMapper();
+        return mapper->MapCPUWrite(addr, data);
     }
 
     // Return false on failed read
@@ -225,8 +225,8 @@ bool Bus::Clock() {
         cpu.NMI();
     }
 
-    if (cart.GetMapper().GetIRQStatus()) {
-        cart.GetMapper().ClearIRQStatus();
+    if (cart.GetMapper()->GetIRQStatus()) {
+        cart.GetMapper()->ClearIRQStatus();
         cpu.IRQ();
     }
 
@@ -263,9 +263,9 @@ void Bus::PowerOn() {
 void Bus::Reset() {
     Bus* bus = this;
     // Contents of RAM do not clear on reset
-    Mapper& mapper = cart.GetMapper();
-    if (mapper.Exists())
-        mapper.Reset();
+    Mapper* mapper = cart.GetMapper();
+    if (mapper != nullptr)
+        mapper->Reset();
     ppu.Reset();
     cpu.Reset();
     apu.Reset();

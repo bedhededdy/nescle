@@ -21,8 +21,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "mappers/MapperFactory.h"
 #include "PPU.h"
-#include "Mapper.h"
 #include "Util.h"
 
 namespace NESCLE {
@@ -133,8 +133,8 @@ bool Cart::LoadROM(const char* path) {
         "Cart_LoadROM: mapper id %d\n", mapper_id);
 
     // Bottom bit of mapper1 determines mirroring mode
-    MapperBase::MirrorMode mirror_mode = (header->mapper1 & 1) ?
-        MapperBase::MAPPER_MIRRORMODE_VERT : MapperBase::MAPPER_MIRRORMODE_HORZ;
+    Mapper::MirrorMode mirror_mode = (header->mapper1 & 1) ?
+        Mapper::MAPPER_MIRRORMODE_VERT : Mapper::MAPPER_MIRRORMODE_HORZ;
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Cart_LoadROM: mirror mode %d\n", mirror_mode);
 
@@ -143,8 +143,10 @@ bool Cart::LoadROM(const char* path) {
     // the mapper is not a critical error
     // SetMapper(Mapper(mapper_id, *this, mirror_mode));
     // mapper = Mapper(mapper_id, *this, mirror_mode);
-    mapper.SetID(mapper_id);
-    mapper.MakeMapperFromID(*this, mirror_mode);
+    // mapper.SetID(mapper_id);
+    // mapper.MakeMapperFromID(*this, mirror_mode);
+
+    SetMapper(mapper_id, mirror_mode);
 
     // Free previous path if it exists and copy it into the cart
     size_t path_len = strlen(path) + 1;
@@ -237,17 +239,19 @@ void Cart::WriteChrRom(size_t off, uint8_t val) {
     chr_rom[off] = val;
 }
 
-Mapper& Cart::GetMapper() {
-    return mapper;
+// TODO: THIS SHOUDL BE MARKED CONST
+Mapper* Cart::GetMapper() {
+    return mapper.get();
 }
 
 const std::string& Cart::GetROMPath() {
     return rom_path;
 }
 
-void Cart::SetMapper(uint8_t _id, Cart& _cart, MapperBase::MirrorMode _mode) {
-    // this->mapper = Mapper(_id, _cart, _mode);
-    mapper.SetID(_id);
-    mapper.MakeMapperFromID(_cart, _mode);
+void Cart::SetMapper(uint8_t _id, Mapper::MirrorMode _mode) {
+    // // this->mapper = Mapper(_id, _cart, _mode);
+    // mapper.SetID(_id);
+    // mapper.MakeMapperFromID(_cart, _mode);
+    mapper = MapperFactory::CreateMapperFromID(_id, *this, _mode);
 }
 }

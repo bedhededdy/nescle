@@ -21,8 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "Mapper.h"
-#include "mappers/MapperBase.h"
+#include "mappers/Mapper.h"
 #include "NESCLETypes.h"
 
 namespace NESCLE {
@@ -50,7 +49,8 @@ private:
     FileType file_type;
     std::string rom_path;
 
-    Mapper mapper;
+    // Mapper mapper;
+    std::unique_ptr<Mapper> mapper;
 
     std::vector<uint8_t> prg_rom;
     std::vector<uint8_t> chr_rom;
@@ -69,8 +69,9 @@ public:
     bool SaveState(FILE* file);
     bool LoadState(FILE* file);
 
-    void SetMapper(uint8_t _id, Cart& cart, MapperBase::MirrorMode mirror);
-    Mapper& GetMapper();
+    void SetMapper(uint8_t _id, Mapper::MirrorMode mirror);
+    // TODO: THIS SHOULD BE MARKED CONST
+    Mapper* GetMapper();
 
     const std::string& GetROMPath();
 

@@ -129,7 +129,7 @@ find_package(OpenGL REQUIRED)
 set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
 set(NESCLE_SRC Bus.cpp Cart.cpp CPU.cpp Emulator.cpp RetroText.cpp NESCLETexture.cpp
-      EmulationWindow.cpp PatternWindow.cpp Main.cpp Mapper.cpp PPU.cpp APU.cpp
+      EmulationWindow.cpp PatternWindow.cpp Main.cpp PPU.cpp APU.cpp
       DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
       MixerWindow.cpp Util.cpp NESCLENotification.cpp)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp

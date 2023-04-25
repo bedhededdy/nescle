@@ -15,10 +15,10 @@
  */
 #pragma once
 
-#include "MapperBase.h"
+#include "Mapper.h"
 
 namespace NESCLE {
-class Mapper004 : public MapperBase {
+class Mapper004 : public Mapper {
 private:
     // FIXME: SHOULDN'T THESE BE 8 BYTES
     uint32_t registers[8];
@@ -38,8 +38,8 @@ private:
     uint8_t sram[0x8000];
 
 public:
-    Mapper004(Cart& cart, MapperBase::MirrorMode mirror)
-        : MapperBase(cart, mirror) {}
+    Mapper004(Cart& cart, Mapper::MirrorMode mirror)
+        : Mapper(cart, mirror) {}
 
     void Reset() override;
 

@@ -21,7 +21,7 @@
 #include "../NESCLETypes.h"
 
 namespace NESCLE {
-class MapperBase {
+class Mapper {
 public:
     enum MirrorMode {
         MAPPER_MIRRORMODE_HORZ,   // Horizontal
@@ -35,9 +35,9 @@ protected:
     MirrorMode mirror_mode;
 
 public:
-    MapperBase(Cart& _cart, MirrorMode _mirror)
+    Mapper(Cart& _cart, MirrorMode _mirror)
         : cart(_cart), mirror_mode(_mirror) {}
-    virtual ~MapperBase() = default;
+    virtual ~Mapper() = default;
 
     virtual void Reset() {}
 

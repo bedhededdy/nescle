@@ -15,10 +15,10 @@
  */
 #pragma once
 
-#include "MapperBase.h"
+#include "Mapper.h"
 
 namespace NESCLE {
-class Mapper001 : public MapperBase {
+class Mapper001 : public Mapper {
 private:
     uint8_t chr_select4_lo = 0;
     uint8_t chr_select4_hi = 0;
@@ -41,8 +41,8 @@ private:
     uint8_t sram[0x8000];
 
 public:
-    Mapper001(Cart& cart, MapperBase::MirrorMode mirror)
-        : MapperBase(cart, mirror) {}
+    Mapper001(Cart& cart, Mapper::MirrorMode mirror)
+        : Mapper(cart, mirror) {}
 
     void Reset() override;
 

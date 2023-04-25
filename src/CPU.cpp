@@ -894,7 +894,7 @@ void CPU::NMI() {
 // https://www.nesdev.org/wiki/CPU_power_up_state
 void CPU::Reset() {
     // Set internal state to hard-coded reset values
-    if (bus->GetCart().GetMapper().Exists() != NULL)
+    if (bus->GetCart().GetMapper() != nullptr)
         pc = bus->Read16(0xfffc);
 
     /*

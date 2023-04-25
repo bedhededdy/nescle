@@ -16,13 +16,13 @@
 // https://nesdev.org/wiki/NROM
 #pragma once
 
-#include "MapperBase.h"
+#include "Mapper.h"
 
 namespace NESCLE {
-class Mapper000 : public MapperBase {
+class Mapper000 : public Mapper {
 public:
-    Mapper000(Cart& cart, MapperBase::MirrorMode mirror)
-        : MapperBase(cart, mirror) {}
+    Mapper000(Cart& cart, Mapper::MirrorMode mirror)
+        : Mapper(cart, mirror) {}
 
     uint8_t MapCPURead(uint16_t addr) override;
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;

@@ -117,7 +117,7 @@
 #include "CPU.h"
 #include "Cart.h"
 #include "Emulator.h"
-#include "Mapper.h"
+#include "mappers/Mapper.h"
 #include "PPU.h"
 #include "Util.h"
 
