@@ -86,7 +86,7 @@ uint8_t Bus::Read(uint16_t addr) {
         /* Cartridge (REQUIRES MAPPER) */
         // FIXME: YOU NEED TO ACTUALLY TELL IT TO READ FROM THE RIGHT PART BASED ON THE MAPPER, IT MAY NOT ALWAYS BE THE PROGRAM_MEM (I THINK??)
         // FIXME: THIS MAPPING MIGHT NOT JUST BE IN THIS RANGE
-        Mapper* mapper = cart.GetMapper();
+        auto mapper = cart.GetMapper();
         return mapper->MapCPURead(addr);
     }
 
@@ -140,7 +140,7 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {
         /* Cartridge */
-        Mapper* mapper = cart.GetMapper();
+        auto mapper = cart.GetMapper();
         return mapper->MapCPUWrite(addr, data);
     }
 

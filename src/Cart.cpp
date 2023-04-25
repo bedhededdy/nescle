@@ -26,12 +26,6 @@
 #include "Util.h"
 
 namespace NESCLE {
-Cart::Cart() {
-}
-
-Cart::~Cart() {
-}
-
 bool Cart::LoadROM(const char* path) {
     // FIXME: THIS WILL LEAK MEMORY IN FAILURE SCENARIOS
 
@@ -241,7 +235,6 @@ void Cart::WriteChrRom(size_t off, uint8_t val) {
     chr_rom[off] = val;
 }
 
-// TODO: THIS SHOUDL BE MARKED CONST
 Mapper* Cart::GetMapper() {
     return mapper.get();
 }

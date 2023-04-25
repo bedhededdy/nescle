@@ -40,7 +40,7 @@ private:
         uint8_t padding[5];     // Unused padding
     };
 
-    enum FileType {
+    enum class FileType {
         INES = 1,
         NES2
     };
@@ -49,30 +49,22 @@ private:
     FileType file_type;
     std::string rom_path;
 
-    // Mapper mapper;
     std::unique_ptr<Mapper> mapper;
 
     std::vector<uint8_t> prg_rom;
     std::vector<uint8_t> chr_rom;
 
-    // TODO: NEED TO ADD THIS
-    // Bus* bus
-
 public:
     static constexpr int CHR_ROM_CHUNK_SIZE = 0x2000;
     static constexpr int PRG_ROM_CHUNK_SIZE = 0x4000;
-
-    Cart();
-    ~Cart();
 
     bool LoadROM(const char* path);
     bool SaveState(std::ofstream& file);
     bool LoadState(std::ifstream& file);
 
     void SetMapper(uint8_t _id, Mapper::MirrorMode mirror);
-    // TODO: THIS SHOULD BE MARKED CONST
-    Mapper* GetMapper();
 
+    Mapper* GetMapper();
     const std::string& GetROMPath();
 
     uint8_t GetPrgRomBlocks();
