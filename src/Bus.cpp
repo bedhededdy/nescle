@@ -30,22 +30,17 @@
 
 namespace NESCLE {
 Bus::Bus() {
-    Bus* bus = this;
-    cpu.LinkBus(bus);
-    ppu.LinkBus(bus);
-}
-
-Bus::~Bus() {
-    // Bus* bus = this;
-    // delete bus->cpu;
-    // delete bus->ppu;
-    // delete bus->cart;
-    // delete bus->apu;
+    cpu.LinkBus(this);
+    ppu.LinkBus(this);
 }
 
 /* R/W */
 void Bus::ClearMem() {
     std::fill(std::begin(ram), std::end(ram), 0);
+}
+
+void Bus::ClearMemRand() {
+    // std::generate(std::begin(ram), std::end(ram), []() { return rand() % 256; });
 }
 
 uint8_t Bus::Read(uint16_t addr) {
@@ -276,26 +271,28 @@ void Bus::Reset() {
     bus->dma_dummy = true;
 }
 
-bool Bus::SaveState(FILE* file) {
-    return fwrite(this, sizeof(Bus), 1, file) == 1;
+bool Bus::SaveState(std::ofstream& file) {
+    // return fwrite(this, sizeof(Bus), 1, file) == 1;
+    return false;
 }
 
-bool Bus::LoadState(FILE* file) {
-    // Bus
-    Bus* bus = this;
-    auto cpu_addr = bus->cpu;
-    auto ppu_addr = bus->ppu;
-    // auto cart_addr = bus->cart;
-    auto apu_addr = bus->apu;
+bool Bus::LoadState(std::ifstream& file) {
+    // // Bus
+    // Bus* bus = this;
+    // auto cpu_addr = bus->cpu;
+    // auto ppu_addr = bus->ppu;
+    // // auto cart_addr = bus->cart;
+    // auto apu_addr = bus->apu;
 
-    bool res = fread(bus, sizeof(Bus), 1, file);
+    // bool res = fread(bus, sizeof(Bus), 1, file);
 
-    bus->cpu = cpu_addr;
-    bus->ppu = ppu_addr;
-    // bus->cart = cart_addr;
-    bus->apu = apu_addr;
+    // bus->cpu = cpu_addr;
+    // bus->ppu = ppu_addr;
+    // // bus->cart = cart_addr;
+    // bus->apu = apu_addr;
 
-    return res;
+    // return res;
+    return false;
 }
 
 void Bus::SetSampleFrequency(uint32_t sample_frequency) {

@@ -651,26 +651,26 @@ void EmulationWindow::Loop() {
                 emu->SetBTurbo(emu->KeyHeld(btn_map->bturbo));
                 if (emu->GetATurbo())
                     bus->SetController1(bus->GetController1()
-                        | (prev_controller1 & Bus::BUS_CONTROLLER_A));
+                        | (prev_controller1 & (int)Bus::NESButtons::BUS_CONTROLLER_A));
                 if (emu->GetBTurbo())
                     bus->SetController1(bus->GetController1()
-                        | (prev_controller1 & Bus::BUS_CONTROLLER_B));
+                        | (prev_controller1 & (int)Bus::NESButtons::BUS_CONTROLLER_B));
                 if (emu->KeyHeld(btn_map->up))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_UP);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_UP);
                 if (emu->KeyHeld(btn_map->left))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_LEFT);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_LEFT);
                 if (emu->KeyHeld(btn_map->down))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_DOWN);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_DOWN);
                 if (emu->KeyHeld(btn_map->right))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_RIGHT);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_RIGHT);
                 if (emu->KeyHeld(btn_map->b))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_B);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_B);
                 if (emu->KeyHeld(btn_map->a))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_A);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_A);
                 if (emu->KeyHeld(btn_map->select))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_SELECT);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_SELECT);
                 if (emu->KeyHeld(btn_map->start))
-                    bus->SetController1(bus->GetController1() | Bus::BUS_CONTROLLER_START);
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_START);
             }
         }
 

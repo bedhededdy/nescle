@@ -218,8 +218,8 @@ bool Emulator::SaveState(const char* path) {
     }
 
     Bus* bus = nes;
-    if (!nes->SaveState(savestate))
-        printf("bus too short");
+    // if (!nes->SaveState(savestate))
+        // printf("bus too short");
 
     if (!bus->GetCPU().SaveState(savestate))
         printf("cpu too short");
@@ -326,7 +326,7 @@ bool Emulator::LoadState(const char* path) {
 
     Bus* bus = nes;
 
-    bus->LoadState(savestate);
+    // bus->LoadState(savestate);
 
     // CPU
     bus->GetCPU().LoadState(savestate);
@@ -467,16 +467,16 @@ float Emulator::EmulateSample() {
             // if it has and we are pressing the turbo button, we will
             // flip the state of the bit that corresponds to that turbo button
             if (aturbo) {
-                if (nes->GetController1() & Bus::BUS_CONTROLLER_A)
-                    nes->SetController1(nes->GetController1() & ~Bus::BUS_CONTROLLER_A);
+                if (nes->GetController1() & (int)Bus::NESButtons::BUS_CONTROLLER_A)
+                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::BUS_CONTROLLER_A);
                 else
-                    nes->SetController1(nes->GetController1() | Bus::BUS_CONTROLLER_A);
+                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_A);
             }
             if (bturbo) {
-                if (nes->GetController1() & Bus::BUS_CONTROLLER_B)
-                    nes->SetController1(nes->GetController1() & ~Bus::BUS_CONTROLLER_B);
+                if (nes->GetController1() & (int)Bus::NESButtons::BUS_CONTROLLER_B)
+                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::BUS_CONTROLLER_B);
                 else
-                    nes->SetController1(nes->GetController1() | Bus::BUS_CONTROLLER_B);
+                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::BUS_CONTROLLER_B);
             }
         }
     }

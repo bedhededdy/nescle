@@ -17,14 +17,13 @@
 
 #include <array>
 #include <cstdint>
-#include <cstdio>
+#include <fstream>
 
 #include "APU.h"
 #include "CPU.h"
 #include "Cart.h"
-#include "PPU.h"
-
 #include "NESCLETypes.h"
+#include "PPU.h"
 
 namespace NESCLE {
 /*
@@ -67,8 +66,7 @@ private:
     uint64_t clocks_count;
 
 public:
-    // TODO: MAKE ENUM CLASS
-    enum NESButtons {
+    enum class NESButtons : uint8_t {
         BUS_CONTROLLER_A = 0x1,
         BUS_CONTROLLER_B = 0x2,
         BUS_CONTROLLER_SELECT = 0X4,
@@ -80,7 +78,6 @@ public:
     };
 
     Bus();
-    ~Bus();
 
     /* Read/Write */
     void ClearMem();        // Sets contents of RAM to a deterministic value
@@ -95,8 +92,8 @@ public:
     void PowerOn(); // Sets entire system to powerup state
     void Reset();   // Equivalent to pushing the RESET button on a NES
 
-    bool SaveState(FILE* file);
-    bool LoadState(FILE* file);
+    bool SaveState(std::ofstream& file);
+    bool LoadState(std::ifstream& file);
 
     void SetSampleFrequency(uint32_t sample_rate);
 

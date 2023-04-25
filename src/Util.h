@@ -18,6 +18,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <type_traits>
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define UTIL_WINDOWS
 #endif
@@ -35,4 +37,7 @@ void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
 const char* Util_GetFileName(const char* path);
 
 bool Util_FileExists(const char* path);
+
+template<typename T>
+constexpr auto Util_CastEnumToUnderlyingType(T t);
 }

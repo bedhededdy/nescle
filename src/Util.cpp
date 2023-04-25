@@ -103,4 +103,9 @@ bool Util_CreateDirectoryIfNotExists(const char* path) {
     int res = mkdir(path, 0777);
     return res == 0 || errno == EEXIST;
 }
+
+template<typename T>
+constexpr auto Util_CastEnumToUnderlyingType(T t) {
+    return static_cast<std::underlying_type_t<T>>(t);
+}
 }
