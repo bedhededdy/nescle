@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <nlohmann/json.hpp>
+
 #include "NESCLETypes.h"
 
 namespace NESCLE {
@@ -87,7 +89,7 @@ private:
         PPU_STATUS_SPR_OVERFLOW = 0x20
     };
 
-    Bus* bus;
+    Bus& bus;
 
     // Current screen and last complete frame
     // We represent them as 1D arrays instead of 2D, because
@@ -97,6 +99,7 @@ private:
     uint32_t frame_buffer[RESOLUTION_Y * RESOLUTION_X];
 
     uint8_t nametbl[2][NAMETBL_SIZE];   // nes supported 2, 1kb nametables
+    // std::array<std::array<uint8_t, NAMETBL_SIZE>, 2> nametbl;
     // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
     //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
     uint8_t palette[PALETTE_SIZE];     // color palette information
@@ -104,7 +107,7 @@ private:
     // Sprite internal info
     OAM oam[64];
     // For accessing OAM as a sequence of bytes
-    uint8_t* oam_ptr;
+    // uint8_t* oam_ptr;
 
     uint8_t oam_addr;
 
@@ -122,6 +125,7 @@ private:
     // 8x8px per tile x 256 tiles per half
     // representation of the pattern table as rgb values
     uint32_t sprpatterntbl[2][TILE_X * TILE_NBYTES][TILE_Y * TILE_NBYTES];
+    // std::array<std::array<std::array<uint32_t, TILE_Y * TILE_NBYTES>, TILE_X * TILE_NBYTES>, 2> sprpatterntbl;
 
     int scanline;   // which row of the screen we are on
     int cycle;      // what col of the screen we are on (1 pixel per cycle)
@@ -171,8 +175,7 @@ private:
     uint32_t MapColor(int idx);
 
 public:
-    PPU();
-    ~PPU();
+    PPU(Bus& _bus);
 
     void Clock();
     void Reset();
@@ -188,11 +191,6 @@ public:
     uint32_t GetColorFromPalette(uint8_t palette, uint8_t pixel);
     uint32_t* GetPatternTable(uint8_t idx, uint8_t palette);
 
-    bool SaveState(FILE* file);
-    bool LoadState(FILE* file);
-
-    void LinkBus(Bus* bus);
-
     bool GetNMIStatus();
     void ClearNMIStatus();
 
@@ -202,5 +200,18 @@ public:
     void WriteOAM(uint8_t addr, uint8_t data);
 
     uint32_t* GetFramebuffer();
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(OAM, y, tile_id, attributes, x)
+    // NLOHMANN_DEFINE_TYPE_INTRUSIVE(PPU, screen, frame_buffer, nametbl, palette,
+    //     oam, oam_addr, spr_scanline, spr_count, spr_shifter_pattern_lo,
+    //     spr_shifter_pattern_hi, spr0_can_hit, spr0_rendering,
+    //     sprpatterntbl, scanline, cycle, status, mask, control,
+    //     vram_addr, tram_addr, fine_x, addr_latch, data_buffer,
+    //     bg_next_tile_id, bg_next_tile_attr, bg_next_tile_lsb,
+    //     bg_next_tile_msb, bg_shifter_pattern_lo, bg_shifter_pattern_hi,
+    //     bg_shifter_attr_lo, bg_shifter_attr_hi, frame_complete, nmi)
+
+    friend void to_json(nlohmann::json& j, const PPU& ppu);
+    friend void from_json(const nlohmann::json& j, PPU& ppu);
 };
 }

@@ -378,28 +378,6 @@ void APU::Reset() {
     noise.volume = prev_n;
 }
 
-bool APU::SaveState(std::ofstream& file) {
-    // return fwrite(this, sizeof(APU), 1, file) == 1;
-    return false;
-}
-
-bool APU::LoadState(std::ifstream& file) {
-    // FIXME: THIS FUNCTION IS NOT RESILIENT AGAINST
-    // A FAILED READ, AS THE BUS POINTER WOULD GET
-    // MESSED UP
-    // THE PROPER WAY TO DO THE SAVE STATING
-    // WOULD BE TO MAKE A COPY OF EVERYTHING
-    // AND THEN COPY IT OVER AT THE END SO THAT
-    // WE DON'T END UP WITH HALF VALID STATE AND
-    // HALF NONSENSE
-    // Bus* bus = bus;
-    // if (fread(this, sizeof(APU), 1, file) < 1)
-    //     return false;
-    // bus = bus;
-    // return true;
-    return false;
-}
-
 float APU::GetPulse1Sample() { return pulse1.sample; }
 float APU::GetPulse2Sample() { return pulse2.sample; }
 float APU::GetTriangleSample() { return triangle.sample; }

@@ -25,9 +25,64 @@
 #include "Util.h"
 
 // Returns if the operand is a negative 8-bit integer
-#define CPU_IS_NEG(x)       ((x) & (1 << 7))
+#define CPU_IS_NEG(x)   ((x) & 0x80)
 
 namespace NESCLE {
+void to_json(nlohmann::json& j, const CPU& cpu) {
+    j = nlohmann::json {
+        {"a", cpu.a},
+        {"y", cpu.y},
+        {"x", cpu.x},
+        {"sp", cpu.sp},
+        {"status", cpu.status},
+        {"pc", cpu.pc},
+
+        // HAVE TO STORE OPCODE SINCE INSTR* WILL BE INVALIDATED BETWEEN RUNS
+        {"opcode", cpu.instr->opcode},
+
+        {"addr_eff", cpu.addr_eff},
+        {"cycles_rem", cpu.cycles_rem},
+        {"cycles_count", cpu.cycles_count}
+    };
+}
+
+void from_json(const nlohmann::json& j, CPU& cpu) {
+    j.at("a").get_to(cpu.a);
+    j.at("y").get_to(cpu.y);
+    j.at("x").get_to(cpu.x);
+    j.at("sp").get_to(cpu.sp);
+    j.at("status").get_to(cpu.status);
+    j.at("pc").get_to(cpu.pc);
+
+    uint8_t opcode = j.at("opcode");
+    cpu.instr = cpu.Decode(opcode);
+
+    j.at("addr_eff").get_to(cpu.addr_eff);
+    j.at("cycles_rem").get_to(cpu.cycles_rem);
+    j.at("cycles_count").get_to(cpu.cycles_count);
+}
+
+// Don't copy the reference to the bus
+// CPU& CPU::operator=(const CPU& cpu) {
+//     if (this == &cpu)
+//         return *this;
+
+//     a = cpu.a;
+//     y = cpu.y;
+//     x = cpu.x;
+//     sp = cpu.sp;
+//     status = cpu.status;
+//     pc = cpu.pc;
+
+//     instr = cpu.instr;
+
+//     addr_eff = cpu.addr_eff;
+//     cycles_rem = cpu.cycles_rem;
+//     cycles_count = cpu.cycles_count;
+
+//     return *this;
+// }
+
 /* UNCOMMENT TO ENABLE LOGGING EACH CPU INSTRUCTION (TANKS PERFORMANCE) */
 //#define DISASSEMBLY_LOG
 
@@ -62,16 +117,16 @@ const CPU::Instr* CPU::Decode(uint8_t opcode) {
 /* Helper Functions */
 // Stack helper functions
 uint8_t CPU::StackPop() {
-    return bus->Read(SP_BASE_ADDR + ++sp);
+    return bus.Read(SP_BASE_ADDR + ++sp);
 }
 
 bool CPU::StackPush(uint8_t data) {
-    return bus->Write(SP_BASE_ADDR + sp--, data);
+    return bus.Write(SP_BASE_ADDR + sp--, data);
 }
 
 // Misc. helper functions
 uint8_t CPU::FetchOperand() {
-    return bus->Read(addr_eff);
+    return bus.Read(addr_eff);
 }
 
 void CPU::SetStatus(uint8_t flag, bool set) {
@@ -100,21 +155,21 @@ void CPU::AddrMode_IMM() {
 
 // addr_eff = (msb << 8) | lsb
 void CPU::AddrMode_ABS() {
-    uint8_t lsb = bus->Read(pc++);
-    uint8_t msb = bus->Read(pc++);
+    uint8_t lsb = bus.Read(pc++);
+    uint8_t msb = bus.Read(pc++);
 
     addr_eff = (msb << 8) | lsb;
 }
 
 // addr_eff = off
 void CPU::AddrMode_ZPG() {
-    uint8_t off = bus->Read(pc++);
+    uint8_t off = bus.Read(pc++);
     addr_eff = off;
 }
 
 // addr_eff = (off + cpu->x) % 256
 void CPU::AddrMode_ZPX() {
-    uint8_t off = bus->Read(pc++);
+    uint8_t off = bus.Read(pc++);
     // Cast the additon back to the 8-bit domain to achieve the
     // desired overflow (wrap around) behavior
     addr_eff = (uint8_t)(off + x);
@@ -122,7 +177,7 @@ void CPU::AddrMode_ZPX() {
 
 // addr_eff = (off + cpu->y) % 256
 void CPU::AddrMode_ZPY() {
-    uint8_t off = bus->Read(pc++);
+    uint8_t off = bus.Read(pc++);
     // Cast the additon back to the 8-bit domain to achieve the
     // desired overflow (wrap around) behavior
     addr_eff = (uint8_t)(off + y);
@@ -130,8 +185,8 @@ void CPU::AddrMode_ZPY() {
 
 // addr_eff = ((msb << 8) | lsb) + cpu->x
 void CPU::AddrMode_ABX() {
-    uint8_t lsb = bus->Read(pc++);
-    uint8_t msb = bus->Read(pc++);
+    uint8_t lsb = bus.Read(pc++);
+    uint8_t msb = bus.Read(pc++);
 
     addr_eff = ((msb << 8) | lsb) + x;
 
@@ -144,8 +199,8 @@ void CPU::AddrMode_ABX() {
 
 // addr_eff = ((msb << 8) | lsb) + cpu->y
 void CPU::AddrMode_ABY() {
-    uint8_t lsb = bus->Read(pc++);
-    uint8_t msb = bus->Read(pc++);
+    uint8_t lsb = bus.Read(pc++);
+    uint8_t msb = bus.Read(pc++);
 
     addr_eff = ((msb << 8) | lsb) + y;
 
@@ -161,31 +216,31 @@ void CPU::AddrMode_IMP() {}
 
 // addr_eff = *pc + pc
 void CPU::AddrMode_REL() {
-    int8_t off = (int8_t)bus->Read(pc++);
+    int8_t off = (int8_t)bus.Read(pc++);
     addr_eff = pc + off;
 }
 
 // addr_eff = (*((off + x + 1) % 256) >> 8) | *((off + x) % 256)
 void CPU::AddrMode_IDX() {
-    uint8_t off = bus->Read(pc++);
+    uint8_t off = bus.Read(pc++);
 
     // Perform addition on 8-bit variable to force desired
     // overflow (wrap around) behavior
     off += x;
-    uint8_t lsb = bus->Read(off++);
-    uint8_t msb = bus->Read(off);
+    uint8_t lsb = bus.Read(off++);
+    uint8_t msb = bus.Read(off);
 
     addr_eff = (msb << 8) | lsb;
 }
 
 // addr_eff = ((*(off) >> 8) | (*((off + 1) % 256))) + y
 void CPU::AddrMode_IDY() {
-    uint8_t off = bus->Read(pc++);
+    uint8_t off = bus.Read(pc++);
 
     // Perform addition on 8-bit variable to force desired
     // overflow (wrap around) behavior
-    uint8_t lsb = bus->Read(off++);
-    uint8_t msb = bus->Read(off);
+    uint8_t lsb = bus.Read(off++);
+    uint8_t msb = bus.Read(off);
 
     addr_eff = ((msb << 8) | lsb) + y;
 
@@ -198,8 +253,8 @@ void CPU::AddrMode_IDY() {
 
 // addr_eff = (*(addr + 1) << 8) | *(addr)
 void CPU::AddrMode_IND() {
-    uint8_t lsb = bus->Read(pc++);
-    uint8_t msb = bus->Read(pc++);
+    uint8_t lsb = bus.Read(pc++);
+    uint8_t msb = bus.Read(pc++);
 
     // The lsb and msb are the bytes of an address that we are pointing to.
     // In order to properly set addr_eff, we will need to read from the address
@@ -215,11 +270,11 @@ void CPU::AddrMode_IND() {
     if (lsb == 0xff)
         // & 0xff00 zeroes out the bottom bits (wrapping around to byte 0
         // of the current page)
-        addr_eff = (bus->Read(addr & 0xff00) << 8)
-            | bus->Read(addr);
+        addr_eff = (bus.Read(addr & 0xff00) << 8)
+            | bus.Read(addr);
     else
-        addr_eff = (bus->Read(addr + 1) << 8)
-            | bus->Read(addr);
+        addr_eff = (bus.Read(addr + 1) << 8)
+            | bus.Read(addr);
 }
 
 /* CPU operations (ISA) */
@@ -303,7 +358,7 @@ void CPU::Op_ASL() {
         uint8_t operand = FetchOperand();
         uint8_t res = operand << 1;
 
-        bus->Write(addr_eff, res);
+        bus.Write(addr_eff, res);
 
         SetStatus(STATUS_ZERO, res == 0);
         SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
@@ -379,7 +434,7 @@ void CPU::Op_BRK() {
     SetStatus(STATUS_BRK, false);
 
     // Fetch and set PC from hard-coded location
-    pc = bus->Read16(0xfffe);
+    pc = bus.Read16(0xfffe);
 }
 
 // Branch on !STATUS_OVERFLOW
@@ -449,7 +504,7 @@ void CPU::Op_DEC() {
     uint8_t operand = FetchOperand();
     uint8_t res = operand - 1;
 
-    bus->Write(addr_eff, res);
+    bus.Write(addr_eff, res);
 
     SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
     SetStatus(STATUS_ZERO, res == 0);
@@ -485,7 +540,7 @@ void CPU::Op_INC() {
     uint8_t operand = FetchOperand();
     uint8_t res = operand + 1;
 
-    bus->Write(addr_eff, res);
+    bus.Write(addr_eff, res);
 
     SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(res));
     SetStatus(STATUS_ZERO, res == 0);
@@ -534,7 +589,7 @@ void CPU::Op_JSR() {
 
 // M -> A
 void CPU::Op_LDA() {
-    a = bus->Read(addr_eff);
+    a = bus.Read(addr_eff);
 
     SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(a));
     SetStatus(STATUS_ZERO, a == 0);
@@ -542,7 +597,7 @@ void CPU::Op_LDA() {
 
 // M -> X
 void CPU::Op_LDX() {
-    x = bus->Read(addr_eff);
+    x = bus.Read(addr_eff);
 
     SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(x));
     SetStatus(STATUS_ZERO, x == 0);
@@ -550,7 +605,7 @@ void CPU::Op_LDX() {
 
 // M -> Y
 void CPU::Op_LDY() {
-    y = bus->Read(addr_eff);
+    y = bus.Read(addr_eff);
 
     SetStatus(STATUS_NEGATIVE, CPU_IS_NEG(y));
     SetStatus(STATUS_ZERO, y == 0);
@@ -570,7 +625,7 @@ void CPU::Op_LSR() {
         uint8_t operand = FetchOperand();
         uint8_t res = operand >> 1;
 
-        bus->Write(addr_eff, res);
+        bus.Write(addr_eff, res);
 
         SetStatus(STATUS_NEGATIVE, false);
         SetStatus(STATUS_ZERO, res == 0);
@@ -642,7 +697,7 @@ void CPU::Op_ROL() {
         uint8_t res = operand << 1;
         res = res | ((status & STATUS_CARRY) == STATUS_CARRY);
 
-        bus->Write(addr_eff, res);
+        bus.Write(addr_eff, res);
 
         SetStatus(STATUS_CARRY, operand & (1 << 7));
         SetStatus(STATUS_ZERO, res == 0);
@@ -666,7 +721,7 @@ void CPU::Op_ROR() {
         uint8_t res = operand >> 1;
         res = res | (((status & STATUS_CARRY) == STATUS_CARRY) << 7);
 
-        bus->Write(addr_eff, res);
+        bus.Write(addr_eff, res);
 
         SetStatus(STATUS_CARRY, operand & 1);
         SetStatus(STATUS_ZERO, res == 0);
@@ -747,17 +802,17 @@ void CPU::Op_SEI() {
 
 // A -> M
 void CPU::Op_STA() {
-    bus->Write(addr_eff, a);
+    bus.Write(addr_eff, a);
 }
 
 // X -> M
 void CPU::Op_STX() {
-    bus->Write(addr_eff, x);
+    bus.Write(addr_eff, x);
 }
 
 // Y -> M
 void CPU::Op_STY() {
-    bus->Write(addr_eff, y);
+    bus.Write(addr_eff, y);
 }
 
 // A -> X
@@ -805,9 +860,6 @@ void CPU::Op_TYA() {
     SetStatus(STATUS_ZERO, a == 0);
 }
 
-CPU::CPU() {}
-CPU::~CPU() {}
-
 /* Interrupts */
 // https://www.nesdev.org/wiki/CPU_interrupts
 void CPU::Clock() {
@@ -821,7 +873,7 @@ void CPU::Clock() {
     if (cycles_rem == 0) {
         // Don't let disassembler run while in middle of instruction
         // Fetch
-        uint8_t op = bus->Read(pc++);
+        uint8_t op = bus.Read(pc++);
 
         // Decode
         instr = CPU::Decode(op);
@@ -860,7 +912,7 @@ void CPU::IRQ() {
         SetStatus(STATUS_IRQ, true);
 
         // Load PC from hard-coded address
-        pc = bus->Read16(0xfffe);
+        pc = bus.Read16(0xfffe);
 
         // Set time for IRQ to be handled
         cycles_rem = 7;
@@ -885,7 +937,7 @@ void CPU::NMI() {
     SetStatus(STATUS_IRQ, true);
 
     // Load pc from hard-coded address
-    pc = bus->Read16(0xfffa);
+    pc = bus.Read16(0xfffa);
 
     // Set time for IRQ to be handled
     cycles_rem = 7;
@@ -894,8 +946,8 @@ void CPU::NMI() {
 // https://www.nesdev.org/wiki/CPU_power_up_state
 void CPU::Reset() {
     // Set internal state to hard-coded reset values
-    if (bus->GetCart().GetMapper() != nullptr)
-        pc = bus->Read16(0xfffc);
+    if (bus.GetCart().GetMapper() != nullptr)
+        pc = bus.Read16(0xfffc);
 
     /*
      * Technically the SP just decrements by 3 for no reason, but that could
@@ -919,7 +971,7 @@ void CPU::Reset() {
     status = STATUS_IRQ | (1 << 5);
 
     // FIXME: THIS MAY VERY WELL CAUSE BUGS LATER WHEN APU IS ADDED
-    bus->Write(0x4015, 0x00);
+    bus.Write(0x4015, 0x00);
 
     cycles_rem = 7;
     cycles_count = 0;
@@ -933,11 +985,11 @@ void CPU::PowerOn() {
     y = 0;
     sp = 0xfd;
 
-    bus->Write(0x4017, 0x00);
-    bus->Write(0x4015, 0x00);
+    bus.Write(0x4017, 0x00);
+    bus.Write(0x4015, 0x00);
 
     for (uint16_t addr = 0x4000; addr <= 0x4013; addr++)
-        bus->Write(addr, 0x00);
+        bus.Write(addr, 0x00);
 
     // nestest assumes you entered reset state on powerup,
     // so we still trigger the reset
@@ -1032,7 +1084,7 @@ char* CPU::DisassembleString(uint16_t addr) {
     uint16_t addr_eff;
     uint8_t off, lsb, msb;
 
-    uint8_t op = bus->Read(addr);
+    uint8_t op = bus.Read(addr);
     auto instr = Decode(op);
 
     /*
@@ -1048,14 +1100,14 @@ char* CPU::DisassembleString(uint16_t addr) {
     char bytecode[9];
     ptr = &bytecode[0];
 
-    b1 = bus->Read(addr);
+    b1 = bus.Read(addr);
     ptr += sprintf(ptr, "%02X ", b1);
     if (instr->bytes > 1) {
-        b2 = bus->Read(addr + 1);
+        b2 = bus.Read(addr + 1);
         ptr += sprintf(ptr, "%02X ", b2);
     }
     if (instr->bytes > 2) {
-        b3 = bus->Read(addr + 2);
+        b3 = bus.Read(addr + 2);
         sprintf(ptr, "%02X", b3);
     }
 
@@ -1095,32 +1147,32 @@ char* CPU::DisassembleString(uint16_t addr) {
             addr_eff = (b3 << 8) | b2;
             if (addr_eff >= 0x2000 && addr_eff < 0x4000)
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
-                    bus->GetPPU().RegisterInspect(addr_eff));
+                    bus.GetPPU().RegisterInspect(addr_eff));
             else
                 sprintf(ptr, "$%02X%02X = %02X", b3, b2,
-                    bus->Read((b3 << 8) | b2));
+                    bus.Read((b3 << 8) | b2));
         }
         break;
     case AddrMode::ZPG:
-        sprintf(ptr, "$%02X = %02X", b2, bus->Read(b2));
+        sprintf(ptr, "$%02X = %02X", b2, bus.Read(b2));
         break;
     case AddrMode::ZPX:
         sprintf(ptr, "$%02X,X @ %02X = %02X", b2, (uint8_t)(b2 + x),
-            bus->Read((uint8_t)(b2 + x)));
+            bus.Read((uint8_t)(b2 + x)));
         break;
     case AddrMode::ZPY:
         sprintf(ptr, "$%02X,Y @ %02X = %02X", b2, (uint8_t)(b2 + y),
-            bus->Read((uint8_t)(b2 + y)));
+            bus.Read((uint8_t)(b2 + y)));
         break;
     case AddrMode::ABX:
         addr_eff = ((b3 << 8) | b2) + x;
         sprintf(ptr, "$%02X%02X,X @ %04X = %02X", b3, b2, addr_eff,
-            bus->Read(addr_eff));
+            bus.Read(addr_eff));
         break;
     case AddrMode::ABY:
         addr_eff = ((b3 << 8) | b2) + y;
         sprintf(ptr, "$%02X%02X,Y @ %04X = %02X", b3, b2, addr_eff,
-            bus->Read(addr_eff));
+            bus.Read(addr_eff));
         break;
     case AddrMode::IMP:
         break;
@@ -1129,18 +1181,18 @@ char* CPU::DisassembleString(uint16_t addr) {
         break;
     case AddrMode::IDX:
         addr_ptr = b2 + x;
-        addr_eff = (bus->Read((uint8_t)(addr_ptr + 1)) << 8)
-            | bus->Read(addr_ptr);
+        addr_eff = (bus.Read((uint8_t)(addr_ptr + 1)) << 8)
+            | bus.Read(addr_ptr);
         sprintf(ptr, "($%02X,X) @ %02X = %04X = %02X", b2, addr_ptr, addr_eff,
-            bus->Read(addr_eff));
+            bus.Read(addr_eff));
         break;
     case AddrMode::IDY:
         off = b2;
 
         // Perform addition on 8-bit variable to force desired
         // overflow (wrap around) behavior
-        lsb = bus->Read(off++);
-        msb = bus->Read(off);
+        lsb = bus.Read(off++);
+        msb = bus.Read(off);
 
         addr_eff = ((msb << 8) | lsb) + y;
         // Without cast you get some weird stack corruption when the
@@ -1149,19 +1201,19 @@ char* CPU::DisassembleString(uint16_t addr) {
         // not fit in the space it should
         sprintf(ptr, "($%02X),Y = %04X @ %04X = %02X", b2,
             (uint16_t)(addr_eff - y), addr_eff,
-            bus->Read(addr_eff));
+            bus.Read(addr_eff));
         break;
     case AddrMode::IND:
         addr_eff = (b3 << 8) | b2;
 
         if (b2 == 0xff)
             sprintf(ptr, "($%04X) = %04X", addr_eff,
-                (uint16_t)(bus->Read(addr_eff & 0xff00) << 8)
-                | bus->Read(addr_eff));
+                (uint16_t)(bus.Read(addr_eff & 0xff00) << 8)
+                | bus.Read(addr_eff));
         else
             sprintf(ptr, "($%04X) = %04X", addr_eff,
-                (bus->Read(addr_eff + 1) << 8)
-                | bus->Read(addr_eff));
+                (bus.Read(addr_eff + 1) << 8)
+                | bus.Read(addr_eff));
         break;
 
     default:
@@ -1247,7 +1299,7 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
     // Fill with first 27 instructions
     for (int i = 0; i < ret_len; i++) {
         ret[i] = addr;
-        uint8_t opcode = bus->Read(addr);
+        uint8_t opcode = bus.Read(addr);
 
         auto instr = Decode(opcode);
         addr += instr->bytes;
@@ -1265,7 +1317,7 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
             for (int i = 1; i < ret_len; i++)
                 ret[i - 1] = ret[i];
 
-            uint8_t opcode = bus->Read(addr);
+            uint8_t opcode = bus.Read(addr);
 
             auto instr = Decode(opcode);
             addr += instr->bytes;
@@ -1279,7 +1331,7 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
 
     // TODO: HANDLE EDGE CASE WHERE WE DON'T HAVE 13 INSTRUCTIONS AFTER THE PC
     for (int i = ret_len/2 + 1; i < ret_len; i++) {
-        uint8_t opcode = bus->Read(addr);
+        uint8_t opcode = bus.Read(addr);
 
         auto instr = Decode(opcode);
         addr += instr->bytes;
@@ -1288,30 +1340,4 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
 
     return ret;
 }
-
-
-bool CPU::SaveState(FILE* file) {
-    if (fwrite(this, sizeof(CPU), 1, file) < 1)
-        return false;
-    if (fwrite(&instr->opcode, sizeof(uint8_t), 1, file) < 1)
-        return false;
-    return true;
-}
-
-bool CPU::LoadState(FILE* file) {
-    Bus* bus = this->bus;
-    if (fread(this, sizeof(CPU), 1, file) < 1)
-        return false;
-    uint8_t opcode;
-    if (fread(&opcode, sizeof(uint8_t), 1, file) < 1)
-        return false;
-    instr = Decode(opcode);
-    this->bus = bus;
-    return true;
-}
-
-void CPU::LinkBus(Bus* bus) {
-    this->bus = bus;
-}
-
 }

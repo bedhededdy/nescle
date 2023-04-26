@@ -249,4 +249,18 @@ void Cart::SetMapper(uint8_t _id, Mapper::MirrorMode _mode) {
     // mapper.MakeMapperFromID(_cart, _mode);
     mapper = Mapper::CreateMapperFromID(_id, *this, _mode);
 }
+
+// Since we need to have the game loaded in order to load a save state, we
+// already have all of the information we need, except for the state of the
+// mapper at the time the savestate was made, as that is the conly thing that
+// could have changed
+void to_json(nlohmann::json& j, const Cart& cart) {
+    j = nlohmann::json {
+        {"mapper", *cart.mapper}
+    };
+}
+
+void from_json(const nlohmann::json& j, Cart& cart) {
+    j.at("mapper").get_to(*cart.mapper);
+}
 }

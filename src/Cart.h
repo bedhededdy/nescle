@@ -21,8 +21,13 @@
 #include <string>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "mappers/Mapper.h"
 #include "NESCLETypes.h"
+
+// Contains template for serializing unique_ptr
+#include "Util.h"
 
 namespace NESCLE {
 class Cart {
@@ -76,5 +81,18 @@ public:
     void WritePrgRom(size_t off, uint8_t data);
     uint8_t ReadChrRom(size_t off);
     void WriteChrRom(size_t off, uint8_t data);
+
+    // FIXME: THIS MAY BE BROKEN BECAUSE THE ARRAYS ARE TECHNICALLY RAW PTRS
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ROMHeader, name, prg_rom_size,
+        chr_rom_size, mapper1, mapper2, prg_ram_size, tv_system1, tv_system2,
+        padding)
+
+    // TODO: MOVE THESE TO THE SRC FILE
+    // I know that if I am making a savestate, that the unique_ptr is not null
+    // I tried to write a template to serialize the unique_ptr, but it didn't
+    // work, but thankfully we can avoid that by virtue of knowing that
+    // mapper will not be null
+    friend void to_json(nlohmann::json& j, const Cart& cart);
+    friend void from_json(const nlohmann::json& j, Cart& cart);
 };
 }

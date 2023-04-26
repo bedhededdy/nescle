@@ -336,7 +336,7 @@ uint32_t PPU::GetColorFromPalette(uint8_t palette, uint8_t pixel) {
 }
 
 /* Constructors/Destructors */
-PPU::PPU() {
+PPU::PPU(Bus& _bus) : bus(_bus) {
     PPU* ppu = this;
     Util_MemsetU32((uint32_t*)ppu->sprpatterntbl, 0xff000000,
         sizeof(ppu->sprpatterntbl)/sizeof(uint32_t));
@@ -345,8 +345,6 @@ PPU::PPU() {
     Util_MemsetU32((uint32_t*)ppu->frame_buffer, 0xff000000,
         sizeof(ppu->frame_buffer)/sizeof(uint32_t));
 }
-
-PPU::~PPU() {}
 
 /* Interrupts (technically the PPU has no notion of interrupts) */
 // https://www.nesdev.org/wiki/PPU_rendering
@@ -787,7 +785,7 @@ break;
     // Properly increment the cycle and scanline
     if ((ppu->mask & PPU_MASK_BG_ENABLE) || (ppu->mask & PPU_MASK_SPR_ENABLE)) {
         if (ppu->cycle == 260 && ppu->scanline < 240) {
-            ppu->bus->GetCart().GetMapper()->CountdownScanline();
+            ppu->bus.GetCart().GetMapper()->CountdownScanline();
         }
     }
     ppu->cycle++;
@@ -817,7 +815,6 @@ void PPU::PowerOn() {
     // this
     ppu->status = 0xc0;
 
-    ppu->oam_ptr = (uint8_t*)ppu->oam;
     memset(ppu->screen, 0, sizeof(ppu->screen));
 
     // just run the reset for safety
@@ -897,7 +894,6 @@ void PPU::Reset() {
     ppu->vram_addr = 0;
     ppu->tram_addr = 0;
 
-    ppu->oam_ptr = (uint8_t*)ppu->oam;
 }
 
 uint8_t PPU::Read(uint16_t addr) {
@@ -908,14 +904,14 @@ uint8_t PPU::Read(uint16_t addr) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->GetCart().GetMapper();
+        Mapper* mapper = bus.GetCart().GetMapper();
         return mapper->MapPPURead(addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
+        Mapper::MirrorMode mirror_mode = bus.GetCart().GetMapper()->GetMirrorMode();
 
         if (mirror_mode == Mapper::MirrorMode::HORIZONTAL) {
             // see vertical comments for explanation
@@ -1014,7 +1010,7 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
 
     // chr rom, vram, palette
     if (addr >= 0 && addr < 0x2000) {
-        Mapper* mapper = bus->GetCart().GetMapper();
+        Mapper* mapper = bus.GetCart().GetMapper();
         return mapper->MapPPUWrite(addr, data);
     }
     else if (addr >= 0x2000 && addr < 0x3f00) {
@@ -1022,7 +1018,7 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
         // only 1kb in each half of nametable
         addr %= 0x1000;
 
-        Mapper::MirrorMode mirror_mode = bus->GetCart().GetMapper()->GetMirrorMode();
+        Mapper::MirrorMode mirror_mode = bus.GetCart().GetMapper()->GetMirrorMode();
         //printf("writing nametable\n");
         if (mirror_mode == Mapper::MirrorMode::HORIZONTAL) {
             if (addr >= 0 && addr < 0x800) {
@@ -1114,7 +1110,7 @@ uint8_t PPU::RegisterRead(uint16_t addr) {
     case 3: // OAM address (OAM = SPRITE)
         break;
     case 4: // OAM data
-        tmp = ppu->oam_ptr[ppu->oam_addr];
+        tmp = reinterpret_cast<uint8_t*>(oam)[ppu->oam_addr];
         break;
     case 5: // scroll
         break;
@@ -1186,7 +1182,7 @@ bool PPU::RegisterWrite(uint16_t addr, uint8_t data) {
         // FIXME: OLC DOES NOT INCREMENT, BUT TEST ROMS DO
         // NOBODY EVER DOES THIS ANYWAY, SO THIS WORKING
         // IS NOT A HUGE DEAL
-        ppu->oam_ptr[ppu->oam_addr++] = data;
+        reinterpret_cast<uint8_t*>(oam)[ppu->oam_addr++] = data;
         break;
     case 5: // scroll
         if (ppu->addr_latch == 0) {
@@ -1249,7 +1245,7 @@ uint8_t PPU::RegisterInspect(uint16_t addr) {
     case 3: // OAM address (OAM = SPRITE)
         break;
     case 4: // OAM data
-        tmp = ppu->oam_ptr[ppu->oam_addr];
+        tmp = reinterpret_cast<uint8_t*>(oam)[ppu->oam_addr];
         break;
     case 5: // scroll
         break;
@@ -1269,30 +1265,6 @@ uint8_t PPU::RegisterInspect(uint16_t addr) {
     return tmp;
 }
 
-bool PPU::SaveState(FILE* file) {
-    if (fwrite(this, sizeof(PPU), 1, file) < 1)
-        return false;
-    return true;
-
-}
-
-bool PPU::LoadState(FILE* file) {
-    // FIXME: THIS FUNCTION IS NOT RESILIENT AGAINST
-    // FAILED READS
-    PPU* ppu = this;
-    Bus* bus = ppu->bus;
-    size_t size = fread(ppu, sizeof(PPU), 1, file);
-    if (size < 1)
-        return false;
-    ppu->bus = bus;
-    ppu->oam_ptr = (uint8_t*)ppu->oam;
-    return true;
-}
-
-void PPU::LinkBus(Bus* bus) {
-    this->bus = bus;
-}
-
 bool PPU::GetNMIStatus() {
     return nmi;
 }
@@ -1302,6 +1274,7 @@ void PPU::ClearNMIStatus() {
 }
 
 void PPU::WriteOAM(uint8_t addr, uint8_t data) {
+    auto oam_ptr = reinterpret_cast<uint8_t*>(oam);
     oam_ptr[addr] = data;
 }
 
@@ -1315,5 +1288,13 @@ void PPU::ClearFrameComplete() {
 
 uint32_t* PPU::GetFramebuffer() {
     return frame_buffer;
+}
+
+void to_json(nlohmann::json& j, const PPU& ppu) {
+
+}
+
+void from_json(const nlohmann::json& j, PPU& ppu) {
+
 }
 }

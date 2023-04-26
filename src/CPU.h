@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <nlohmann/json.hpp>
+
 #include "NESCLETypes.h"
 
 namespace NESCLE {
@@ -84,7 +86,7 @@ private:
         const int cycles;
     };
 
-    Bus* bus;
+    Bus& bus;
 
     // Registers
     uint8_t a;      // Accumulator
@@ -138,8 +140,9 @@ private:
     void Op_TAX(); void Op_TAY(); void Op_TSX(); void Op_TXA(); void Op_TXS(); void Op_TYA();
 
 public:
-    CPU();
-    ~CPU();
+    CPU(Bus& _bus) : bus(_bus) {}
+
+    // CPU& operator= (const CPU& cpu);
 
     void Clock();
     void IRQ();
@@ -154,10 +157,8 @@ public:
     void DisassembleLog();
     uint16_t* GenerateOpStartingAddrs();
 
-    bool SaveState(FILE* file);
-    bool LoadState(FILE* file);
-
-    void LinkBus(Bus* bus);
+    friend void to_json(nlohmann::json& j, const CPU& cpu);
+    friend void from_json(const nlohmann::json& j, CPU& cpu);
 };
 
 /*

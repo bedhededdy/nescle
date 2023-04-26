@@ -51,4 +51,12 @@ bool Mapper000::LoadState(std::ifstream& file) {
     // return fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
     return false;
 }
+
+void Mapper000::ToJSON(nlohmann::json& json) {
+    Mapper::ToJSON(json);
+}
+
+void Mapper000::FromJSON(const nlohmann::json& json) {
+    Mapper::FromJSON(json);
+}
 }

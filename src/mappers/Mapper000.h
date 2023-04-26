@@ -31,5 +31,8 @@ public:
 
     bool SaveState(std::ofstream& file) override;
     bool LoadState(std::ifstream& file) override;
+
+    void ToJSON(nlohmann::json& json) override;
+    void FromJSON(const nlohmann::json& json) override;
 };
 }

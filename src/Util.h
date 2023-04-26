@@ -17,12 +17,34 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+
+#include <nlohmann/json.hpp>
 
 #include <type_traits>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define UTIL_WINDOWS
 #endif
+
+// namespace nlohmann {
+// template <typename T>
+// struct adl_serializer<std::unique_ptr<T>> {
+//     static void to_json(json& j, const std::unique_ptr<T>& ptr) {
+//         if (ptr)
+//             j = *ptr;
+//         else
+//             j = nullptr;
+//     }
+
+//     static void from_json(const json& j, std::unique_ptr<T>& ptr) {
+//         if (j.is_null())
+//             ptr = nullptr;
+//         else
+//             ptr = std::make_unique<T>(j.get<T>());
+//     }
+// };
+// }
 
 namespace NESCLE {
 void* Util_SafeMalloc(size_t size);

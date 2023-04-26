@@ -22,6 +22,10 @@ class Mapper002 : public Mapper {
 private:
     uint8_t bank_select;
 
+protected:
+    void ToJSON(nlohmann::json& json) override;
+    void FromJSON(const nlohmann::json& json) override;
+
 public:
     Mapper002(uint8_t id, Cart& cart, Mapper::MirrorMode mirror)
         : Mapper(id, cart, mirror), bank_select(0) {}

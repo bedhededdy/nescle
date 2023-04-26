@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: OBJECTIFY THIS
 #include "Bus.h"
 
 #include <algorithm>
@@ -29,10 +28,10 @@
 #include "NESCLETypes.h"
 
 namespace NESCLE {
-Bus::Bus() {
-    cpu.LinkBus(this);
-    ppu.LinkBus(this);
-}
+// Bus::Bus() {
+//     // cpu.LinkBus(*this);
+//     ppu.LinkBus(this);
+// }
 
 /* R/W */
 void Bus::ClearMem() {

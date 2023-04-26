@@ -19,6 +19,8 @@
 #include <fstream>
 #include <memory>
 
+#include <nlohmann/json.hpp>
+
 #include "../NESCLETypes.h"
 
 namespace NESCLE {
@@ -39,9 +41,16 @@ protected:
     Mapper(uint8_t _id, Cart& _cart, MirrorMode _mirror)
         : id(_id), cart(_cart), mirror_mode(_mirror) {}
 
+    virtual void ToJSON(nlohmann::json& json);
+    virtual void FromJSON(const nlohmann::json& json);
+
 public:
     static std::unique_ptr<Mapper>
     CreateMapperFromID(uint8_t id, Cart& cart, MirrorMode mirror_mode);
+
+    // Copy constructor
+    Mapper(const Mapper& other) : id(other.id),
+        cart(other.cart), mirror_mode(other.mirror_mode) {}
 
     virtual ~Mapper() = default;
 
@@ -59,6 +68,11 @@ public:
     virtual bool GetIRQStatus() { return false; }
     virtual void ClearIRQStatus() {}
 
+    uint8_t GetID() { return id; }
+
     MirrorMode GetMirrorMode() { return mirror_mode; }
+
+    friend void to_json(nlohmann::json& j, const Mapper& mapper);
+    friend void from_json(const nlohmann::json& j, Mapper& mapper);
 };
 }

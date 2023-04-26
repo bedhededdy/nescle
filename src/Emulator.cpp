@@ -210,19 +210,35 @@ bool Emulator::SaveState(const char* path) {
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
     }
+    using json = nlohmann::json;
 
-    FILE* savestate;
-    if (fopen_s(&savestate, path, "wb") != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Emulator_SaveState: Could not open file %s", path);
-    }
+    std::ofstream savestate(path);
+    // json cpu_json = nes->GetCPU();
+    // json apu_json = nes->GetAPU();
+    // json cart_json = nes->GetCart();
+    // json ppu_json = nes->GetPPU();
+    // json j = json {
+    //     {"cpu", cpu_json},
+    //     {"apu", apu_json},
+    //     {"cart", cart_json},
+    //     {"ppu", ppu_json}
+    // };
+    //  FIXME: NEED TO CHECK FOR SUCCESS
+    json j = *nes;
+    savestate << std::setw(4) << j;
+    return true;
+    // FILE* savestate;
+    // if (fopen_s(&savestate, path, "wb") != 0) {
+    //     SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+    //         "Emulator_SaveState: Could not open file %s", path);
+    // }
 
-    Bus* bus = nes;
+    // Bus* bus = nes;
     // if (!nes->SaveState(savestate))
         // printf("bus too short");
 
-    if (!bus->GetCPU().SaveState(savestate))
-        printf("cpu too short");
+    // if (!bus->GetCPU().SaveState(savestate))
+        // printf("cpu too short");
 
     // if (!bus->GetAPU().SaveState(savestate))
         // printf("apu too short");
@@ -231,16 +247,16 @@ bool Emulator::SaveState(const char* path) {
         // printf("cart too short");
 
     // Save Mapper state (deepcopying mapper_class)
-    if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
-        printf("mapper too short");
-    // bus->GetCart().GetMapper()->SaveState(savestate);
+    // if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
+    //     printf("mapper too short");
+    // // bus->GetCart().GetMapper()->SaveState(savestate);
 
-    if (!bus->GetPPU().SaveState(savestate))
-        printf("ppu too short");
+    // if (!bus->GetPPU().SaveState(savestate))
+    //     printf("ppu too short");
 
-    fclose(savestate);
+    // fclose(savestate);
 
-    return 0;
+    return false;
 }
 /*
 bool Emulator_LoadState(Emulator* const char* path) {
@@ -321,15 +337,23 @@ bool Emulator_LoadState(Emulator* const char* path) {
 */
 
 bool Emulator::LoadState(const char* path) {
-    FILE* savestate;
-    fopen_s(&savestate, path, "rb");
+    std::ifstream savestate(path);
+    nlohmann::json j;
+    savestate >> j;
+    // either you do this, or overwrite the copy assignment operator for every
+    // class
 
-    Bus* bus = nes;
+
+    return true;
+    // FILE* savestate;
+    // fopen_s(&savestate, path, "rb");
+
+    // Bus* bus = nes;
 
     // bus->LoadState(savestate);
 
     // CPU
-    bus->GetCPU().LoadState(savestate);
+    // bus->GetCPU().LoadState(savestate);
 
     // APU
     // bus->GetAPU().LoadState(savestate);
@@ -344,22 +368,26 @@ bool Emulator::LoadState(const char* path) {
     //     // Mapper_Destroy(bus->GetCart()->GetMapper());
     //     delete bus->GetCart().GetMapper();
     // }
-    uint8_t dummy_buf[sizeof(Mapper)];
-    fread(dummy_buf, sizeof(Mapper), 1, savestate);
-    uint8_t mapper_id = dummy_buf[0];
-    // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    bus->GetCart().SetMapper(mapper_id, (Mapper::MirrorMode)0);
-    // bus->GetCart().GetMapper()->LoadState(savestate);
+    // uint8_t dummy_buf[sizeof(Mapper)];
+    // fread(dummy_buf, sizeof(Mapper), 1, savestate);
+    // uint8_t mapper_id = dummy_buf[0];
+    // // fine to give dummy mirror_mode, since it's overwritten by LoadState
+    // bus->GetCart().SetMapper(mapper_id, (Mapper::MirrorMode)0);
+    // // bus->GetCart().GetMapper()->LoadState(savestate);
 
-    bus->GetPPU().LoadState(savestate);
+    // bus->GetPPU().LoadState(savestate);
 
-    fclose(savestate);
+    // fclose(savestate);
+
 
     // FIXME: RETURN A SUCCESS OR FAILURE
     return 0;
 }
 
 bool Emulator::SaveSettings(const char* path) {
+    // TODO: YOU CAN DEFINE A MACRO THAT WILL SERIALIZE A STRUCT, SO YOU
+    // DON'T HAVE TO DO THIS MANUALLY
+    // USE THE INTRUSIVE VERSION OF IT SO YOU CAN ACCESS PRIVATE MEMBERS
     nlohmann::json j = {
         {"sync", settings.sync},
         {"next_sync", settings.next_sync},
@@ -389,23 +417,28 @@ bool Emulator::SaveSettings(const char* path) {
     std::ofstream json_file(path);
     if (!json_file.is_open())
         return false;
-    json_file << j;
+    json_file << std::setw(4) << j;
     return !json_file.fail();
 }
 
 bool Emulator::LoadSettings(const char* path) {
+    // TODO: YOU CAN DEFINE A MACRO THAT WILL SERIALIZE A STRUCT, SO YOU
+    // DON'T HAVE TO DO THIS MANUALLY
     std::ifstream json_file(path);
     if (!json_file.is_open())
         return false;
     nlohmann::json j;
     json_file >> j;
+    json_file.close();
 
     if (j.is_null())
         return false;
 
     // FIXME: YOU SHOULD CHECK THAT THESE FIELDS EXIST BEFORE ACCESSING THEM
-    settings.sync = (SyncType)j["sync"];
-    settings.next_sync = (SyncType)j["next_sync"];
+    // WAY TO DO THIS IS TO CALL THE .at() METHOD INSTEAD OF THE [] OPERATOR
+    // AND CATCH THE EXCEPTION THAT IS THROWN
+    settings.sync = static_cast<SyncType>(j["sync"]);
+    settings.next_sync = static_cast<SyncType>(j["next_sync"]);
     settings.vsync = j["vsync"];
     settings.p1_vol = j["p1_vol"];
     settings.p2_vol = j["p2_vol"];

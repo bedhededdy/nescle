@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <fstream>
 
+#include <nlohmann/json.hpp>
+
 #include "APU.h"
 #include "CPU.h"
 #include "Cart.h"
@@ -54,6 +56,13 @@ private:
 
     CPU cpu;
     PPU ppu;
+    // TODO: A BETTER DESIGN WOULD BE TO HAVE THE BUS HOLD A STD::UNIQUE_PTR
+    // TO THE CART, BECAUSE IT WOULD BE MUCH EASIER TO HANDLE NO CART
+    // SCENARIOS
+    // AT THE END OF THE DAY, A CART WITHOUT A MAPPER MAKES NO SENSE
+    // SO HAVING THE CART HOLD A UNIQUE PTR TO A MAPPER IS POINTLESS
+    // THE BUS SHOUDL HAVE A UNIQUE PTR TO CART AND CART SHOULD DIRECTLY
+    // HODL MAPPER
     Cart cart;
     APU apu;
 
@@ -77,7 +86,7 @@ public:
         RIGHT = 0x80
     };
 
-    Bus();
+    Bus() : cpu(*this), ppu(*this) {}
 
     /* Read/Write */
     void ClearMem();        // Sets contents of RAM to a deterministic value
@@ -107,5 +116,14 @@ public:
     void SetController1(uint8_t data) { controller1 = data; }
     uint8_t GetController2() { return controller2; }
     void SetController2(uint8_t data) { controller2 = data; }
+
+    // friend void to_json(nlohmann::json& j, const Bus& b);
+    // friend void from_json(const nlohmann::json& j, Bus& b);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Bus, ram, controller1, controller2,
+        controller1_shifter, controller2_shifter, dma_page, dma_addr, dma_data,
+        dma_2003_off, dma_transfer, dma_dummy, cpu, ppu, cart, apu,
+        time_per_sample, time_per_clock, audio_time, clocks_count
+    )
 };
 }
