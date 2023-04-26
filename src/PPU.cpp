@@ -1291,10 +1291,89 @@ uint32_t* PPU::GetFramebuffer() {
 }
 
 void to_json(nlohmann::json& j, const PPU& ppu) {
+    j = nlohmann::json {
+        // Save space and time by not saving these
+        // user won't be able to tell about a 1 frame mess up
+        // {"screen", ppu.screen},
+        // {"frame_buffer", ppu.frame_buffer},
+        {"nametbl0", ppu.nametbl[0]},
+        {"nametbl1", ppu.nametbl[1]},
+        {"palette", ppu.palette},
+        {"oam", ppu.oam},
+        {"oam_addr", ppu.oam_addr},
+        {"spr_scanline", ppu.spr_scanline},
+        {"spr_count", ppu.spr_count},
+        {"spr_shifter_pattern_lo", ppu.spr_shifter_pattern_lo},
+        {"spr_shifter_pattern_hi", ppu.spr_shifter_pattern_hi},
+        {"spr0_can_hit", ppu.spr0_can_hit},
+        {"spr0_rendering", ppu.spr0_rendering},
 
+        // not saving spr patterntbl as of now since it gets overwritten every frame
+        // and will not affect the ppu internals at all, and it would take forever to save
+        // given how this thing won't serialize multidimensional arrays
+
+        {"scanline", ppu.scanline},
+        {"cycle", ppu.cycle},
+        {"status", ppu.status},
+        {"mask", ppu.mask},
+        {"control", ppu.control},
+        {"vram_addr", ppu.vram_addr},
+        {"tram_addr", ppu.tram_addr},
+        {"fine_x", ppu.fine_x},
+        {"addr_latch", ppu.addr_latch},
+        {"data_buffer", ppu.data_buffer},
+
+        {"bg_next_tile_id", ppu.bg_next_tile_id},
+        {"bg_next_tile_attr", ppu.bg_next_tile_attr},
+        {"bg_next_tile_lsb", ppu.bg_next_tile_lsb},
+        {"bg_next_tile_msb", ppu.bg_next_tile_msb},
+
+        {"bg_shifter_pattern_lo", ppu.bg_shifter_pattern_lo},
+        {"bg_shifter_pattern_hi", ppu.bg_shifter_pattern_hi},
+
+        {"bg_shifter_attr_lo", ppu.bg_shifter_attr_lo},
+        {"bg_shifter_attr_hi", ppu.bg_shifter_attr_hi},
+
+        {"nmi", ppu.nmi},
+        {"frame_complete", ppu.frame_complete},
+    };
 }
 
 void from_json(const nlohmann::json& j, PPU& ppu) {
+    // j.at("screen").get_to(ppu.screen);
+    // j.at("frame_buffer").get_to(ppu.frame_buffer);
+    j.at("nametbl0").get_to(ppu.nametbl[0]);
+    j.at("nametbl1").get_to(ppu.nametbl[1]);
+    j.at("palette").get_to(ppu.palette);
+    j.at("oam").get_to(ppu.oam);
+    j.at("oam_addr").get_to(ppu.oam_addr);
+    j.at("spr_scanline").get_to(ppu.spr_scanline);
+    j.at("spr_count").get_to(ppu.spr_count);
+    j.at("spr_shifter_pattern_lo").get_to(ppu.spr_shifter_pattern_lo);
+    j.at("spr_shifter_pattern_hi").get_to(ppu.spr_shifter_pattern_hi);
+    j.at("spr0_can_hit").get_to(ppu.spr0_can_hit);
+    j.at("spr0_rendering").get_to(ppu.spr0_rendering);
+    j.at("scanline").get_to(ppu.scanline);
+    j.at("cycle").get_to(ppu.cycle);
+    j.at("status").get_to(ppu.status);
+    j.at("mask").get_to(ppu.mask);
+    j.at("control").get_to(ppu.control);
+    j.at("vram_addr").get_to(ppu.vram_addr);
+    j.at("tram_addr").get_to(ppu.tram_addr);
+    j.at("fine_x").get_to(ppu.fine_x);
+    j.at("addr_latch").get_to(ppu.addr_latch);
+    j.at("data_buffer").get_to(ppu.data_buffer);
+    j.at("bg_next_tile_id").get_to(ppu.bg_next_tile_id);
+    j.at("bg_next_tile_attr").get_to(ppu.bg_next_tile_attr);
+    j.at("bg_next_tile_lsb").get_to(ppu.bg_next_tile_lsb);
+    j.at("bg_next_tile_msb").get_to(ppu.bg_next_tile_msb);
+    j.at("bg_shifter_pattern_lo").get_to(ppu.bg_shifter_pattern_lo);
+    j.at("bg_shifter_pattern_hi").get_to(ppu.bg_shifter_pattern_hi);
+    j.at("bg_shifter_attr_lo").get_to(ppu.bg_shifter_attr_lo);
+    j.at("bg_shifter_attr_hi").get_to(ppu.bg_shifter_attr_hi);
+
+    j.at("nmi").get_to(ppu.nmi);
+    j.at("frame_complete").get_to(ppu.frame_complete);
 
 }
 }

@@ -224,7 +224,9 @@ bool Emulator::SaveState(const char* path) {
     //     {"ppu", ppu_json}
     // };
     //  FIXME: NEED TO CHECK FOR SUCCESS
-    json j = *nes;
+    // json j = *nes;
+    json j;
+    j["bus"] = *nes;
     savestate << std::setw(4) << j;
     return true;
     // FILE* savestate;
@@ -338,10 +340,14 @@ bool Emulator_LoadState(Emulator* const char* path) {
 
 bool Emulator::LoadState(const char* path) {
     std::ifstream savestate(path);
-    nlohmann::json j;
+    using json = nlohmann::json;
+    json j;
     savestate >> j;
-    // either you do this, or overwrite the copy assignment operator for every
-    // class
+    // you're supposed to be able to use the = operator or .get for this,
+    // but it whines about the = operator not being well defined for CPU, etc.,
+    // so better to just do this instead
+    from_json(j.at("bus"), *nes);
+
 
 
     return true;
