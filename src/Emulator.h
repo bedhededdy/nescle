@@ -21,6 +21,8 @@
 
 #include <nfd.h>
 
+#include <nlohmann/json.hpp>
+
 #include <SDL_audio.h>
 #include <SDL_mutex.h>
 #include <SDL_keyboard.h>
@@ -169,5 +171,8 @@ public:
     void RefreshPrevKeys();
 
     SDL_AudioDeviceID GetAudioDevice() { return audio_device; }
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Controller, up, down, left, right, a, b, start, select, aturbo, bturbo)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol, p2_vol, tri_vol, noise_vol, master_vol, controller1)
 };
 }

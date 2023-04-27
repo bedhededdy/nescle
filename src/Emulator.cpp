@@ -17,10 +17,9 @@
 // AND ALLOWING USER TO EDIT THE FILE MANUALLY IF NECESSARY
 #include "Emulator.h"
 
-#include <nlohmann/json.hpp>
-
 #include <SDL_log.h>
 #include <SDL_filesystem.h>
+#include <SDL_timer.h>
 
 #include <string>
 #include <cstring>
@@ -204,221 +203,73 @@ Emulator::~Emulator() {
 }
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
+// TODO: ALSO SAVE IN SOME BINARY FORMAT AND INVESTIGATE THE PERFORMANCE AND
+// SIZE VS SAVING TO JSON
 bool Emulator::SaveState(const char* path) {
     if (!ROMInserted()) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Cannot save state with no cart loaded");
         return false;
     }
-    using json = nlohmann::json;
 
     std::ofstream savestate(path);
-    // json cpu_json = nes->GetCPU();
-    // json apu_json = nes->GetAPU();
-    // json cart_json = nes->GetCart();
-    // json ppu_json = nes->GetPPU();
-    // json j = json {
-    //     {"cpu", cpu_json},
-    //     {"apu", apu_json},
-    //     {"cart", cart_json},
-    //     {"ppu", ppu_json}
-    // };
-    //  FIXME: NEED TO CHECK FOR SUCCESS
-    // json j = *nes;
-    json j;
-    j["bus"] = *nes;
-    savestate << std::setw(4) << j;
-    return true;
-    // FILE* savestate;
-    // if (fopen_s(&savestate, path, "wb") != 0) {
-    //     SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-    //         "Emulator_SaveState: Could not open file %s", path);
-    // }
-
-    // Bus* bus = nes;
-    // if (!nes->SaveState(savestate))
-        // printf("bus too short");
-
-    // if (!bus->GetCPU().SaveState(savestate))
-        // printf("cpu too short");
-
-    // if (!bus->GetAPU().SaveState(savestate))
-        // printf("apu too short");
-
-    // if (!bus->GetCart().SaveState(savestate))
-        // printf("cart too short");
-
-    // Save Mapper state (deepcopying mapper_class)
-    // if (fwrite(bus->GetCart().GetMapper(), sizeof(Mapper), 1, savestate) < 1)
-    //     printf("mapper too short");
-    // // bus->GetCart().GetMapper()->SaveState(savestate);
-
-    // if (!bus->GetPPU().SaveState(savestate))
-    //     printf("ppu too short");
-
-    // fclose(savestate);
-
-    return false;
-}
-/*
-bool Emulator_LoadState(Emulator* const char* path) {
-    FILE* to_load = fopen(path, "rb");
-    if (to_load == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+    if (!savestate.is_open()) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Could not open file %s", path);
         return false;
     }
-
-    // FIXME: THIS IS NOT THE WAY TO DO TMP FILES
-    if (!Emulator_SaveState("../saves/emusavtmp.bin")) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Emulator_LoadState: Could not backup state to tmp file");
-        fclose(to_load);
-        return false;
-    }
-
-    Bus* bus = nes;
-
-    // Do the loading
-    bool success = Bus_LoadState(nes, to_load);
-    success = success && CPU_LoadState(nes->cpu, to_load);
-    success = success && PPU_LoadState(nes->ppu, to_load);
-    success = success && APU_LoadState(nes->apu, to_load);
-    // FIXME: FOR THIS TO WORK, THE CART'S GOTTA HANDLE ITS OWN SHIT
-    Mapper* mapper_addr = bus->cart->mapper;
-    success = success && Cart_LoadState(nes->cart, to_load);
-    // Mapper
-    bus->cart->mapper = mapper_addr;
-    if (bus->cart->mapper != NULL) {
-        Mapper_Destroy(bus->cart->mapper);
-    }
-    uint8_t dummy_buf[sizeof(Mapper)];
-    fread(dummy_buf, sizeof(Mapper), 1, savestate);
-    uint8_t mapper_id = dummy_buf[0];
-    bus->cart->mapper = Mapper_Create(mapper_id, bus->cart);
-    Mapper_LoadFromDisk(bus->cart->mapper, savestate);
-
-    if (!success) {
-        // FIXME: THIS IS NOT RESILIENT, BECAUSE IF WE FAIL PARTWAY THROUGH
-        // SOME POINTERS WILL BE MESSED UP THAT MAY NOT BE RESTORED
-        // IF WE ARE LUCKY, I WROTE THE FUNCTIONS TO RESTORE THE POINTERS
-        // AFTER FAILURE
-        // IF WE ARE UNLUCKY, WE HAVE UNDEFINED BEHAVIOR
-        FILE* backup = fopen("emusavtmp.bin", "rb");
-        if (backup == NULL) {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                "Emulator_LoadState: Could not open backup file");
-            fclose(to_load);
-            return false;
-        }
-
-        success = Bus_LoadState(nes, backup);
-        success = success && CPU_LoadState(nes->cpu, backup);
-        success = success && PPU_LoadState(nes->ppu, backup);
-        success = success && APU_LoadState(nes->apu, backup);
-        success = success && Cart_LoadState(nes->cart, backup);
-
-        if (!success) {
-            SDL_LogCritical(SDL_LOG_CATEGORY_ERROR,
-                "Emulator_LoadState: Could not restore backup state");
-            fclose(to_load);
-            fclose(backup);
-            exit(EXIT_FAILURE);
-            return false;
-        }
-
-        fclose(backup);
-        return false;
-    }
-
-    fclose(to_load);
-    run_emulation = true;
-
-    return true;
+    nlohmann::json j;
+    uint64_t t0 = SDL_GetPerformanceCounter();
+    j["bus"] = *nes;
+    savestate << j;
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Emulator_SaveState: Took %fms to save",
+        1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency());
+    return !savestate.fail();
 }
-*/
 
 bool Emulator::LoadState(const char* path) {
+    if (!ROMInserted()) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            "Emulator_LoadState: Cannot load state with no cart loaded");
+        return false;
+    }
+
+    std::string backup_path = std::string(user_data_path) + "saves/tmp.sav";
+    if (!SaveState(backup_path.c_str())) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            "Emulator_LoadState: Could not backup current state");
+        return false;
+    }
+
     std::ifstream savestate(path);
-    using json = nlohmann::json;
-    json j;
+    if (!savestate.is_open()) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            "Emulator_LoadState: Could not open file %s", path);
+        return false;
+    }
+    nlohmann::json j;
+    uint64_t t0 = SDL_GetPerformanceCounter();
     savestate >> j;
+
     // you're supposed to be able to use the = operator or .get for this,
     // but it whines about the = operator not being well defined for CPU, etc.,
     // so better to just do this instead
+
+    // throws some exception on fail, but I don't know what so we just need to
+    // wait and see
     from_json(j.at("bus"), *nes);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+        "Emulator_LoadState: Took %fms to load",
+        1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency());
 
-
-
+    // FIXME: RETURN WHETHER WE SUCCEEDED AND IF WE DIDN'T, LOAD THE BACKUP
+    // BACK IN
     return true;
-    // FILE* savestate;
-    // fopen_s(&savestate, path, "rb");
-
-    // Bus* bus = nes;
-
-    // bus->LoadState(savestate);
-
-    // CPU
-    // bus->GetCPU().LoadState(savestate);
-
-    // APU
-    // bus->GetAPU().LoadState(savestate);
-
-    // Cart
-    // Mapper* mapper_addr = bus->GetCart().GetMapper();
-    // bus->GetCart().LoadState(savestate);
-
-    // Mapper
-    // bus->GetCart().SetMapper(mapper_addr);
-    // if (bus->GetCart().GetMapper() != NULL) {
-    //     // Mapper_Destroy(bus->GetCart()->GetMapper());
-    //     delete bus->GetCart().GetMapper();
-    // }
-    // uint8_t dummy_buf[sizeof(Mapper)];
-    // fread(dummy_buf, sizeof(Mapper), 1, savestate);
-    // uint8_t mapper_id = dummy_buf[0];
-    // // fine to give dummy mirror_mode, since it's overwritten by LoadState
-    // bus->GetCart().SetMapper(mapper_id, (Mapper::MirrorMode)0);
-    // // bus->GetCart().GetMapper()->LoadState(savestate);
-
-    // bus->GetPPU().LoadState(savestate);
-
-    // fclose(savestate);
-
-
-    // FIXME: RETURN A SUCCESS OR FAILURE
-    return 0;
 }
 
 bool Emulator::SaveSettings(const char* path) {
-    // TODO: YOU CAN DEFINE A MACRO THAT WILL SERIALIZE A STRUCT, SO YOU
-    // DON'T HAVE TO DO THIS MANUALLY
-    // USE THE INTRUSIVE VERSION OF IT SO YOU CAN ACCESS PRIVATE MEMBERS
-    nlohmann::json j = {
-        {"sync", settings.sync},
-        {"next_sync", settings.next_sync},
-        {"vsync", settings.vsync},
-        {"p1_vol", settings.p1_vol},
-        {"p2_vol", settings.p2_vol},
-        {"tri_vol", settings.tri_vol},
-        {"noise_vol", settings.noise_vol},
-        {"master_vol", settings.master_vol},
-
-        // Optionally I could make this struct serializable, but it's not
-        // worth the effort
-        {"controller1", {
-            {"a", settings.controller1.a},
-            {"b", settings.controller1.b},
-            {"start", settings.controller1.start},
-            {"select", settings.controller1.select},
-            {"up", settings.controller1.up},
-            {"down", settings.controller1.down},
-            {"left", settings.controller1.left},
-            {"right", settings.controller1.right},
-            {"aturbo", settings.controller1.aturbo},
-            {"bturbo", settings.controller1.bturbo}
-        }},
-    };
+    nlohmann::json j = settings;
 
     std::ofstream json_file(path);
     if (!json_file.is_open())
@@ -428,8 +279,6 @@ bool Emulator::SaveSettings(const char* path) {
 }
 
 bool Emulator::LoadSettings(const char* path) {
-    // TODO: YOU CAN DEFINE A MACRO THAT WILL SERIALIZE A STRUCT, SO YOU
-    // DON'T HAVE TO DO THIS MANUALLY
     std::ifstream json_file(path);
     if (!json_file.is_open())
         return false;
@@ -440,27 +289,8 @@ bool Emulator::LoadSettings(const char* path) {
     if (j.is_null())
         return false;
 
-    // FIXME: YOU SHOULD CHECK THAT THESE FIELDS EXIST BEFORE ACCESSING THEM
-    // WAY TO DO THIS IS TO CALL THE .at() METHOD INSTEAD OF THE [] OPERATOR
-    // AND CATCH THE EXCEPTION THAT IS THROWN
-    settings.sync = static_cast<SyncType>(j["sync"]);
-    settings.next_sync = static_cast<SyncType>(j["next_sync"]);
-    settings.vsync = j["vsync"];
-    settings.p1_vol = j["p1_vol"];
-    settings.p2_vol = j["p2_vol"];
-    settings.tri_vol = j["tri_vol"];
-    settings.noise_vol = j["noise_vol"];
-    settings.master_vol = j["master_vol"];
-    settings.controller1.a = j["controller1"]["a"];
-    settings.controller1.b = j["controller1"]["b"];
-    settings.controller1.start = j["controller1"]["start"];
-    settings.controller1.select = j["controller1"]["select"];
-    settings.controller1.up = j["controller1"]["up"];
-    settings.controller1.down = j["controller1"]["down"];
-    settings.controller1.left = j["controller1"]["left"];
-    settings.controller1.right = j["controller1"]["right"];
-    settings.controller1.aturbo = j["controller1"]["aturbo"];
-    settings.controller1.bturbo = j["controller1"]["bturbo"];
+    // FIXME: CHECK FOR EXCEPTIONS
+    settings = j;
     return true;
 }
 
