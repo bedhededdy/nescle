@@ -61,9 +61,6 @@ public:
     virtual uint8_t MapPPURead(uint16_t addr) = 0;
     virtual bool MapPPUWrite(uint16_t addr, uint8_t data) = 0;
 
-    virtual bool SaveState(std::ofstream& file) = 0;
-    virtual bool LoadState(std::ifstream& file) = 0;
-
     virtual void CountdownScanline() {}
     virtual bool GetIRQStatus() { return false; }
     virtual void ClearIRQStatus() {}

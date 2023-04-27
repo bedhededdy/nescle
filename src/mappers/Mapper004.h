@@ -51,11 +51,12 @@ public:
     uint8_t MapPPURead(uint16_t addr) override;
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
 
-    bool SaveState(std::ofstream& file) override;
-    bool LoadState(std::ifstream& file) override;
-
     void CountdownScanline() override;
     bool GetIRQStatus() override;
     void ClearIRQStatus() override;
+
+protected:
+    void ToJSON(nlohmann::json& json) override;
+    void FromJSON(const nlohmann::json& json) override;
 };
 }

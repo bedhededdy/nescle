@@ -42,16 +42,6 @@ bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-bool Mapper000::SaveState(std::ofstream& file) {
-    // return fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    return false;
-}
-
-bool Mapper000::LoadState(std::ifstream& file) {
-    // return fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    return false;
-}
-
 void Mapper000::ToJSON(nlohmann::json& json) {
     Mapper::ToJSON(json);
 }

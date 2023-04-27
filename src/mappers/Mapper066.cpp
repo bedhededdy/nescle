@@ -47,17 +47,13 @@ bool Mapper066::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-bool Mapper066::SaveState(std::ofstream& file) {
-    //bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    //bool b2 = fwrite(&bank_select, sizeof(bank_select), 1, file) == 1;
-    //return b1 && b2;
-    return false;
+void Mapper066::ToJSON(nlohmann::json& json) {
+    Mapper::ToJSON(json);
+    json["bank_select"] = bank_select;
 }
 
-bool Mapper066::LoadState(std::ifstream& file) {
-    // bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    // bool b2 = fread(&bank_select, sizeof(bank_select), 1, file) == 1;
-    // return b1 && b2;
-    return false;
+void Mapper066::FromJSON(const nlohmann::json& json) {
+    Mapper::FromJSON(json);
+    bank_select = json["bank_select"];
 }
 }

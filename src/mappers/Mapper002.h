@@ -36,8 +36,5 @@ public:
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;
     uint8_t MapPPURead(uint16_t addr) override;
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
-
-    bool SaveState(std::ofstream& file) override;
-    bool LoadState(std::ifstream& file) override;
 };
 }

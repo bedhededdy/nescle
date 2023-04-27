@@ -42,6 +42,10 @@ private:
     // the iNES header, we must allocate the maximum possible amount of 32kb
     std::array<uint8_t, 0x8000> sram;
 
+protected:
+    void ToJSON(nlohmann::json& json) override;
+    void FromJSON(const nlohmann::json& json) override;
+
 public:
     Mapper001(uint8_t id, Cart& cart, Mapper::MirrorMode mirror)
         : Mapper(id, cart, mirror) {}
@@ -52,8 +56,5 @@ public:
     bool MapCPUWrite(uint16_t addr, uint8_t data) override;
     uint8_t MapPPURead(uint16_t addr) override;
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
-
-    bool SaveState(std::ofstream& file) override;
-    bool LoadState(std::ifstream& file) override;
 };
 }

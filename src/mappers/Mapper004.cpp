@@ -158,40 +158,36 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 // FIXME: MIRRORING IS BUSTED
-bool Mapper004::SaveState(std::ofstream& file) {
-    //bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    //bool b2 = fwrite(&registers, sizeof(registers), 1, file) == 1;
-    //bool b3 = fwrite(&chr_banks, sizeof(chr_banks), 1, file) == 1;
-    //bool b4 = fwrite(&prg_banks, sizeof(prg_banks), 1, file) == 1;
-    //bool b5 = fwrite(&target_register, sizeof(target_register), 1, file) == 1;
-    //bool b6 = fwrite(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
-    //bool b7 = fwrite(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
-    //bool b8 = fwrite(&irq_active, sizeof(irq_active), 1, file) == 1;
-    //bool b9 = fwrite(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
-    //bool b10 = fwrite(&irq_update, sizeof(irq_update), 1, file) == 1;
-    //bool b11 = fwrite(&irq_counter, sizeof(irq_counter), 1, file) == 1;
-    //bool b12 = fwrite(&irq_reload, sizeof(irq_reload), 1, file) == 1;
-    //bool b13 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    //return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
-    return false;
+void Mapper004::ToJSON(nlohmann::json& json) {
+    Mapper::ToJSON(json);
+    json["registers"] = registers;
+    json["chr_banks"] = chr_banks;
+    json["prg_banks"] = prg_banks;
+    json["target_register"] = target_register;
+    json["prg_bank_mode"] = prg_bank_mode;
+    json["chr_inversion"] = chr_inversion;
+    json["irq_active"] = irq_active;
+    json["irq_enabled"] = irq_enabled;
+    json["irq_update"] = irq_update;
+    json["irq_counter"] = irq_counter;
+    json["irq_reload"] = irq_reload;
+    json["sram"] = sram;
 }
 
-bool Mapper004::LoadState(std::ifstream& file) {
-//    bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-//    bool b2 = fread(&registers, sizeof(registers), 1, file) == 1;
-//    bool b3 = fread(&chr_banks, sizeof(chr_banks), 1, file) == 1;
-//    bool b4 = fread(&prg_banks, sizeof(prg_banks), 1, file) == 1;
-//    bool b5 = fread(&target_register, sizeof(target_register), 1, file) == 1;
-//    bool b6 = fread(&prg_bank_mode, sizeof(prg_bank_mode), 1, file) == 1;
-//    bool b7 = fread(&chr_inversion, sizeof(chr_inversion), 1, file) == 1;
-//    bool b8 = fread(&irq_active, sizeof(irq_active), 1, file) == 1;
-//    bool b9 = fread(&irq_enabled, sizeof(irq_enabled), 1, file) == 1;
-//    bool b10 = fread(&irq_update, sizeof(irq_update), 1, file) == 1;
-//    bool b11 = fread(&irq_counter, sizeof(irq_counter), 1, file) == 1;
-//    bool b12 = fread(&irq_reload, sizeof(irq_reload), 1, file) == 1;
-//    bool b13 = fread(sram, sizeof(sram), 1, file) == 1;
-//    return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11 && b12 && b13;
-    return false;
+void Mapper004::FromJSON(const nlohmann::json& json) {
+    Mapper::FromJSON(json);
+    json.at("registers").get_to(registers);
+    json.at("chr_banks").get_to(chr_banks);
+    json.at("prg_banks").get_to(prg_banks);
+    json.at("target_register").get_to(target_register);
+    json.at("prg_bank_mode").get_to(prg_bank_mode);
+    json.at("chr_inversion").get_to(chr_inversion);
+    json.at("irq_active").get_to(irq_active);
+    json.at("irq_enabled").get_to(irq_enabled);
+    json.at("irq_update").get_to(irq_update);
+    json.at("irq_counter").get_to(irq_counter);
+    json.at("irq_reload").get_to(irq_reload);
+    json.at("sram").get_to(sram);
 }
 
 void Mapper004::CountdownScanline() {

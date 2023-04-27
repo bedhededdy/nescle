@@ -25,6 +25,16 @@ namespace NESCLE {
 std::vector<NESCLENotification*> NESCLENotification::notifications;
 GLuint NESCLENotification::fade_shader = -1;
 
+void NESCLENotification::Init() {
+    // notifications.re
+}
+
+void NESCLENotification::Shutdown() {
+    // notifications.clear();
+    notifications.resize(0);
+    notifications.shrink_to_fit();
+}
+
 NESCLENotification::NESCLENotification(const char* text, int duration) {
     this->duration = duration;
     t0 = SDL_GetTicks64();

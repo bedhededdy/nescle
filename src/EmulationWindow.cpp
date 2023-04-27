@@ -369,6 +369,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
     // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
+    NESCLENotification::Init();
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
     #ifdef _DEBUG
@@ -713,11 +714,15 @@ EmulationWindow::~EmulationWindow() {
 
     // TODO: SEE IF A FUNCTION LIKE THIS EXISTS FOR GL
     // FIXME: THERE IS ONE OUSTANDING ALLOCATION
+
+    NESCLENotification::Shutdown();
+
     SDL_Quit();
     SDL_Log("remaining allocations: %d\n", SDL_GetNumAllocations());
 }
 
 void EmulationWindow::Show(Emulator* emu) {
+
     Bus* bus = emu->GetNES();
 
     ImGui_ImplOpenGL3_NewFrame();

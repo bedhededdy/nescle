@@ -185,35 +185,33 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-bool Mapper001::SaveState(std::ofstream& file) {
-    // bool b1 = fwrite(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    // bool b2 = fwrite(&ctrl, sizeof(ctrl), 1, file) == 1;
-    // bool b3 = fwrite(&load, sizeof(load), 1, file) == 1;
-    // bool b4 = fwrite(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
-    // bool b5 = fwrite(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
-    // bool b6 = fwrite(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
-    // bool b7 = fwrite(&chr_select8, sizeof(chr_select8), 1, file) == 1;
-    // bool b8 = fwrite(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
-    // bool b9 = fwrite(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
-    // bool b10 = fwrite(&prg_select32, sizeof(prg_select32), 1, file) == 1;
-    // bool b11 = fwrite(sram, sizeof(sram), 1, file) == 1;
-    // return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
-    return false;
+void Mapper001::ToJSON(nlohmann::json& json) {
+    Mapper::ToJSON(json);
+    json = nlohmann::json {
+        {"ctrl", ctrl},
+        {"load", load},
+        {"load_reg_ct", load_reg_ct},
+        {"chr_select4_lo", chr_select4_lo},
+        {"chr_select4_hi", chr_select4_hi},
+        {"chr_select8", chr_select8},
+        {"prg_select16_lo", prg_select16_lo},
+        {"prg_select16_hi", prg_select16_hi},
+        {"prg_select32", prg_select32},
+        {"sram", sram}
+    };
 }
 
-bool Mapper001::LoadState(std::ifstream& file) {
-    // bool b1 = fread(&mirror_mode, sizeof(mirror_mode), 1, file) == 1;
-    // bool b2 = fread(&ctrl, sizeof(ctrl), 1, file) == 1;
-    // bool b3 = fread(&load, sizeof(load), 1, file) == 1;
-    // bool b4 = fread(&load_reg_ct, sizeof(load_reg_ct), 1, file) == 1;
-    // bool b5 = fread(&chr_select4_lo, sizeof(chr_select4_lo), 1, file) == 1;
-    // bool b6 = fread(&chr_select4_hi, sizeof(chr_select4_hi), 1, file) == 1;
-    // bool b7 = fread(&chr_select8, sizeof(chr_select8), 1, file) == 1;
-    // bool b8 = fread(&prg_select16_lo, sizeof(prg_select16_lo), 1, file) == 1;
-    // bool b9 = fread(&prg_select16_hi, sizeof(prg_select16_hi), 1, file) == 1;
-    // bool b10 = fread(&prg_select32, sizeof(prg_select32), 1, file) == 1;
-    // bool b11 = fread(sram, sizeof(sram), 1, file) == 1;
-    // return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11;
-    return false;
+void Mapper001::FromJSON(const nlohmann::json& json) {
+    Mapper::FromJSON(json);
+    json.at("ctrl").get_to(ctrl);
+    json.at("load").get_to(load);
+    json.at("load_reg_ct").get_to(load_reg_ct);
+    json.at("chr_select4_lo").get_to(chr_select4_lo);
+    json.at("chr_select4_hi").get_to(chr_select4_hi);
+    json.at("chr_select8").get_to(chr_select8);
+    json.at("prg_select16_lo").get_to(prg_select16_lo);
+    json.at("prg_select16_hi").get_to(prg_select16_hi);
+    json.at("prg_select32").get_to(prg_select32);
+    json.at("sram").get_to(sram);
 }
 }
