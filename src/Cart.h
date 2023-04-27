@@ -64,8 +64,6 @@ public:
     static constexpr int PRG_ROM_CHUNK_SIZE = 0x4000;
 
     bool LoadROM(const char* path);
-    bool SaveState(std::ofstream& file);
-    bool LoadState(std::ifstream& file);
 
     void SetMapper(uint8_t _id, Mapper::MirrorMode mirror);
 
@@ -82,12 +80,10 @@ public:
     uint8_t ReadChrRom(size_t off);
     void WriteChrRom(size_t off, uint8_t data);
 
-    // FIXME: THIS MAY BE BROKEN BECAUSE THE ARRAYS ARE TECHNICALLY RAW PTRS
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(ROMHeader, name, prg_rom_size,
         chr_rom_size, mapper1, mapper2, prg_ram_size, tv_system1, tv_system2,
         padding)
 
-    // TODO: MOVE THESE TO THE SRC FILE
     // I know that if I am making a savestate, that the unique_ptr is not null
     // I tried to write a template to serialize the unique_ptr, but it didn't
     // work, but thankfully we can avoid that by virtue of knowing that

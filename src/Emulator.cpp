@@ -119,14 +119,19 @@ Emulator::Emulator(const char* settings_path) {
     }
 
     // Get the exe and user data paths
-    exe_path = SDL_GetBasePath();
-    user_data_path = SDL_GetPrefPath("NesEmu", "NesEmu");
+    char* bp = SDL_GetBasePath();
+    exe_path = bp;
+    SDL_free(bp);
+
+    char* dp = SDL_GetPrefPath("NesEmu", "NesEmu");
+    user_data_path = dp;
+    SDL_free(dp);
 
     // Create a saves directory if there isn't one
-    std::string saves_path = std::string(user_data_path) + "saves";
+    std::string saves_path = user_data_path + "saves";
     Util_CreateDirectoryIfNotExists(saves_path.c_str());
 
-    std::string settings_path_str = std::string(user_data_path) + "settings.json";
+    std::string settings_path_str = user_data_path + "settings.json";
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "settings_path_str: %s", settings_path_str.c_str());
     // settings_path_str = "settings.json";
@@ -191,11 +196,9 @@ Emulator::Emulator(const char* settings_path) {
 
 Emulator::~Emulator() {
     // Save settings for next session
-    std::string settings_path_str = std::string(user_data_path) + "settings.json";
+    std::string settings_path_str = user_data_path + "settings.json";
     SaveSettings(settings_path_str.c_str());
 
-    SDL_free(const_cast<char*>(exe_path));
-    SDL_free(const_cast<char*>(user_data_path));
     SDL_DestroyMutex(nes_state_lock);
     SDL_CloseAudioDevice(audio_device);
     delete nes;
@@ -235,7 +238,7 @@ bool Emulator::LoadState(const char* path) {
         return false;
     }
 
-    std::string backup_path = std::string(user_data_path) + "saves/tmp.sav";
+    std::string backup_path = user_data_path + "saves/tmp.sav";
     if (!SaveState(backup_path.c_str())) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
             "Emulator_LoadState: Could not backup current state");
@@ -444,7 +447,7 @@ nfdresult_t Emulator::LoadROM() {
         // FIXME: UNSAFE, PROBABLY SHOULD USE std::string
         char save_path[1024];
         for (int i = 0; i < 10; i++) {
-            sprintf(save_path, "%ssaves/%sslot%d.sav", user_data_path, game_name, i);
+            sprintf(save_path, "%ssaves/%sslot%d.sav", user_data_path.c_str(), game_name, i);
             used_saveslots[i] = Util_FileExists(save_path);
         }
     } else {

@@ -157,44 +157,6 @@ bool Cart::LoadROM(const char* path) {
     return true;
 }
 
-bool Cart::SaveState(std::ofstream& file) {
-    // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
-    // SCENARIO WHERE THERE IS NO ROM LOADED
-    // bool b1 = fwrite(this, sizeof(Cart), 1, file) == 1;
-    // size_t rom_path_len = rom_path.size() + 1;
-    // bool b2 = fwrite(&rom_path_len, sizeof(size_t), 1, file) == 1;
-    // bool b3 = fwrite(rom_path.c_str(), sizeof(char), rom_path_len, file) == 1;
-    // // bool b4 = fwrite(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    // // bool b5 = fwrite(chr_rom, GetChrRomBytes(), 1, file) == 1;
-    // return b1 && b2 && b3; //&& b4 && b5;
-    return false;
-}
-
-bool Cart::LoadState(std::ifstream& file) {
-    // NOTE: THIS FUNCTION ASSUMES THAT THE CALLER HAS GUARDED AGAINST THE
-    // SCENARIO WHERE THERE IS NO ROM LOADED
-
-    // bool b1 = fread(this, sizeof(Cart), 1, file) == 1;
-    // size_t rom_path_len;
-    // bool b2 = fread(&rom_path_len, sizeof(size_t), 1, file) == 1;
-
-    // char* tmp = (char*)malloc(rom_path_len);
-    // bool b3 = fread(tmp, sizeof(char), rom_path_len, file) == 1;
-    // rom_path = tmp;
-    // free(tmp);
-
-    // prg_rom.resize(GetPrgRomBytes());
-    // prg_rom.shrink_to_fit();
-    // // bool b4 = fread(prg_rom, GetPrgRomBytes(), 1, file) == 1;
-    // chr_rom.resize(GetChrRomBytes());
-    // chr_rom.shrink_to_fit();
-    // // bool b5 = fread(chr_rom, GetChrRomBytes(), 1, file) == 1;
-
-    // // Let the caller handle the mapper too
-    // return b1 && b2 && b3; //&& b4 && b5;
-    return false;
-}
-
 uint8_t Cart::GetPrgRomBlocks() {
     return metadata.prg_rom_size;
 }

@@ -19,6 +19,8 @@
 // OF SAVE FILES
 #pragma once
 
+#include <string>
+
 #include <nfd.h>
 
 #include <nlohmann/json.hpp>
@@ -103,8 +105,8 @@ private:
     const uint8_t* keys;
     SDL_KeyCode most_recent_key_this_frame;
 
-    const char* exe_path;
-    const char* user_data_path;
+    std::string exe_path;
+    std::string user_data_path;
 
     bool aturbo;
     bool bturbo;
@@ -154,8 +156,8 @@ public:
 
     Bus* GetNES() { return nes; }
 
-    const char* GetUserDataPath() { return user_data_path; }
-    const char* GetExePath() { return exe_path; }
+    const std::string& GetUserDataPath() { return user_data_path; }
+    const std::string& GetExePath() { return exe_path; }
 
     bool* GetUsedSaveSlots() { return used_saveslots; }
 
