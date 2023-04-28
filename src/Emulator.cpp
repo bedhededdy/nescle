@@ -293,7 +293,12 @@ bool Emulator::LoadSettings(const char* path) {
         return false;
 
     // FIXME: CHECK FOR EXCEPTIONS
-    settings = j;
+    // TODO: NARROW EXCEPTIONS TO SPECIFICS
+    try {
+        settings = j;
+    } catch (...) {
+        return false;
+    }
     return true;
 }
 

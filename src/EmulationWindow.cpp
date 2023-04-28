@@ -101,6 +101,10 @@
 // SOMETHING BASED ON IF IT HAS THE FOCUS
 #include "EmulationWindow.h"
 
+#include <filesystem>
+#include <string>
+#include <sstream>
+
 #include <glad/glad.h>
 
 #include <imgui.h>
@@ -151,12 +155,17 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, !bus->GetCart().GetROMPath().empty())) {
-                        char path[1024];
                         const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
-                        sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath().c_str(), game_name, i);
-                        emu->SaveState(path);
+                        std::stringstream path_stream;
+                        path_stream << emu->GetUserDataPath() << "saves/" << game_name << "slot" << i << ".sav";
+                        std::string path = path_stream.str();
+                        emu->SaveState(path.c_str());
                         emu->GetUsedSaveSlots()[i] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+
+                        path_stream.clear();
+                        path_stream << "Saved state " << i;
+                        path = path_stream.str();
+                        NESCLENotification::MakeNotification(path.c_str());
                     }
                 }
                 ImGui::EndMenu();
@@ -168,11 +177,17 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                     char shortcut_str[13];
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
                     if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->GetUsedSaveSlots()[i])) {
-                        char path[1024];
                         const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
-                        sprintf(path, "%ssaves/%sslot%d.sav", emu->GetUserDataPath().c_str(), game_name, i);
-                        emu->LoadState(path);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        std::stringstream path_stream;
+                        path_stream << emu->GetUserDataPath() << "saves/" << game_name << "slot" << i << ".sav";
+                        std::string path = path_stream.str();
+                        // TODO: CHECK FOR SUCCESS
+                        emu->LoadState(path.c_str());
+
+                        path_stream.clear();
+                        path_stream << "Loaded state " << i;
+                        path = path_stream.str();
+                        NESCLENotification::MakeNotification(path.c_str());
                     }
                 }
                 ImGui::EndMenu();
@@ -447,7 +462,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     // ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        style.WindowRounding = 0.0f;
+        style.WindowRounding = 1.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
@@ -533,54 +548,66 @@ void EmulationWindow::Loop() {
                 if (emu->KeyHeld(SDLK_LSHIFT) || emu->KeyHeld(SDLK_RSHIFT)) {
                     // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
                     // BEFORE CALLING LOAD STATE?
-                    char path_to_save[1024];
                     const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
+                    std::stringstream path_to_save;
+                    path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
 
                     if (emu->KeyPushed(SDLK_0)) {
-                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot0.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 0");
                     } else if (emu->KeyPushed(SDLK_1)) {
-                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot1.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 1");
                     } else if (emu->KeyPushed(SDLK_2)) {
-                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot2.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 2");
                     } else if (emu->KeyPushed(SDLK_3)) {
-                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot3.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 3");
                     } else if (emu->KeyPushed(SDLK_4)) {
-                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot4.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 4");
                     } else if (emu->KeyPushed(SDLK_5)) {
-                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot5.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 5");
                     } else if (emu->KeyPushed(SDLK_6)) {
-                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot6.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 6");
                     } else if (emu->KeyPushed(SDLK_7)) {
-                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot7.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 7");
                     } else if (emu->KeyPushed(SDLK_8)) {
-                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot8.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 8");
                     } else if (emu->KeyPushed(SDLK_9)) {
-                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->LoadState(path_to_save);
-                        NESCLENotification::MakeNotification("Loaded state");
+                        path_to_save << "slot9.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->LoadState(path_to_save_str.c_str());
+                        NESCLENotification::MakeNotification("Loaded state 9");
                     }
                 } else {
-                    char path_to_save[1024];
                     // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
                     const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
+                    std::stringstream path_to_save;
+                    path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
 
                     // only process one of these if multiple are pressed
                     if (emu->KeyPushed(SDLK_o)) {
@@ -593,56 +620,68 @@ void EmulationWindow::Loop() {
                     } else if (emu->KeyPushed(SDLK_f)) {
                         show_frametime = !show_frametime;
                     } else if (emu->KeyPushed(SDLK_0)) {
-                        sprintf(path_to_save, "%ssaves/%sslot0.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot0.sav";
+                        // Can't use .str().c_str() because the string is inline
+                        // and will get destroyed immediately
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[0] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 0");
                     } else if (emu->KeyPushed(SDLK_1)) {
-                        sprintf(path_to_save, "%ssaves/%sslot1.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot1.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[1] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 1");
                     } else if (emu->KeyPushed(SDLK_2)) {
-                        sprintf(path_to_save, "%ssaves/%sslot2.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot2.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[2] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 2");
                     } else if (emu->KeyPushed(SDLK_3)) {
-                        sprintf(path_to_save, "%ssaves/%sslot3.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot3.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[3] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 3");
                     } else if (emu->KeyPushed(SDLK_4)) {
-                        sprintf(path_to_save, "%ssaves/%sslot4.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot4.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[4] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 4");
                     } else if (emu->KeyPushed(SDLK_5)) {
-                        sprintf(path_to_save, "%ssaves/%sslot5.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot5.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[5] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 5");
                     } else if (emu->KeyPushed(SDLK_6)) {
-                        sprintf(path_to_save, "%ssaves/%sslot6.sav", emu->GetUserDataPath().c_str(), game_name);
                         // FIXME: HAVE TO CHECK THAT SAVE WAS SUCCESSFUL
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot6.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[6] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 6");
                     } else if (emu->KeyPushed(SDLK_7)) {
-                        sprintf(path_to_save, "%ssaves/%sslot7.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot7.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[7] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 7");
                     } else if (emu->KeyPushed(SDLK_8)) {
-                        sprintf(path_to_save, "%ssaves/%sslot8.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot8.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[8] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 8");
                     } else if (emu->KeyPushed(SDLK_9)) {
-                        sprintf(path_to_save, "%ssaves/%sslot9.sav", emu->GetUserDataPath().c_str(), game_name);
-                        emu->SaveState(path_to_save);
+                        path_to_save << "slot9.sav";
+                        std::string path_to_save_str = path_to_save.str();
+                        emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[9] = true;
-                        NESCLENotification::MakeNotification("Saved state");
+                        NESCLENotification::MakeNotification("Saved state 9");
                     }
                 }
             } else {

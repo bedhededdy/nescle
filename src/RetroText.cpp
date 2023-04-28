@@ -24,6 +24,23 @@
 namespace NESCLE {
 uint8_t* RetroText::font = nullptr;
 
+RetroText::RetroText(const char* text, uint32_t fgcolor, uint32_t bgcolor) {
+    text_len = strlen(text);
+    pixels = new uint32_t[(2*padding_x + text_len*8) * (8 + 2*padding_y)];
+}
+
+RetroText::~RetroText() {
+    delete pixels;
+}
+
+void RetroText::Init() {
+
+}
+
+void RetroText::Shutdown() {
+
+}
+
 int RetroText::CharToTile(char ch) {
     // Recall that the first 32 (0x20) characters in the ASCII table are
     // special chars.

@@ -189,18 +189,16 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
 
 void Mapper001::ToJSON(nlohmann::json& json) {
     Mapper::ToJSON(json);
-    json = nlohmann::json {
-        {"ctrl", ctrl},
-        {"load", load},
-        {"load_reg_ct", load_reg_ct},
-        {"chr_select4_lo", chr_select4_lo},
-        {"chr_select4_hi", chr_select4_hi},
-        {"chr_select8", chr_select8},
-        {"prg_select16_lo", prg_select16_lo},
-        {"prg_select16_hi", prg_select16_hi},
-        {"prg_select32", prg_select32},
-        {"sram", sram}
-    };
+    json["ctrl"] = ctrl;
+    json["load"] = load;
+    json["load_reg_ct"] = load_reg_ct;
+    json["chr_select4_lo"] = chr_select4_lo;
+    json["chr_select4_hi"] = chr_select4_hi;
+    json["chr_select8"] = chr_select8;
+    json["prg_select16_lo"] = prg_select16_lo;
+    json["prg_select16_hi"] = prg_select16_hi;
+    json["prg_select32"] = prg_select32;
+    json["sram"] = sram;
 }
 
 void Mapper001::FromJSON(const nlohmann::json& json) {
