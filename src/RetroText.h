@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -31,31 +32,29 @@ private:
     static constexpr int padding_y = 2;
 
     // TODO: You can give this a size, this need not be allocated at runtime
-    static uint8_t* font;
+    static std::array<uint8_t, 4096> font;
 
     static void LoadFont();
     static int CharToTile(char ch);
     static void MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_t fgcolor, uint32_t bgcolor);
 
-    uint32_t* pixels;
+    std::unique_ptr<uint32_t[]> pixels;
     int width;
     int height;
     size_t text_len;
 
 public:
+    static bool Init();
+
     RetroText(const char* text, uint32_t fgcolor = 0xffffffff,
         uint32_t bgcolor = 0xff000000);
-    ~RetroText();
 
-    // TODO: Get rid of MakeText and DestroyText
-    static uint32_t* MakeText(const char* text, uint32_t fgcolor = 0xffffffff,
-        uint32_t bgcolor = 0xff000000);
-    static void DestroyText(uint32_t* pixels);
+    uint32_t* GetPixels() { return pixels.get(); }
+    int GetWidth() { return width; }
+    int GetHeight() { return height; }
+    size_t GetTextLen() { return text_len; }
 
-    // TODO: IMPLEMENT
-    static void Init();
-    static void Shutdown();
-
-    static void DrawTextToBound2DTexture(const RetroText& retro_text);
+    // static void DrawTextToNew2DTexture(const RetroText& retro_text);
+    // static void DrawTextToExisting2DTexture(const RetroText& retro_text);
 };
 }

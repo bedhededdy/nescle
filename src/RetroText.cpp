@@ -22,24 +22,7 @@
 #include "Cart.h"
 
 namespace NESCLE {
-uint8_t* RetroText::font = nullptr;
-
-RetroText::RetroText(const char* text, uint32_t fgcolor, uint32_t bgcolor) {
-    text_len = strlen(text);
-    pixels = new uint32_t[(2*padding_x + text_len*8) * (8 + 2*padding_y)];
-}
-
-RetroText::~RetroText() {
-    delete pixels;
-}
-
-void RetroText::Init() {
-
-}
-
-void RetroText::Shutdown() {
-
-}
+std::array<uint8_t, 4096> RetroText::font;
 
 int RetroText::CharToTile(char ch) {
     // Recall that the first 32 (0x20) characters in the ASCII table are
@@ -97,15 +80,11 @@ int RetroText::CharToTile(char ch) {
 }
 
 void RetroText::LoadFont() {
-    // 128 8x8 tiles per half
-    constexpr size_t nbytes = 128 * 8 * 8;
-    font = new uint8_t[nbytes];
-    Cart* cart = new Cart();
-    cart->LoadROM("../res/nestest.nes");
-    // inefficient compared to a memcpy, but it's fine
-    for (size_t i = 0; i < nbytes; i++)
-        font[i] = cart->ReadChrRom(i);
-    delete cart;
+    Cart cart;
+    cart.LoadROM("../res/nestest.nes");
+    // Inefficient compared to a memcpy, but it's fine
+    for (size_t i = 0; i < font.size(); i++)
+        font[i] = cart.ReadChrRom(i);
 }
 
 void RetroText::MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_t fgcolor, uint32_t bgcolor) {
@@ -134,19 +113,18 @@ void RetroText::MakeChar(char ch, int pos, size_t len, uint32_t* pixels, uint32_
     }
 }
 
-uint32_t* RetroText::MakeText(const char* text, uint32_t fgcolor, uint32_t bgcolor) {
-    if (font == nullptr)
-        LoadFont();
+RetroText::RetroText(const char* text, uint32_t fgcolor, uint32_t bgcolor) {
+    text_len = strlen(text);
+    pixels = std::make_unique<uint32_t[]>((2*padding_x + text_len*8) * (8 + 2*padding_y));
+    size_t len = text_len;
+    width = 2*padding_x + len*8;
+    height = 8 + 2*padding_y;
 
-    size_t len = strlen(text);
-
-    const int ncols = 2*padding_x + 8*len;
-    const int nrows = 2*padding_y + 8;
-
-    uint32_t* pixels = new uint32_t[(2*padding_x + len*8) * (8 + 2*padding_y)];
+    const int ncols = width;
+    const int nrows = height;
 
     for (size_t i = 0; i < len; i++)
-        MakeChar(text[i], i, len, pixels + padding_y*(2*padding_x + len*8), fgcolor, bgcolor);
+        MakeChar(text[i], i, len, pixels.get() + padding_y*(2*padding_x + len*8), fgcolor, bgcolor);
 
     // shade background rows
     for (int y = 0; y < padding_y; y++) {
@@ -168,11 +146,10 @@ uint32_t* RetroText::MakeText(const char* text, uint32_t fgcolor, uint32_t bgcol
         for (int x = 0; x < padding_x; x++)
             pixels[y*(2*padding_x + len*8) + (ncols - 1 - x)] = bgcolor;
     }
-
-    return pixels;
 }
 
-void RetroText::DestroyText(uint32_t* pixels) {
-    delete pixels;
+bool RetroText::Init() {
+    LoadFont();
+    return true;
 }
 }

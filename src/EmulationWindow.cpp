@@ -196,9 +196,9 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("NES")) {
-           if (ImGui::MenuItem("Reset", "Ctrl+R"))
+           if (ImGui::MenuItem("Reset", "Ctrl+R", false, !bus->GetCart().GetROMPath().empty()))
                bus->Reset();
-           if (ImGui::MenuItem("Play/Pause", "Ctrl+P"))
+           if (ImGui::MenuItem("Play/Pause", "Ctrl+P", false, !bus->GetCart().GetROMPath().empty()))
                emu->SetRunEmulation(!emu->GetRunEmulation());
 
            ImGui::EndMenu();
@@ -384,6 +384,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
     //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
     // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
+    RetroText::Init();
     NESCLENotification::Init();
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
@@ -953,7 +954,8 @@ void EmulationWindow::Show(Emulator* emu) {
         // period of time
         char buf[64];
         sprintf(buf, "Frametime: %llu", frametime);
-        uint32_t* pixels = RetroText::MakeText(buf);
+        // uint32_t* pixels = RetroText::MakeText(buf);
+        RetroText rt(buf);
         size_t len = strlen(buf);
         // need weird offset to avoid getting hidden behind menu bar
         // glViewport((int)io.DisplaySize.x - 2 * len * 8 - 10, (int)io.DisplaySize.y - 40, 2 * len * 8, 2 * 8);
@@ -961,11 +963,10 @@ void EmulationWindow::Show(Emulator* emu) {
         const int height = 8 + 4;
 
         glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - 18 - 2*height, 2*width, 2*height);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, rt.GetPixels());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glGenerateMipmap(GL_TEXTURE_2D);
-        RetroText::DestroyText(pixels);
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glDeleteTextures(1, &ftime_tex);

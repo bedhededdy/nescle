@@ -35,6 +35,8 @@ private:
     uint64_t t0;
     int duration;
     GLuint texture;
+    int width;
+    int height;
 
     NESCLENotification(const char* text, int duration);
     ~NESCLENotification();
@@ -44,5 +46,8 @@ public:
     static void MakeNotification(const char* text, int duration = 3000);
     static void ShowNotifications();
     static void Shutdown();
+
+    int GetWidth() { return width; }
+    int GetHeight() { return height; }
 };
 }
