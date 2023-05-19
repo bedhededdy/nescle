@@ -218,12 +218,27 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         if (ImGui::BeginMenu("Config")) {
             if (ImGui::MenuItem("Options"))
                 show_options = true;
+            if (ImGui::BeginMenu("Resolution options")) {
+                if (ImGui::MenuItem("1x"))
+                    SDL_SetWindowSize(window, 256, 240 + 19);
+                if (ImGui::MenuItem("2x"))
+                    SDL_SetWindowSize(window, 512, 480 + 19);
+                if (ImGui::MenuItem("3x"))
+                    SDL_SetWindowSize(window, 768, 720 + 19);
+                if (ImGui::MenuItem("4x"))
+                    SDL_SetWindowSize(window, 1024, 960 + 19);
+                if (ImGui::MenuItem("5x"))
+                    SDL_SetWindowSize(window, 1280, 1200 + 19);
+
+                ImGui::EndMenu();
+            }
             if (ImGui::MenuItem("Open mixer"))
                 show_mixer = true;
             if (ImGui::MenuItem("Edit controls"))
                 show_controller = true;
             if (ImGui::MenuItem("Reset defaults"))
                 emu->SetDefaultSettings();
+
 
             ImGui::EndMenu();
         }
@@ -520,6 +535,19 @@ void EmulationWindow::Loop() {
                 case SDL_WINDOWEVENT_FOCUS_GAINED:
                     // if (focus_lost_triggered && cart is inserted)
                     //    emulator->run_emulation = true;
+                    break;
+                case SDL_WINDOWEVENT_RESIZED:
+                    // User is more likely to want to resize vertically
+                    // so we will force the width to match the height
+                    // FIXME: MAKE THIS USE THE ASPECT RATIO THE USER
+                    // SELECTS WHEN WE ADD ASPECT RATIO OPTIONS
+
+                    // TODO: LATER WE CAN ALLOW ARBITRARY WINDOW SIZES,
+                    // AND JUST HAVE THE TEXTURE PAD WITH CLEAR PIXELS
+                    // ON THE SIDES
+                    SDL_SetWindowSize(window,
+                        event.window.data2 * (double)PPU::RESOLUTION_X/(double)PPU::RESOLUTION_Y + 19,
+                        event.window.data2);
                     break;
                 }
                 break;
@@ -880,7 +908,7 @@ void EmulationWindow::Show(Emulator* emu) {
         sub_windows[WindowType::CONTROLLER] = nullptr;
     }
 
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - 19);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 

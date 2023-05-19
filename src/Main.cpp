@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     // FAILS EDGE TIMING WITH CODE 3
 
     // Have to alloc on the heap to check for leaks
-    auto emuWin = new NESCLE::EmulationWindow(256 * 3, 240 * 3);
+    auto emuWin = new NESCLE::EmulationWindow(256 * 3, 240 * 3 + 19);
     emuWin->Loop();
     delete emuWin;
 
