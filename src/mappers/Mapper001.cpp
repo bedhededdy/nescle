@@ -187,7 +187,7 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper001::ToJSON(nlohmann::json& json) {
+void Mapper001::ToJSON(nlohmann::json& json) const {
     Mapper::ToJSON(json);
     json["ctrl"] = ctrl;
     json["load"] = load;

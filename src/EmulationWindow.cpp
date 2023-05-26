@@ -219,16 +219,39 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
             if (ImGui::MenuItem("Options"))
                 show_options = true;
             if (ImGui::BeginMenu("Resolution options")) {
-                if (ImGui::MenuItem("1x"))
+                // TODO: NEED TO MAKE THIS A SETTING AND DO SOMETHING
+                if (ImGui::MenuItem("4:3"))
+                    emu->GetSettings()->aspect_ratio = 4.0f/3.0f;
+                if (ImGui::MenuItem("16:9"))
+                    emu->GetSettings()->aspect_ratio = 16.0f/9.0f;
+                if (ImGui::MenuItem("256:240"))
+                    emu->GetSettings()->aspect_ratio = 256.0f/240.0f;
+
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Window sizes")) {
+                float aspect_ratio = emu->GetSettings()->aspect_ratio;
+
+                // 256/4 = 64
+
+
+                // 256/16 = 16
+
+                if (ImGui::MenuItem("1x")) {
                     SDL_SetWindowSize(window, 256, 240 + 19);
-                if (ImGui::MenuItem("2x"))
+                }
+                if (ImGui::MenuItem("2x")) {
                     SDL_SetWindowSize(window, 512, 480 + 19);
-                if (ImGui::MenuItem("3x"))
+                }
+                if (ImGui::MenuItem("3x")) {
                     SDL_SetWindowSize(window, 768, 720 + 19);
-                if (ImGui::MenuItem("4x"))
+                }
+                if (ImGui::MenuItem("4x")) {
                     SDL_SetWindowSize(window, 1024, 960 + 19);
-                if (ImGui::MenuItem("5x"))
+                }
+                if (ImGui::MenuItem("5x")) {
                     SDL_SetWindowSize(window, 1280, 1200 + 19);
+                }
 
                 ImGui::EndMenu();
             }
@@ -394,30 +417,22 @@ void EmulationWindow::SetupMainFrame() {
     glDeleteShader(fshader);
 }
 
-EmulationWindow::EmulationWindow(int w, int h) {
+EmulationWindow::EmulationWindow() {
     // TODO: FIND A WAY TO NOT HAVE TO CALL GETIO EACH TIME
     //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
     // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     RetroText::Init();
     NESCLENotification::Init();
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
-    #ifdef _DEBUG
-       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
-    #else
-       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-    #endif
 
     // TODO: CHANGE SDL LOGGING FUNCTION TO A CUSTOM FUNCTION
-
-    emulator = new Emulator("");
 
     // NOTE: EVEN IF YOU DON'T FREE THIS, SDL DOES NOT SHOW A MEMORY LEAK
     // BECAUSE ALTHOUGH SDL_malloc IS A MACRO TO MALLOC
     // IT JUST PLAIN SUBSTITUES THE REGULAR MALLOC AND NOT THE DEBUG
     // VERSION OF MALLOC THAT ALLOWS US TO TRACK MEMORY LEAKS
-    Bus* bus = emulator->GetNES();
+    Bus* bus = emulator.GetNES();
 
     for (size_t i = 0; i < WindowType::COUNT; i++)
         sub_windows[i] = nullptr;
@@ -426,6 +441,9 @@ EmulationWindow::EmulationWindow(int w, int h) {
     bus->SetSampleFrequency(44100);
 
     NFD_Init();
+
+    int w = 256 * 3;
+    int h = 240 * 3 + 19;
 
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
@@ -447,7 +465,7 @@ EmulationWindow::EmulationWindow(int w, int h) {
 
     // FIXME: BUG, SOMEHOW VSYNC IS GETTING DISABLED BEFORE WE GET HERE
     // REGARDLESS OF THE SETTING
-    if (emulator->GetSettings()->vsync) {
+    if (emulator.GetSettings()->vsync) {
         SDL_Log("Vsync enabled\n");
         SDL_GL_SetSwapInterval(1);
     } else {
@@ -494,16 +512,16 @@ EmulationWindow::EmulationWindow(int w, int h) {
 }
 
 void EmulationWindow::Loop() {
-    Emulator* emu = emulator;
-    Bus *bus = emulator->GetNES();
+    Emulator* emu = &emulator;
+    Bus *bus = emu->GetNES();
     auto ppu = bus->GetPPU();
 
-    while (!emulator->GetQuit()) {
+    while (!emulator.GetQuit()) {
         uint64_t t0 = SDL_GetTicks64();
 
         emu->SetMostRecentKeyThisFrame(SDLK_UNKNOWN);
         SDL_Event event;
-        if (emulator->LockNESState() < 0) {
+        if (emulator.LockNESState() < 0) {
             SDL_Log("Failed to lock mutex\n");
             continue;
         }
@@ -748,13 +766,13 @@ void EmulationWindow::Loop() {
         // but we will not show the updates visually
         // FIXME: THIS MAY NOT BE TRUE, SINCE THIS FUNCTION RELEASES THE LOCK
         // THE AUDIO THREAD MAY BE SPINNING WAITING FOR THE LOCK
-        Show(emulator);
+        Show();
 
-        emulator->RefreshPrevKeys();
+        emulator.RefreshPrevKeys();
 
         // Need to sleep (8ms is good because it ensures we will see new frame)
         // to avoid starving the audio thread
-        if (emulator->GetSettings()->vsync == false && emulator->GetSettings()->sync == Emulator::SyncType::AUDIO)
+        if (emulator.GetSettings()->vsync == false && emulator.GetSettings()->sync == Emulator::SyncType::AUDIO)
             SDL_Delay(8);
 
         frametime = SDL_GetTicks64() - t0;
@@ -778,19 +796,19 @@ EmulationWindow::~EmulationWindow() {
 
     // TODO: MAKE SURE THE AUDIO DEVICE IS CLOSED
     // BY THE EMULATOR (AKA CALL EMULATOR DESTROY HERE)
-    delete emulator;
+    // delete emulator;
 
     // TODO: SEE IF A FUNCTION LIKE THIS EXISTS FOR GL
     // FIXME: THERE IS ONE OUSTANDING ALLOCATION
 
     NESCLENotification::Shutdown();
 
-    SDL_Quit();
     SDL_Log("remaining allocations: %d\n", SDL_GetNumAllocations());
 }
 
-void EmulationWindow::Show(Emulator* emu) {
+void EmulationWindow::Show() {
 
+    auto emu = &emulator;
     Bus* bus = emu->GetNES();
 
     ImGui_ImplOpenGL3_NewFrame();

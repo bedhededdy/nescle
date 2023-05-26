@@ -23,7 +23,7 @@ private:
     uint8_t bank_select;
 
 protected:
-    void ToJSON(nlohmann::json& json) override;
+    void ToJSON(nlohmann::json& json) const override;
     void FromJSON(const nlohmann::json& json) override;
 
 public:

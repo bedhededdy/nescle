@@ -42,7 +42,7 @@ bool Mapper000::MapPPUWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-void Mapper000::ToJSON(nlohmann::json& json) {
+void Mapper000::ToJSON(nlohmann::json& json) const {
     Mapper::ToJSON(json);
 }
 

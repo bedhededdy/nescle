@@ -29,7 +29,7 @@
 #include <SDL_mutex.h>
 #include <SDL_keyboard.h>
 
-#include "NESCLETypes.h"
+#include "Bus.h"
 
 namespace NESCLE {
 class Emulator {
@@ -85,12 +85,14 @@ public:
         // controls
         Controller controller1;
 
-        // misc.
-        // bool cart_inserted;
+        // visuals
+        float aspect_ratio;
+        float scale_factor;
+        bool underscan;
     };
 
 private:
-    Bus* nes;
+    Bus nes;
     SDL_mutex* nes_state_lock;
 
     SDL_AudioSpec audio_settings;
@@ -117,7 +119,7 @@ private:
     void LogKeymaps();
 
 public:
-    Emulator(const char* settings_path);
+    Emulator();
     ~Emulator();
 
     void PowerOn();
@@ -143,38 +145,41 @@ public:
 
     bool ROMInserted();
 
-    SDL_KeyCode GetMostRecentKeyThisFrame() { return most_recent_key_this_frame; }
-    void SetMostRecentKeyThisFrame(SDL_KeyCode key) { most_recent_key_this_frame = key; }
+    SDL_KeyCode GetMostRecentKeyThisFrame();
+    void SetMostRecentKeyThisFrame(SDL_KeyCode key);
 
-    Settings* GetSettings() { return &settings; }
+    Settings* GetSettings();
 
-    bool GetRunEmulation() { return run_emulation; }
-    void SetRunEmulation(bool run) { run_emulation = run; }
+    bool GetRunEmulation();
+    void SetRunEmulation(bool run);
 
-    bool GetQuit() { return quit; }
-    void SetQuit(bool _quit) { quit = _quit; }
+    bool GetQuit();
+    void SetQuit(bool _quit);
 
-    Bus* GetNES() { return nes; }
+    Bus* GetNES();
 
-    const std::string& GetUserDataPath() { return user_data_path; }
-    const std::string& GetExePath() { return exe_path; }
+    const std::string& GetUserDataPath();
+    const std::string& GetExePath();
 
-    bool* GetUsedSaveSlots() { return used_saveslots; }
+    bool* GetUsedSaveSlots();
 
     int LockNESState();
     int UnlockNESState();
 
-    void SetATurbo(bool turbo) { aturbo = turbo; }
-    void SetBTurbo(bool turbo) { bturbo = turbo; }
-    bool GetATurbo() { return aturbo; }
-    bool GetBTurbo() { return bturbo; }
+    void SetATurbo(bool turbo);
+    void SetBTurbo(bool turbo);
+    bool GetATurbo();
+    bool GetBTurbo();
 
     void RefreshKeyboardState();
     void RefreshPrevKeys();
 
-    SDL_AudioDeviceID GetAudioDevice() { return audio_device; }
+    SDL_AudioDeviceID GetAudioDevice();
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Controller, up, down, left, right, a, b, start, select, aturbo, bturbo)
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol, p2_vol, tri_vol, noise_vol, master_vol, controller1)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Controller, up, down, left, right, a, b,
+        start, select, aturbo, bturbo)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol,
+        p2_vol, tri_vol, noise_vol, master_vol, controller1, aspect_ratio,
+        scale_factor, underscan)
 };
 }

@@ -43,7 +43,7 @@ private:
     std::array<uint8_t, 0x8000> sram;
 
 protected:
-    void ToJSON(nlohmann::json& json) override;
+    void ToJSON(nlohmann::json& json) const override;
     void FromJSON(const nlohmann::json& json) override;
 
 public:

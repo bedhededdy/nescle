@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <string>
 
 #include <nlohmann/json.hpp>
 
@@ -142,8 +143,6 @@ private:
 public:
     CPU(Bus& _bus) : bus(_bus) {}
 
-    // CPU& operator= (const CPU& cpu);
-
     void Clock();
     void IRQ();
     void NMI();
@@ -153,7 +152,7 @@ public:
     void SetAddrMode();
     void Execute();
 
-    char* DisassembleString(uint16_t addr);
+    std::string DisassembleString(uint16_t addr);
     void DisassembleLog();
     uint16_t* GenerateOpStartingAddrs();
 

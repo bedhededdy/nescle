@@ -14,3 +14,11 @@
  * limitations under the License.
  */
 #pragma once
+
+class WindowManager {
+private:
+    // Need to move that window enum thing to here
+
+public:
+
+};

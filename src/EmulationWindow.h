@@ -19,7 +19,7 @@
 #include <imgui.h>
 #include <glad/glad.h>
 
-#include "NESCLETypes.h"
+#include "Emulator.h"
 #include "NESCLEWindow.h"
 
 namespace NESCLE {
@@ -28,7 +28,7 @@ private:
     SDL_Window* window;
     SDL_GLContext gl_context;
 
-    Emulator* emulator;
+    Emulator emulator;
     // ImGuiIO& io;
 
     // TODO: PUT SOME OF THESE IN A STRUCT
@@ -77,13 +77,13 @@ private:
     void IncrementPalette();
 
 public:
-    EmulationWindow(int w, int h);
+    EmulationWindow();
     ~EmulationWindow();
 
     void Loop();
 
     // FIXME: THESE ARE NOT REALLY PUBLICS
-    void Show(Emulator* emu);
+    void Show();
     uint32_t GetWindowID();
 };
 }

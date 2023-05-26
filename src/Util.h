@@ -27,30 +27,8 @@
 #define UTIL_WINDOWS
 #endif
 
-// namespace nlohmann {
-// template <typename T>
-// struct adl_serializer<std::unique_ptr<T>> {
-//     static void to_json(json& j, const std::unique_ptr<T>& ptr) {
-//         if (ptr)
-//             j = *ptr;
-//         else
-//             j = nullptr;
-//     }
-
-//     static void from_json(const json& j, std::unique_ptr<T>& ptr) {
-//         if (j.is_null())
-//             ptr = nullptr;
-//         else
-//             ptr = std::make_unique<T>(j.get<T>());
-//     }
-// };
-// }
-
 namespace NESCLE {
-void* Util_SafeMalloc(size_t size);
-void* Util_SafeRealloc(void* ptr, size_t size);
-void* Util_SafeCalloc(size_t nelem, size_t elem_sz);
-void  Util_SafeFree(void* ptr);
+constexpr int IMGUI_MAIN_MENU_HEIGHT = 19;
 
 bool Util_CreateDirectoryIfNotExists(const char* path);
 

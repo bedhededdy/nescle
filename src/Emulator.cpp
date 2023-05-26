@@ -17,9 +17,8 @@
 // AND ALLOWING USER TO EDIT THE FILE MANUALLY IF NECESSARY
 #include "Emulator.h"
 
-#include <SDL_log.h>
+#include <SDL.h>
 #include <SDL_filesystem.h>
-#include <SDL_timer.h>
 
 #include <string>
 #include <cstring>
@@ -33,6 +32,50 @@
 #include "Util.h"
 
 namespace NESCLE {
+SDL_KeyCode Emulator::GetMostRecentKeyThisFrame() {
+    return most_recent_key_this_frame;
+}
+
+void Emulator::SetMostRecentKeyThisFrame(SDL_KeyCode key) {
+    most_recent_key_this_frame = key;
+}
+
+Emulator::Settings* Emulator::GetSettings() {
+    return &settings;
+}
+
+bool Emulator::GetRunEmulation() {
+    return run_emulation;
+}
+
+void Emulator::SetRunEmulation(bool run) {
+    run_emulation = run;
+}
+
+bool Emulator::GetQuit() {
+    return quit;
+}
+
+void Emulator::SetQuit(bool _quit) {
+    quit = _quit;
+}
+
+Bus* Emulator::GetNES() {
+    return &nes;
+}
+
+const std::string& Emulator::GetUserDataPath() {
+    return user_data_path;
+}
+
+const std::string& Emulator::GetExePath() {
+    return exe_path;
+}
+
+bool* Emulator::GetUsedSaveSlots() {
+    return used_saveslots;
+}
+
 void Emulator::LogKeymaps() {
     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
         "Button %s mapped to key %s",
@@ -110,8 +153,15 @@ void Emulator::AudioCallback(void* userdata, uint8_t* stream, int len) {
     SDL_UnlockMutex(nes_state_lock);
 }
 
-Emulator::Emulator(const char* settings_path) {
-    nes = new Bus();
+Emulator::Emulator() {
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+
+    #ifdef _DEBUG
+       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+    #else
+       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+    #endif
+
     nes_state_lock = SDL_CreateMutex();
     if (nes_state_lock == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -176,7 +226,7 @@ Emulator::Emulator(const char* settings_path) {
 
     const uint8_t* state = SDL_GetKeyboardState(&nkeys);
     const size_t sz = nkeys * sizeof(uint8_t);
-    prev_keys = (uint8_t*)Util_SafeMalloc(sz);
+    prev_keys = new uint8_t[sz];
     // Should be the equivalent of just memsetting 0, but on the off chance
     // that it isn't we will do this
     memcpy(prev_keys, state, sz);
@@ -201,8 +251,9 @@ Emulator::~Emulator() {
 
     SDL_DestroyMutex(nes_state_lock);
     SDL_CloseAudioDevice(audio_device);
-    delete nes;
-    Util_SafeFree(prev_keys);
+    delete prev_keys;
+
+    SDL_Quit();
 }
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
@@ -223,7 +274,7 @@ bool Emulator::SaveState(const char* path) {
     }
     nlohmann::json j;
     uint64_t t0 = SDL_GetPerformanceCounter();
-    j["bus"] = *nes;
+    j["bus"] = nes;
     savestate << j;
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Emulator_SaveState: Took %fms to save",
@@ -261,7 +312,7 @@ bool Emulator::LoadState(const char* path) {
 
     // throws some exception on fail, but I don't know what so we just need to
     // wait and see
-    from_json(j.at("bus"), *nes);
+    from_json(j.at("bus"), nes);
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
         "Emulator_LoadState: Took %fms to load",
         1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency());
@@ -292,13 +343,13 @@ bool Emulator::LoadSettings(const char* path) {
     if (j.is_null())
         return false;
 
-    // FIXME: CHECK FOR EXCEPTIONS
     // TODO: NARROW EXCEPTIONS TO SPECIFICS
     try {
         settings = j;
     } catch (...) {
         return false;
     }
+
     return true;
 }
 
@@ -323,37 +374,59 @@ void Emulator::SetDefaultSettings() {
     settings.controller1.left = SDLK_a;
     settings.controller1.right = SDLK_d;
     settings.controller1.down = SDLK_s;
-
+    settings.aspect_ratio = (float)PPU::RESOLUTION_Y/(float)PPU::RESOLUTION_X;
+    settings.scale_factor = 3.0f;
+    settings.underscan = false;
 
     // settings.sync = EMULATOR_SYNC_AUDIO;
     // settings.vsync = false;
 }
 
+void Emulator::SetATurbo(bool turbo) {
+    aturbo = turbo;
+}
+
+void Emulator::SetBTurbo(bool turbo) {
+    bturbo = turbo;
+}
+
+bool Emulator::GetATurbo() {
+    return aturbo;
+}
+
+bool Emulator::GetBTurbo() {
+    return bturbo;
+}
+
+SDL_AudioDeviceID Emulator::GetAudioDevice() {
+    return audio_device;
+}
+
 float Emulator::EmulateSample() {
-    while (!nes->Clock()) {
-        if (nes->GetPPU().GetFrameComplete()) {
-            nes->GetPPU().ClearFrameComplete();
+    while (!nes.Clock()) {
+        if (nes.GetPPU().GetFrameComplete()) {
+            nes.GetPPU().ClearFrameComplete();
 
             // After we emulate a sample, we will check to see
             // if a frame has been rendered
             // if it has and we are pressing the turbo button, we will
             // flip the state of the bit that corresponds to that turbo button
             if (aturbo) {
-                if (nes->GetController1() & (int)Bus::NESButtons::A)
-                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::A);
+                if (nes.GetController1() & (int)Bus::NESButtons::A)
+                    nes.SetController1(nes.GetController1() & ~(int)Bus::NESButtons::A);
                 else
-                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::A);
+                    nes.SetController1(nes.GetController1() | (int)Bus::NESButtons::A);
             }
             if (bturbo) {
-                if (nes->GetController1() & (int)Bus::NESButtons::B)
-                    nes->SetController1(nes->GetController1() & ~(int)Bus::NESButtons::B);
+                if (nes.GetController1() & (int)Bus::NESButtons::B)
+                    nes.SetController1(nes.GetController1() & ~(int)Bus::NESButtons::B);
                 else
-                    nes->SetController1(nes->GetController1() | (int)Bus::NESButtons::B);
+                    nes.SetController1(nes.GetController1() | (int)Bus::NESButtons::B);
             }
         }
     }
 
-    auto apu = nes->GetAPU();
+    auto apu = nes.GetAPU();
     float p1 = apu.GetPulse1Sample() * settings.p1_vol;
     float p2 = apu.GetPulse2Sample() * settings.p2_vol;
     float tri = apu.GetTriangleSample() * settings.tri_vol;
@@ -418,7 +491,7 @@ bool Emulator::MapButton(ControllerButton btn, SDL_KeyCode key) {
 }
 
 nfdresult_t Emulator::LoadROM() {
-    Bus* bus = nes;
+    Bus* bus = &nes;
 
     nfdchar_t *rom;
     nfdfilteritem_t filter[1] = {{"NES ROM", "nes"}};
@@ -485,8 +558,16 @@ const char* Emulator::GetButtonName(ControllerButton btn) {
     return btn_names[(int)btn];
 }
 
+void Emulator::PowerOn() {
+    nes.PowerOn();
+}
+
+void Emulator::Reset() {
+    nes.Reset();
+}
+
 bool Emulator::ROMInserted() {
-    return !nes->GetCart().GetROMPath().empty();
+    return !nes.GetCart().GetROMPath().empty();
 }
 
 int Emulator::LockNESState() {

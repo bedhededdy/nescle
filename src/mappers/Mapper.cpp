@@ -58,7 +58,7 @@ Mapper::CreateMapperFromID(uint8_t id, Cart& cart, MirrorMode mirror_mode) {
     return mapper;
 }
 
-void Mapper::ToJSON(nlohmann::json& json) {
+void Mapper::ToJSON(nlohmann::json& json) const {
     json["id"] = id;
     json["mirror_mode"] = mirror_mode;
 }
@@ -69,8 +69,7 @@ void Mapper::FromJSON(const nlohmann::json& json) {
 }
 
 void to_json(nlohmann::json& json, const Mapper& mapper) {
-    // FIXME: SHOULD ACTUALLY MARK TOJSON AS A CONST FUNCTION
-    const_cast<Mapper&>(mapper).ToJSON(json);
+    mapper.ToJSON(json);
 }
 
 void from_json(const nlohmann::json& json, Mapper& mapper) {

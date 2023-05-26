@@ -159,7 +159,7 @@ bool Mapper004::MapPPUWrite(uint16_t addr, uint8_t data) {
 }
 
 // FIXME: MIRRORING IS BUSTED
-void Mapper004::ToJSON(nlohmann::json& json) {
+void Mapper004::ToJSON(nlohmann::json& json) const {
     Mapper::ToJSON(json);
     json["registers"] = registers;
     json["chr_banks"] = chr_banks;

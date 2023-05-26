@@ -41,7 +41,7 @@ protected:
     Mapper(uint8_t _id, Cart& _cart, MirrorMode _mirror)
         : id(_id), cart(_cart), mirror_mode(_mirror) {}
 
-    virtual void ToJSON(nlohmann::json& json);
+    virtual void ToJSON(nlohmann::json& json) const;
     virtual void FromJSON(const nlohmann::json& json);
 
 public:

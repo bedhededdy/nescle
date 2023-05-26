@@ -18,7 +18,7 @@
 #include "../Cart.h"
 
 namespace NESCLE {
-void Mapper002::ToJSON(nlohmann::json& json) {
+void Mapper002::ToJSON(nlohmann::json& json) const {
     Mapper::ToJSON(json);
     json["bank_select"] = bank_select;
 }

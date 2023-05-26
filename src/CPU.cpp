@@ -16,8 +16,8 @@
 #include "CPU.h"
 
 #include <cstdlib>
-#include <cstring>
 #include <functional>
+#include <sstream>
 
 #include "Bus.h"
 #include "Cart.h"
@@ -1055,7 +1055,7 @@ void CPU::Execute() {
 // Returns a string of the disassembled instruction at addr
 // Call before clocking
 // FIXME: SHADOW WARNINGS HERE PROBABLY BORKE SOMETHING
-char* CPU::DisassembleString(uint16_t addr) {
+std::string CPU::DisassembleString(uint16_t addr) {
     // Map OpType to string
     static const char* op_names[(int)OpType::INV+1] = {
         "ADC", "AND", "ASL" ,
@@ -1235,26 +1235,37 @@ char* CPU::DisassembleString(uint16_t addr) {
      * It will allocate that much anyway due to 8 byte alignment and give
      * me a safety net, so really there is no downside.
      */
-    char* ret = (char*)malloc(120*sizeof(char));
+    // char* ret = (char*)malloc(120*sizeof(char));
+    std::stringstream ss;
+    ss << std::uppercase << std::setfill('0') << std::setw(4) << std::hex
+        << addr << "  ";
+    ss << std::setw(8) << std::left << bytecode << ' ';
+    ss << std::setw(31) << std::left << disas << "  ";
+    ss << "A:" << std::setw(2) << std::hex << std::setfill('0') << a << ' ';
+    ss << "X:" << std::setw(2) << std::hex << std::setfill('0') << x << ' ';
+    ss << "Y:" << std::setw(2) << std::hex << std::setfill('0') << y << ' ';
+    ss << "P:" << std::setw(2) << std::hex << std::setfill('0') << status << ' ';
+    ss << "SP:" << std::setw(2) << std::hex << std::setfill('0') << sp << ' ';
+    ss << "PPU:" << std::dec << std::setfill(' ') << std::setw(3)
+        << (unsigned int)(cycles_count*3/341) << ',';
+    ss << std::dec << std::setfill(' ') << std::setw(3) << (unsigned int)(cycles_count*3%341) << ' ';
+    ss << "CYC:" << (unsigned int)cycles_count;
 
-    if (ret == NULL)
-        return NULL;
+    // sprintf(ret,
+    //     "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+    //     addr, bytecode, disas, a, x, y, status, sp,
+    //     (unsigned int)(cycles_count*3/341),
+    //     (unsigned int)(cycles_count*3%341),
+    //     (unsigned int)cycles_count);
 
-    sprintf(ret,
-        "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-        addr, bytecode, disas, a, x, y, status, sp,
-        (unsigned int)(cycles_count*3/341),
-        (unsigned int)(cycles_count*3%341),
-        (unsigned int)cycles_count);
-
+    std::string ret = ss.str();
     return ret;
 }
 
 void CPU::DisassembleLog() {
     // Need to do PC-1 since we call this in the middle of the clock function
-    char* str = DisassembleString(pc-1);
-    fprintf(nestest_log, "%s\n", str);
-    free(str);
+    std::string str = DisassembleString(pc-1);
+    fprintf(nestest_log, "%s\n", str.c_str());
 }
 
 
