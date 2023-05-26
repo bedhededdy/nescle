@@ -16,6 +16,8 @@
 // TODO: ADD SOMETHING THAT VISUALIZES THE COLOR OF EACH PALETTE ENTRY
 #include "PatternWindow.h"
 
+#include <SDL_log.h>
+
 #include "Bus.h"
 #include "Emulator.h"
 #include "PPU.h"
@@ -112,8 +114,14 @@ void PatternWindow::Show(Emulator* emu) {
     focused = ImGui::IsWindowFocused();
     auto uintptr_tex = static_cast<uintptr_t>(palette_texture);
     auto imguiptr_tex = reinterpret_cast<ImTextureID>(uintptr_tex);
-    ImGui::Image(imguiptr_tex, ImVec2(width, height),
-        ImVec2(0, 1), ImVec2(1, 0));
+    // FIXME: NEED TO MAKE THIS SCALE WITH THE WINDOW
+    // FIXME: MIGHT BE CUTTING SOME STUFF OFF WITH THE BORDER HOVER
+    // FIXME: EACH INDIVIDUAL TILE SHOULD BE CLICKABLE
+    if (ImGui::ImageButton(imguiptr_tex, ImVec2(256*4, 128 * 4),
+        ImVec2(0, 1), ImVec2(1, 0))) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Click img btn\n");
+    }
+
     ImGui::End();
 }
 

@@ -20,5 +20,7 @@ private:
     // Need to move that window enum thing to here
 
 public:
+    void OpenWindow();
+    void CloseWindow();
 
 };
