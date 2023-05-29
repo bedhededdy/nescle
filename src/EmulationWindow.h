@@ -65,7 +65,7 @@ private:
         COUNT
     };
 
-    NESCLEWindow* sub_windows[WindowType::COUNT];
+    std::array<NESCLEWindow*, WindowType::COUNT> sub_windows;
 
     void SetGLOptions();
 

@@ -554,19 +554,6 @@ void EmulationWindow::Loop() {
                     // if (focus_lost_triggered && cart is inserted)
                     //    emulator->run_emulation = true;
                     break;
-                case SDL_WINDOWEVENT_RESIZED:
-                    // User is more likely to want to resize vertically
-                    // so we will force the width to match the height
-                    // FIXME: MAKE THIS USE THE ASPECT RATIO THE USER
-                    // SELECTS WHEN WE ADD ASPECT RATIO OPTIONS
-
-                    // TODO: LATER WE CAN ALLOW ARBITRARY WINDOW SIZES,
-                    // AND JUST HAVE THE TEXTURE PAD WITH CLEAR PIXELS
-                    // ON THE SIDES
-                    SDL_SetWindowSize(window,
-                        event.window.data2 * (double)PPU::RESOLUTION_X/(double)PPU::RESOLUTION_Y + 19,
-                        event.window.data2);
-                    break;
                 }
                 break;
 
@@ -930,6 +917,13 @@ void EmulationWindow::Show() {
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // TODO: WE CAN'T HAVE BOTH ENFORCED ASPECT RATIO AND RESIZING TO GO
+    // WITH THE BORDER
+    // I THINK THE WAY TO DO THIS IS DETERMINE THE WIDTH OF THE TEXTURE
+    // WITH REGARDS TO THE NUMBER OF VERTICAL PIXELS DISPLAYED
+    int nearest_multiple = ((int)io.DisplaySize.y - 0) / PPU::RESOLUTION_Y;
+    int border_width = ((int)io.DisplaySize.x - nearest_multiple * PPU::RESOLUTION_X) / 2;
+    glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - 19);
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
     // Since x86 is big endian, we can get away with this, but this should
