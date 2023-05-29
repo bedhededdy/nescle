@@ -19,6 +19,7 @@
 // OF SAVE FILES
 #pragma once
 
+#include <array>
 #include <string>
 
 #include <nfd.h>
@@ -34,6 +35,8 @@
 namespace NESCLE {
 class Emulator {
 public:
+    static constexpr int NUM_SAVE_SLOTS = 10;
+
     enum class SyncType {
         AUDIO,
         VIDEO
@@ -100,6 +103,7 @@ private:
 
     Settings settings;
 
+    // std::array<bool, NUM_SAVE_SLOTS> used_saveslots;
     bool used_saveslots[10];
 
     int nkeys;
@@ -160,6 +164,7 @@ public:
 
     const std::string& GetUserDataPath();
     const std::string& GetExePath();
+    const char* GetGameName();
 
     bool* GetUsedSaveSlots();
 

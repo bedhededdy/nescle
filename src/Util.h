@@ -38,6 +38,8 @@ const char* Util_GetFileName(const char* path);
 
 bool Util_FileExists(const char* path);
 
+bool Util_FloatEquals(float a, float b);
+
 template<typename T>
 constexpr auto Util_CastEnumToUnderlyingType(T t);
 }

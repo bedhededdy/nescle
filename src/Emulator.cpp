@@ -282,6 +282,12 @@ bool Emulator::SaveState(const char* path) {
     return !savestate.fail();
 }
 
+const char* Emulator::GetGameName() {
+    if (!ROMInserted())
+        return "";
+    return Util_GetFileName(nes.GetCart().GetROMPath().c_str());
+}
+
 bool Emulator::LoadState(const char* path) {
     if (!ROMInserted()) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,

@@ -29,7 +29,6 @@ private:
     SDL_GLContext gl_context;
 
     Emulator emulator;
-    // ImGuiIO& io;
 
     // TODO: PUT SOME OF THESE IN A STRUCT
     GLuint main_vao;
@@ -37,11 +36,6 @@ private:
     GLuint main_ebo;
     GLuint main_texture;
     GLuint main_shader;
-
-    // TODO: MOVE THESE DEFAULT VALUES TO THE CONSTRUCTOR
-    int palette = 0;
-
-    // const char* exe_path;
 
     bool show_disassembler = false;
     bool show_oam = false;
@@ -71,10 +65,8 @@ private:
 
     void RenderDisassembler();
     void RenderOAM();
-    void RenderMainGUI(Emulator* emu);
+    void RenderMainGUI();
     void SetupMainFrame();
-
-    void IncrementPalette();
 
 public:
     EmulationWindow();

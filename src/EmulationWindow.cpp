@@ -13,92 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// FIXME: NEED TO CHECK IF A GAME HAS BEEN LOADED IN ORDER TO SHOW PTTERN TBL
-// ETC.
-// FIXME: YEAH SO MULTIPLE WINDOWS AND VERTICAL SYNC DON'T MIX
-// SO EVEN THOUGH MY MAIN WINDOW DISABLES THE SYNC, THAT DOESN'T APPLY TO
-// THE OTHER WINDOWS WHICH IS A MASSIVE PROBLEM
-
-// FIXME: DISABLING FRAMERATE CAP IN NVCP RESOLVES THE ISSUE
-
-// FIXME: MAYBE NEED MULTIPLE GL CONTEXTS, BECAUSE AS IT STANDS IT WOULD APPEAR
-// THAT HAVING MULTIPLE WINDOWS OPEN MAKES REALTIME EMULATION IMPOSSIBLE
-
-// FIXME: PERFORMANCE BUG IS ALLEVIATED BY TURNING OFF MULTIVIEWPORTS
-
-// FIXME: ISSUE IS NOT REALLY AN ISSUE IN AUDIO SYNC MODE, SINCE THERE
-// THE EMULATION RUNS ON ITS OWN THREAD
-
-// FIXME: PERFORMANCE BUG IS COMPLETELY CAUSED BY RUNNING TOO MANY WINDOWS AT
-// THE SAME TIME. I CAN GET FRAMETIMES OF UP TO 10MS WITH NO DELAYS WITH
-// ONLY A FEW WINDOWS OPEN AND NO EMULATION RUNNING
-
-// FIXME: VSYNC SWITCHING DURING RUNNING SEEMS BUGGED OUT (OFF TO ON WORKS
-// BUT ON TO OFF DOESN'T)
-
-// FIXME: SYNCING TO VIDEO WITH MULTIPLE WINDOWS OPEN CAN LEAD TO IT TAKING
-// TOO MUCH TIME AND ENDING UP DROPPING AUDIO SAMPLES
-// THIS DOES NOT HAPPEN WHEN SYNCING TO AUDIO, SO THE REASON FOR THIS IS UNCLEAR
-// TURNING OFF VSYNC WHEN SYNCING TO VIDEO CAN ALSO CAUSE THIS
-// THE ISSUE MAY BE FIXABLE BY THE CIRCULAR BUFFER APPROACH, BUT I THINK
-// THIS IS JUST A CASE OF PURE STARVATION
-// IT APPEARS TO ME THAT WITH VSYNC OFF ON RELEASE MODE I GET FRAMETIMES OF
-// ABOUT 12MS, CONSIDERING THAT I SLEEP FOR 8MS THAT MEANS IT TAKES ABT 4MS
-// TO RENDER WITHOUT EMULATING
-// WITH EMULATING, I CAN GET FRAMETIMES THAT EXCEED 18MS, WHICH LEADS TO THE
-// STARVATION
-
-// FIXME: THERE IS A FOR SURE ISSUE GOING ON WITH CHANGING VSYNC AFTER BOOT
-
 // FIXME: THERE IS SOME MASSIVE BUG THAT RANDOMLY MAKES THIS RUN AS FAST
 // AS IT CAN AND IT ABSOLUTELY EATS CPU CYCLES
 // I THINK ITS A DISCREPANCY RELATED TO THE VSYNC BOOLEAN AND THE VSYNC
 // STATUS
-
-// FIXME: IT APPEARS THAT HAVING MULTIPLE WINDOWS OPEN FUCKS WITH THE VSYNC
-// AND COMPLETELY ELIMINATES THE TIMING
-// FIXME: NEVERMIND IT SEEMS LIKE THAT'A  BUG WITH RTSS
-
-// FIXME: SOMETHING IS FOR SURE WRONG WTIH THE WAY THINGS HAPPEN WITH
-// VSYNC ON
-// IT USES MUCH MORE CPU FOR NO REASON
 
 // FIXME: OK IT SOMETIMES IGNORES THE VSYNC BY GIVING 0 FRAMETIME EVEN WHEN
 // IT IS ENABLED
 // CLEARLY THE VSYNC IS NOT BLOCKING AND THAT IS WHY ISSUES ARE HAPPENING
 // SOMETIMES IT CHOOSES TO WAIT 16MS, OTHER TIMES IT DOESN'T
 
-// FIXME: OK IT WOULD APPEAR THAT SETTING SWAP INTERVAL TO 0 MAKES IT SYNC
-// BUT SETTING IT TO 1 MAKES IT NOT SYNC, WHICH IS THE COMPLETE WRONG WAY
-
-// IT APPEARS THE BUG ONLY GETS FIXED WHEN STARTING ON VIDEO WITH VSYNC ON
-// IF STARTED WITH VSYNC OFF IT ENVER GETS FIXED
-
-// AT THIS POINT BEHAVIOR SEEMS COMPLETELY NON-DETERMINISTIC
-
-// FIXME: VSYNC ONLY GETS ACTIVE WHEN THE SETTINGS WINDOW IS OPEN
-
-// FIXME: THIS DROPS INPUTS BECAUSE IF IT SEES START PRESSED TWICE WITHIN
-// 8MS, IT WILL NOT PAUSE AND UNPAUSE THE GAME
-// FIXME: ADD BACK THE SLEEPS
-
-// TODO: INVESTIGATE USING SDL_PERFORMANCECOUNTER FOR TIMING INSTEAD OF VSYNC
-// AS THERE IS A FUNCTION YOU CAN CALL THAT GETS THE FREQUENCY
-// HOWEVER THIS STILL WOULND'T BE ACCURATE IF THE FREQ CHANGED INBETWEEN TWO
-// CALLS TO IT, I WOULD ONLY GET THE CURRENT FREQ
-// AND THAT APPROACH WOULD STILL REQUIRE SLEEPING TO AVOID STARVING THE CPU
-// SO ON ANY SYSTEM WITH A LOW RESOLUTION CLOCK IT FIXES NOTHING
-// WITH REGARDS TO IT SLEEPING FOR TOO LONG
-
 // TODO: ONLY ALLOW THIS TO INTERACT WITH THE EMULATOR
 // FOR INSTANCE IF LOADING A ROM, THERE SHOULD BE AN EMULATOR FUNCTION THAT
 // WRAPS CART_LOADROM AND THEN CALLS BUS_RESET INSTEAD OF THIS DIRECTLY
 // INTERFACING WITH THE CART
-
-// FIXME: BEST WAY TO DO EVERYTHING IS TO HAVE THE EMULATOR STORE A COPY
-// OF THE BUTTONS PRESSED THIS FRAME AND THEN EACH WINDOW CAN HANDLE ITS
-// OWN INPUTS IN THAT WAY, SINCE IT WILL BE ABLE TO CHECK WHETHER TO DO
-// SOMETHING BASED ON IF IT HAS THE FOCUS
 #include "EmulationWindow.h"
 
 #include <filesystem>
@@ -110,57 +38,50 @@
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
-// #include <imgui_internal.h>
 
 #include <nfd.h>
 
 #include <SDL.h>
 
-#include "APU.h"
-#include "Bus.h"
-#include "CPU.h"
-#include "Cart.h"
+#include "ControllerWindow.h"
 #include "Emulator.h"
-#include "mappers/Mapper.h"
-#include "PPU.h"
+#include "MixerWindow.h"
+#include "NESCLENotification.h"
+#include "PatternWindow.h"
+#include "RetroText.h"
+#include "SettingsWindow.h"
 #include "Util.h"
 
-#include "ControllerWindow.h"
-#include "MixerWindow.h"
-#include "PatternWindow.h"
-#include "SettingsWindow.h"
-#include "RetroText.h"
-#include "NESCLENotification.h"
-
 namespace NESCLE {
-void EmulationWindow::RenderMainGUI(Emulator* emu) {
-    // ImGui::Shortcut()
-    Bus* bus = emu->GetNES();
-
+void EmulationWindow::RenderMainGUI() {
     bool show_popup = false;
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open ROM", "Ctrl+O")) {
-                nfdresult_t res = emu->LoadROM();
+                nfdresult_t res = emulator.LoadROM();
                 show_popup = res == NFD_ERROR;
             }
-            // TODO: EITHER ADD SEPARATE SAVE STATES FOR EACH ROM
-            // OR MARK WHICH GAME EACH SLOT IS REGISTERED TO
-            // SEPARATE PER GAME IS IDEAL, BUT MAY REQUIRE AN INTERNAL DB
-            // FOR INSTANCES WHERE THERE ARE MULTIPLE GAMES WITH THE SAME NAME
+
             if (ImGui::BeginMenu("Save State")) {
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < Emulator::NUM_SAVE_SLOTS; i++) {
                     char slot_str[7];
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[7];
                     sprintf(shortcut_str, "Ctrl+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, !bus->GetCart().GetROMPath().empty())) {
-                        const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
+
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false,
+                        emulator.ROMInserted())) {
+
+                        const char* game_name = emulator.GetGameName();
                         std::stringstream path_stream;
-                        path_stream << emu->GetUserDataPath() << "saves/" << game_name << "slot" << i << ".sav";
+                        path_stream << emulator.GetUserDataPath()
+                            << "saves/" << game_name << "slot" << i << ".sav";
                         std::string path = path_stream.str();
-                        emu->SaveState(path.c_str());
-                        emu->GetUsedSaveSlots()[i] = true;
+                        if (!emulator.SaveState(path.c_str()))
+                            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                                "Failed to save state\n");
+                        emulator.GetUsedSaveSlots()[i] = true;
+
 
                         path_stream.clear();
                         path_stream << "Saved state " << i;
@@ -171,19 +92,22 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Load state")) {
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < Emulator::NUM_SAVE_SLOTS; i++) {
                     char slot_str[7];
                     sprintf(slot_str, "Slot %d", i);
                     char shortcut_str[13];
                     sprintf(shortcut_str, "Ctrl+Shift+%d", i);
-                    if (ImGui::MenuItem(slot_str, shortcut_str, false, emu->GetUsedSaveSlots()[i])) {
-                        const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
-                        std::stringstream path_stream;
-                        path_stream << emu->GetUserDataPath() << "saves/" << game_name << "slot" << i << ".sav";
-                        std::string path = path_stream.str();
-                        // TODO: CHECK FOR SUCCESS
-                        emu->LoadState(path.c_str());
+                    if (ImGui::MenuItem(slot_str, shortcut_str, false,
+                        emulator.GetUsedSaveSlots()[i])) {
 
+                        const char* game_name = emulator.GetGameName();
+                        std::stringstream path_stream;
+                        path_stream << emulator.GetUserDataPath()
+                            << "saves/" << game_name << "slot" << i << ".sav";
+                        std::string path = path_stream.str();
+                        if (!emulator.LoadState(path.c_str()))
+                            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                                "Failed to load state\n");
                         path_stream.clear();
                         path_stream << "Loaded state " << i;
                         path = path_stream.str();
@@ -195,16 +119,18 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
 
             ImGui::EndMenu();
         }
+
         if (ImGui::BeginMenu("NES")) {
-           if (ImGui::MenuItem("Reset", "Ctrl+R", false, !bus->GetCart().GetROMPath().empty()))
-               bus->Reset();
-           if (ImGui::MenuItem("Play/Pause", "Ctrl+P", false, !bus->GetCart().GetROMPath().empty()))
-               emu->SetRunEmulation(!emu->GetRunEmulation());
+           if (ImGui::MenuItem("Reset", "Ctrl+R", false, emulator.ROMInserted()))
+               emulator.Reset();
+           if (ImGui::MenuItem("Play/Pause", "Ctrl+P", false, emulator.ROMInserted()))
+               emulator.SetRunEmulation(!emulator.GetRunEmulation());
 
            ImGui::EndMenu();
         }
+
         if (ImGui::BeginMenu("Debug")) {
-            bool cart_loaded = !bus->GetCart().GetROMPath().empty();
+            bool cart_loaded = emulator.ROMInserted();
             ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
                 cart_loaded);
             ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
@@ -215,52 +141,16 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
 
             ImGui::EndMenu();
         }
+
         if (ImGui::BeginMenu("Config")) {
             if (ImGui::MenuItem("Options"))
                 show_options = true;
-            if (ImGui::BeginMenu("Resolution options")) {
-                // TODO: NEED TO MAKE THIS A SETTING AND DO SOMETHING
-                if (ImGui::MenuItem("4:3"))
-                    emu->GetSettings()->aspect_ratio = 4.0f/3.0f;
-                if (ImGui::MenuItem("16:9"))
-                    emu->GetSettings()->aspect_ratio = 16.0f/9.0f;
-                if (ImGui::MenuItem("256:240"))
-                    emu->GetSettings()->aspect_ratio = 256.0f/240.0f;
-
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Window sizes")) {
-                float aspect_ratio = emu->GetSettings()->aspect_ratio;
-
-                // 256/4 = 64
-
-
-                // 256/16 = 16
-
-                if (ImGui::MenuItem("1x")) {
-                    SDL_SetWindowSize(window, 256, 240 + 19);
-                }
-                if (ImGui::MenuItem("2x")) {
-                    SDL_SetWindowSize(window, 512, 480 + 19);
-                }
-                if (ImGui::MenuItem("3x")) {
-                    SDL_SetWindowSize(window, 768, 720 + 19);
-                }
-                if (ImGui::MenuItem("4x")) {
-                    SDL_SetWindowSize(window, 1024, 960 + 19);
-                }
-                if (ImGui::MenuItem("5x")) {
-                    SDL_SetWindowSize(window, 1280, 1200 + 19);
-                }
-
-                ImGui::EndMenu();
-            }
             if (ImGui::MenuItem("Open mixer"))
                 show_mixer = true;
             if (ImGui::MenuItem("Edit controls"))
                 show_controller = true;
             if (ImGui::MenuItem("Reset defaults"))
-                emu->SetDefaultSettings();
+                emulator.SetDefaultSettings();
 
 
             ImGui::EndMenu();
@@ -279,8 +169,8 @@ void EmulationWindow::RenderMainGUI(Emulator* emu) {
         ImGui::Separator();
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            if (!bus->GetCart().GetROMPath().empty())
-                emu->SetRunEmulation(true);
+            if (emulator.ROMInserted())
+                emulator.SetRunEmulation(true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -307,12 +197,6 @@ void EmulationWindow::RenderOAM() {
     ImGui::Begin("OAM", &show_oam);
     ImGui::Text("This is the OAM");
     ImGui::End();
-}
-
-void EmulationWindow::IncrementPalette() {
-    if (sub_windows[WindowType::PATTERN] != nullptr)
-        static_cast<PatternWindow*>(sub_windows[WindowType::PATTERN])
-            ->IncrementPalette();
 }
 
 void EmulationWindow::SetupMainFrame() {
@@ -418,20 +302,11 @@ void EmulationWindow::SetupMainFrame() {
 }
 
 EmulationWindow::EmulationWindow() {
-    // TODO: FIND A WAY TO NOT HAVE TO CALL GETIO EACH TIME
-    //       B/C THE COMPILER WHINES ABOUT NULL REFERENCES
-    // TODO: FORCE ALPHA BLENDING FROM OPENGL
     // TODO: MAKE THE WINDOW FLAGS A CONSTEXPR IN THE HEADER
     RetroText::Init();
     NESCLENotification::Init();
 
-
     // TODO: CHANGE SDL LOGGING FUNCTION TO A CUSTOM FUNCTION
-
-    // NOTE: EVEN IF YOU DON'T FREE THIS, SDL DOES NOT SHOW A MEMORY LEAK
-    // BECAUSE ALTHOUGH SDL_malloc IS A MACRO TO MALLOC
-    // IT JUST PLAIN SUBSTITUES THE REGULAR MALLOC AND NOT THE DEBUG
-    // VERSION OF MALLOC THAT ALLOWS US TO TRACK MEMORY LEAKS
     Bus* bus = emulator.GetNES();
 
     for (size_t i = 0; i < WindowType::COUNT; i++)
@@ -454,17 +329,10 @@ EmulationWindow::EmulationWindow() {
     gl_context = SDL_GL_CreateContext(window);
     gladLoadGLLoader(SDL_GL_GetProcAddress);
 
-    // NOTE: IF THE USER IS USING SYNC TO AUDIO, THEY ARE BETTER OFF DISABLGIN
-    // VSYNC, AS THE FRAMES WILL BE LESS DELAYED AND HONESTLY IT SEEMS
-    // SMOOTHER THAN WITH VSYNC. ADDITIONALLY, WITH VSYNC ON, THE INPUT
-    // LATENCY IS RIDICULOUSLY HIGH, BORDERLINE UNPLAYABLE
     // TODO: SUPPORT ADAPTIVE SYNC BY CALLING WITH -1
     // IF ADAPTIVE SYNC FAILS THEN WE TRY THE OTHER OPTIONS
     // IT MAY BE POSSIBLE THAT ADAPTIVE SYNC KICKS IN WITHOUT ME TELLING IT
     // YOU CAN CHECK THIS BY SETTING THE GSYNC INDICATOR IN NVCP
-
-    // FIXME: BUG, SOMEHOW VSYNC IS GETTING DISABLED BEFORE WE GET HERE
-    // REGARDLESS OF THE SETTING
     if (emulator.GetSettings()->vsync) {
         SDL_Log("Vsync enabled\n");
         SDL_GL_SetSwapInterval(1);
@@ -475,7 +343,7 @@ EmulationWindow::EmulationWindow() {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // const float font_scale_factor
@@ -493,7 +361,6 @@ EmulationWindow::EmulationWindow() {
     // io.FontGlobalScale = 1.0f;
 
     ImGui::StyleColorsLight();
-    // ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         style.WindowRounding = 1.0f;
@@ -501,7 +368,7 @@ EmulationWindow::EmulationWindow() {
     }
 
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    const char* glsl_version = "#version 130";
+    const char* glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Set blending
@@ -514,7 +381,6 @@ EmulationWindow::EmulationWindow() {
 void EmulationWindow::Loop() {
     Emulator* emu = &emulator;
     Bus *bus = emu->GetNES();
-    auto ppu = bus->GetPPU();
 
     while (!emulator.GetQuit()) {
         uint64_t t0 = SDL_GetTicks64();
@@ -850,7 +716,7 @@ void EmulationWindow::Show() {
 
     // Show this in light
     ImGui::StyleColorsLight();
-    RenderMainGUI(emu);
+    RenderMainGUI();
 
     // EVERYONE FROM HERE WILL HAVE TO RELOCK AND UNLOCK TO ACCESS THE
     // BUS STATE
@@ -917,10 +783,12 @@ void EmulationWindow::Show() {
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // TODO: WE CAN'T HAVE BOTH ENFORCED ASPECT RATIO AND RESIZING TO GO
-    // WITH THE BORDER
-    // I THINK THE WAY TO DO THIS IS DETERMINE THE WIDTH OF THE TEXTURE
-    // WITH REGARDS TO THE NUMBER OF VERTICAL PIXELS DISPLAYED
+    // TODO: NEED TO ENFORCE A MINIMUM WINDOW SIZE BECAUSE THIS WILL BREAK
+    // UPON TOO MUCH SHRINKAGE
+    // WINDOW CANNOT BE LESS THAN 240 PIXELS TALL
+    // TODO: INCORPORATE THIS WITH THE ASPECT RATIOS
+    // FIXME: MAYBE WE SHOULD HAVE FTIME AND NOTIFICATIONS SHOW OVER THE GAME
+    // INSTEAD OF BEING HARD CODED TO THE CORNERS
     int nearest_multiple = ((int)io.DisplaySize.y - 0) / PPU::RESOLUTION_Y;
     int border_width = ((int)io.DisplaySize.x - nearest_multiple * PPU::RESOLUTION_X) / 2;
     glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - 19);
