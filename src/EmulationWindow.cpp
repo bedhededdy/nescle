@@ -646,21 +646,10 @@ EmulationWindow::~EmulationWindow() {
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
 
-
-    // TODO: MAKE SURE THE AUDIO DEVICE IS CLOSED
-    // BY THE EMULATOR (AKA CALL EMULATOR DESTROY HERE)
-    // delete emulator;
-
-    // TODO: SEE IF A FUNCTION LIKE THIS EXISTS FOR GL
-    // FIXME: THERE IS ONE OUSTANDING ALLOCATION
-
     NESCLENotification::Shutdown();
-
-    SDL_Log("remaining allocations: %d\n", SDL_GetNumAllocations());
 }
 
 void EmulationWindow::Show() {
-
     auto emu = &emulator;
     Bus* bus = emu->GetNES();
 

@@ -239,7 +239,6 @@ Emulator::Emulator() {
     // Set all saveslots as unused
     memset(used_saveslots, false, sizeof(used_saveslots));
 
-
     // Start the audio device
     SDL_PauseAudioDevice(audio_device, 0);
 }
@@ -254,6 +253,7 @@ Emulator::~Emulator() {
     delete prev_keys;
 
     SDL_Quit();
+    SDL_Log("SDL Remaining Allocations: %d", SDL_GetNumAllocations());
 }
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT

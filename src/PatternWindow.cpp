@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: ADD SOMETHING THAT VISUALIZES THE COLOR OF EACH PALETTE ENTRY
+// TODO: ADD SOMETHING THAT VISUALIZES THE COLOR OF EACH PALETTE ENTRY AND
+// ALLOWS THE USER TO CHANGE THE COLOR AT WILL
+// THIS WILL REQUIRE A PPU CHANGE THAT ALLOWS THE USER TO OVERRIDE WHAT THE
+// PPU SAYS
 #include "PatternWindow.h"
 
 #include <SDL_log.h>
@@ -26,7 +29,6 @@ namespace NESCLE {
 PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shader(shader), main_vao(vao), show(show) {
     palette = 0;
 
-    glGenTextures(1, &dummy_tex);
     glBindTexture(GL_TEXTURE_2D, dummy_tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 128, 0,
                  GL_BGRA, GL_UNSIGNED_BYTE, NULL);
@@ -45,10 +47,12 @@ PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shade
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glGenerateMipmap(GL_TEXTURE_2D);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, palette_texture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D, palette_texture, 0);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        // SDL_Log("framebuf err\n");
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER,
+            "Failed to create framebuffer for palette window");
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -79,6 +83,15 @@ void PatternWindow::Show(Emulator* emu) {
     glUseProgram(main_shader);
     glBindVertexArray(main_vao);
     glBindTexture(GL_TEXTURE_2D, dummy_tex);
+
+    focused = ImGui::IsWindowFocused();
+    if (focused) {
+        // FIXME: THIS ISN'T WORKING
+        // I THINK IT'S ALPHA BLENDING
+        if (emu->KeyPushed(SDLK_p))
+            IncrementPalette();
+    }
+
     // FIXME: THIS IS WRONG, WE SHOULD BE RENDERING THE TWO SELECTED BANKS
     // OF CHAR ROM, NOT JUST THE FIRST TWO BANKS. THIS ALSO PLAYS INTO THE
     // SAVESTATE, WHICH IS KEEPING THE PREVIOUS TILES LOADED ON A SAVESTATE
@@ -111,7 +124,6 @@ void PatternWindow::Show(Emulator* emu) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    focused = ImGui::IsWindowFocused();
     auto uintptr_tex = static_cast<uintptr_t>(palette_texture);
     auto imguiptr_tex = reinterpret_cast<ImTextureID>(uintptr_tex);
     // FIXME: NEED TO MAKE THIS SCALE WITH THE WINDOW

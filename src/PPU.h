@@ -103,12 +103,11 @@ private:
     // MAY ADD THIS BACK LATER, BUT FOR NOW THIS IS USELESS
     //uint8_t patterntbl[2][PPU_PATTERNTBL_SIZE];     // nes supported 2, 4k pattern tables
     uint8_t palette[PALETTE_SIZE];     // color palette information
+    uint8_t non_overridden_palette[PALETTE_SIZE];
+    bool palette_overrides[PALETTE_SIZE];
 
     // Sprite internal info
     OAM oam[64];
-    // For accessing OAM as a sequence of bytes
-    // uint8_t* oam_ptr;
-
     uint8_t oam_addr;
 
     // Sprite rendering info
@@ -202,14 +201,6 @@ public:
     uint32_t* GetFramebuffer();
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(OAM, y, tile_id, attributes, x)
-    // NLOHMANN_DEFINE_TYPE_INTRUSIVE(PPU, screen, frame_buffer, nametbl, palette,
-    //     oam, oam_addr, spr_scanline, spr_count, spr_shifter_pattern_lo,
-    //     spr_shifter_pattern_hi, spr0_can_hit, spr0_rendering,
-    //     sprpatterntbl, scanline, cycle, status, mask, control,
-    //     vram_addr, tram_addr, fine_x, addr_latch, data_buffer,
-    //     bg_next_tile_id, bg_next_tile_attr, bg_next_tile_lsb,
-    //     bg_next_tile_msb, bg_shifter_pattern_lo, bg_shifter_pattern_hi,
-    //     bg_shifter_attr_lo, bg_shifter_attr_hi, frame_complete, nmi)
 
     friend void to_json(nlohmann::json& j, const PPU& ppu);
     friend void from_json(const nlohmann::json& j, PPU& ppu);

@@ -344,6 +344,7 @@ PPU::PPU(Bus& _bus) : bus(_bus) {
         sizeof(ppu->screen)/sizeof(uint32_t));
     Util_MemsetU32((uint32_t*)ppu->frame_buffer, 0xff000000,
         sizeof(ppu->frame_buffer)/sizeof(uint32_t));
+    memset(ppu->palette_overrides, false, sizeof(ppu->palette_overrides));
 }
 
 /* Interrupts (technically the PPU has no notion of interrupts) */
@@ -1082,7 +1083,9 @@ bool PPU::Write(uint16_t addr, uint8_t data) {
             break;
         }
 
-        ppu->palette[addr] = data;
+        ppu->non_overridden_palette[addr] = data;
+        if (!ppu->palette_overrides[addr])
+            palette[addr] = data;
     }
 
     return true;
