@@ -1057,6 +1057,7 @@ void CPU::Execute() {
 // FIXME: SHADOW WARNINGS HERE PROBABLY BORKE SOMETHING
 std::string CPU::DisassembleString(uint16_t addr) {
     // Map OpType to string
+    // FIXME: CAN CAUSE WEIRD BEHAVIOR
     static const char* op_names[(int)OpType::INV+1] = {
         "ADC", "AND", "ASL" ,
         "BCC", "BCS", "BEQ", "BIT", "BMI", "BNE", "BPL", "BRK", "BVC", "BVS",
@@ -1235,31 +1236,36 @@ std::string CPU::DisassembleString(uint16_t addr) {
      * It will allocate that much anyway due to 8 byte alignment and give
      * me a safety net, so really there is no downside.
      */
-    // char* ret = (char*)malloc(120*sizeof(char));
-    std::stringstream ss;
-    ss << std::uppercase << std::setfill('0') << std::setw(4) << std::hex
-        << addr << "  ";
-    ss << std::setw(8) << std::left << bytecode << ' ';
-    ss << std::setw(31) << std::left << disas << "  ";
-    ss << "A:" << std::setw(2) << std::hex << std::setfill('0') << a << ' ';
-    ss << "X:" << std::setw(2) << std::hex << std::setfill('0') << x << ' ';
-    ss << "Y:" << std::setw(2) << std::hex << std::setfill('0') << y << ' ';
-    ss << "P:" << std::setw(2) << std::hex << std::setfill('0') << status << ' ';
-    ss << "SP:" << std::setw(2) << std::hex << std::setfill('0') << sp << ' ';
-    ss << "PPU:" << std::dec << std::setfill(' ') << std::setw(3)
-        << (unsigned int)(cycles_count*3/341) << ',';
-    ss << std::dec << std::setfill(' ') << std::setw(3) << (unsigned int)(cycles_count*3%341) << ' ';
-    ss << "CYC:" << (unsigned int)cycles_count;
+    char* ret = (char*)malloc(120*sizeof(char));
+    // std::stringstream ss;
+    // ss << std::uppercase << std::setfill('0') << std::setw(4) << std::hex
+    //     << addr << "  ";
+    // ss << std::setw(8) << std::left << bytecode << ' ';
+    // ss << std::setw(31) << std::left << disas << "  ";
+    // ss << "A:" << std::setw(2) << std::hex << std::setfill('0') << a << ' ';
+    // ss << "X:" << std::setw(2) << std::hex << std::setfill('0') << x << ' ';
+    // ss << "Y:" << std::setw(2) << std::hex << std::setfill('0') << y << ' ';
+    // ss << "P:" << std::setw(2) << std::hex << std::setfill('0') << status << ' ';
+    // ss << "SP:" << std::setw(2) << std::hex << std::setfill('0') << sp << ' ';
+    // ss << "PPU:" << std::dec << std::setfill(' ') << std::setw(3)
+    //     << (unsigned int)(cycles_count*3/341) << ',';
+    // ss << std::dec << std::setfill(' ') << std::setw(3) << (unsigned int)(cycles_count*3%341) << ' ';
+    // ss << "CYC:" << (unsigned int)cycles_count;
 
-    // sprintf(ret,
-    //     "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-    //     addr, bytecode, disas, a, x, y, status, sp,
-    //     (unsigned int)(cycles_count*3/341),
-    //     (unsigned int)(cycles_count*3%341),
-    //     (unsigned int)cycles_count);
+    sprintf(ret,
+        "%04X  %-8s %-31s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+        addr, bytecode, disas, a, x, y, status, sp,
+        (unsigned int)(cycles_count*3/341),
+        (unsigned int)(cycles_count*3%341),
+        (unsigned int)cycles_count);
 
-    std::string ret = ss.str();
-    return ret;
+    std::string ret_typed = ret;
+    free(ret);
+    return ret_typed;
+}
+
+uint16_t CPU::GetPC() {
+    return pc;
 }
 
 void CPU::DisassembleLog() {
@@ -1272,13 +1278,12 @@ void CPU::DisassembleLog() {
 // TODO: TO REALLY TEST IF THIS WORKS PROPERLY, YOU SHOULD JUST
 //       LET THE EMULATION THREAD RUN INFINITELY FAST
 //       AND THEN CONTINUOUSLY CHECK IN HERE IF THE PC HAS CHANGED
-uint16_t* CPU::GenerateOpStartingAddrs() {
+std::array<uint16_t, 27> CPU::GenerateOpStartingAddrs() {
     // TODO: CALLING THIS EACH TIME IS SUBOPTIMAL (ALTHOUGH HAS LITTLE
     //       PERFORMANCE IMPACT). BETTER TO GENERATE ALL ADDRS AT ONCE
     //       AND DO A BIN SEARCH FOR OUR SUBSET OF INSTRUCTIONS.
     //       WE COULD USE A MAP TO FURTHER
-    //       IMPROVE THE PERFORMANCE, BUT I'D RATHER NOT CREATE MY OWN
-    //       MAP FOR NO PERCEPTIBLE PERFORMANCE GAIN
+    //       IMPROVE THE PERFORMANCE
     /*
      * NOTE: This function will not necessarily work for misaligned
      * instructions. What I
@@ -1294,12 +1299,8 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
 
     // Need to start all the way from the beginning of prg_rom to determine
     // the alignment of all instructions preceding the current one
-    const int ret_len = 27;
-    uint16_t* ret = (uint16_t*)malloc(ret_len * sizeof(uint16_t));
     uint16_t addr = 0x8000;
-
-    if (ret == NULL)
-        return NULL;
+    std::array<uint16_t, NUM_INSTR_TO_DISPLAY> ret;
 
     // Could make pc volatile and unlock immediately,
     // but probably better to just release lock later
@@ -1308,12 +1309,12 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
     uint16_t pc = this->pc;
 
     // Fill with first 27 instructions
-    for (int i = 0; i < ret_len; i++) {
+    for (int i = 0; i < ret.size(); i++) {
         ret[i] = addr;
         uint8_t opcode = bus.Read(addr);
 
-        auto instr = Decode(opcode);
-        addr += instr->bytes;
+        auto curr_instr = Decode(opcode);
+        addr += curr_instr->bytes;
     }
 
     if (addr >= pc) {
@@ -1325,27 +1326,30 @@ uint16_t* CPU::GenerateOpStartingAddrs() {
         // We need to do a < here, because if we do an addr != pc
         // we will get stuck in an infinite loop on misaligned instructions
         while (addr < pc) {
-            for (int i = 1; i < ret_len; i++)
+            for (int i = 1; i < ret.size(); i++)
                 ret[i - 1] = ret[i];
 
             uint8_t opcode = bus.Read(addr);
 
-            auto instr = Decode(opcode);
-            addr += instr->bytes;
-            ret[ret_len - 1] = addr;
+            auto curr_instr = Decode(opcode);
+            addr += curr_instr->bytes;
+
+            assert(addr >= 0x8000);
+            ret[ret.size() - 1] = addr;
         }
     }
 
-    for (int i = 0; i < ret_len/2; i++)
-        for (int j = 1; j < 27; j++)
+    for (int i = 0; i < ret.size()/2; i++)
+        for (int j = 1; j < ret.size(); j++)
             ret[j - 1] = ret[j];
 
     // TODO: HANDLE EDGE CASE WHERE WE DON'T HAVE 13 INSTRUCTIONS AFTER THE PC
-    for (int i = ret_len/2 + 1; i < ret_len; i++) {
+    for (int i = ret.size()/2 + 1; i < ret.size(); i++) {
         uint8_t opcode = bus.Read(addr);
 
         auto instr = Decode(opcode);
         addr += instr->bytes;
+        assert(addr >= 0x8000);
         ret[i] = addr;
     }
 

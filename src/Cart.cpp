@@ -89,9 +89,6 @@ bool Cart::LoadROM(const char* path) {
     // CURRENTLY THIS WILL ONLY WORK WITH iNES AND NES2.0 FILES THAT DO NOT
     // USE ANY OF THE EXTENDED FEATURES
 
-    // We use normal realloc here, as it is not a critical failure if it fails
-    // Recall that Util_Safe* is just a wrapper around stdlib functions that
-    // will exit the program if the allocation fails
     const size_t prg_rom_nbytes = Cart::GetPrgRomBytes();
     prg_rom.resize(prg_rom_nbytes);
     prg_rom.shrink_to_fit();
@@ -172,8 +169,7 @@ size_t Cart::GetPrgRomBytes() {
 
 // This will return 8kb if the cart has no CHR ROM
 size_t Cart::GetChrRomBytes() {
-    size_t sz = metadata.chr_rom_size == 0
-        ? 1 : metadata.chr_rom_size;
+    size_t sz = metadata.chr_rom_size == 0 ? 1 : metadata.chr_rom_size;
     return sz * CHR_ROM_CHUNK_SIZE;
 }
 
@@ -206,15 +202,12 @@ const std::string& Cart::GetROMPath() {
 }
 
 void Cart::SetMapper(uint8_t _id, Mapper::MirrorMode _mode) {
-    // // this->mapper = Mapper(_id, _cart, _mode);
-    // mapper.SetID(_id);
-    // mapper.MakeMapperFromID(_cart, _mode);
     mapper = Mapper::CreateMapperFromID(_id, *this, _mode);
 }
 
 // Since we need to have the game loaded in order to load a save state, we
 // already have all of the information we need, except for the state of the
-// mapper at the time the savestate was made, as that is the conly thing that
+// mapper at the time the savestate was made, as that is the only thing that
 // could have changed
 void to_json(nlohmann::json& j, const Cart& cart) {
     j = nlohmann::json {

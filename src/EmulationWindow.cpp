@@ -132,11 +132,11 @@ void EmulationWindow::RenderMainGUI() {
 
         if (ImGui::BeginMenu("Debug")) {
             bool cart_loaded = emulator.ROMInserted();
-            ImGui::MenuItem("Show Disassembler", "Ctrl+D", &show_disassembler,
+            ImGui::MenuItem("Show Disassembler (bugs possible)", "Ctrl+D", &show_disassembler,
                 cart_loaded);
             ImGui::MenuItem("Show Pattern Mem", nullptr, &show_pattern,
                 cart_loaded);
-            ImGui::MenuItem("Show OAM", nullptr, &show_oam, cart_loaded);
+            ImGui::MenuItem("Show OAM (not implemented)", nullptr, &show_oam, cart_loaded);
             ImGui::MenuItem("Show Frametime", "Ctrl+F", &show_frametime,
                 cart_loaded);
 

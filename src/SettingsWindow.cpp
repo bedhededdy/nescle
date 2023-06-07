@@ -49,7 +49,7 @@ void SettingsWindow::Show(Emulator* emu) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "VSync disabled");
         }
 
-        ImGui::Text("Aspect Ratio");
+        ImGui::Text("Aspect Ratio (not implemented)");
         if (ImGui::RadioButton("4:3", Util_FloatEquals(settings->aspect_ratio, 4.0f/3.0f)))
             settings->aspect_ratio = 4.0f/3.0f;
         ImGui::SameLine();

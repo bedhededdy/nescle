@@ -29,6 +29,7 @@ class CPU {
 private:
     // TODO: CHANGE TO UINT16_T (MAKES NO DIFF, BUT IS MORE CORRECT)
     static constexpr int SP_BASE_ADDR = 0x100;
+    static constexpr int NUM_INSTR_TO_DISPLAY = 27;
 
     enum class AddrMode {
         ACC,
@@ -154,9 +155,9 @@ public:
 
     std::string DisassembleString(uint16_t addr);
     void DisassembleLog();
-    uint16_t* GenerateOpStartingAddrs();
+    std::array<uint16_t, NUM_INSTR_TO_DISPLAY> GenerateOpStartingAddrs();
 
-    uint16_t GetPC() { return pc; }
+    uint16_t GetPC();
 
     friend void to_json(nlohmann::json& j, const CPU& cpu);
     friend void from_json(const nlohmann::json& j, CPU& cpu);

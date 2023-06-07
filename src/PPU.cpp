@@ -424,9 +424,9 @@ void PPU::Clock() {
                     ppu->bg_next_tile_attr >>= 4;
                 if (((ppu->vram_addr & LOOPY_COARSE_X) >> 0) & 0x02)
                     ppu->bg_next_tile_attr >>= 2;
-ppu->bg_next_tile_attr &= 0x03;
+                ppu->bg_next_tile_attr &= 0x03;
 
-break;
+                break;
             case 4:
                 // Get LSB
                 // The control register tells us what half of pattern memory to read from
@@ -450,9 +450,8 @@ break;
                 IncrementScrollX();
                 break;
             }
-        }
-        // We have hit the top of the screen again, so clear VBLANK
-        else if (ppu->scanline == -1 && ppu->cycle == 1) {
+        } else if (ppu->scanline == -1 && ppu->cycle == 1) {
+            // We have hit the top of the screen again, so clear VBLANK
             ppu->status &= ~PPU_STATUS_VBLANK;
             ppu->status &= ~PPU_STATUS_SPR_OVERFLOW;
             ppu->status &= ~PPU_STATUS_SPR_HIT;
@@ -473,150 +472,150 @@ break;
         else if (ppu->scanline == -1 && ppu->cycle >= 280 && ppu->cycle < 305)
             TransferAddrY();
 
-            // First invisible cycle, increment to next scanline
-            if (ppu->cycle == RESOLUTION_X)
-                IncrementScrollY();
-            // Prepare tiles for next scanline
-            else if (ppu->cycle == RESOLUTION_X + 1) {
-                LoadBGShifters();
-                TransferAddrX();
+        // First invisible cycle, increment to next scanline
+        if (ppu->cycle == RESOLUTION_X)
+            IncrementScrollY();
+        // Prepare tiles for next scanline
+        else if (ppu->cycle == RESOLUTION_X + 1) {
+            LoadBGShifters();
+            TransferAddrX();
 
-                // May wanna put this in a separate if for readability
-                if (ppu->scanline >= 0) {
-                    // Set sprite info to 0xff, because if the y-coord of the sprite
-                    // is 0xff, we will never see it
-                    memset(ppu->spr_scanline, 0xff, SPR_PER_LINE * sizeof(OAM));
-                    ppu->spr_count = 0;
-                    ppu->spr0_can_hit = false;
+            // May wanna put this in a separate if for readability
+            if (ppu->scanline >= 0) {
+                // Set sprite info to 0xff, because if the y-coord of the sprite
+                // is 0xff, we will never see it
+                memset(ppu->spr_scanline, 0xff, SPR_PER_LINE * sizeof(OAM));
+                ppu->spr_count = 0;
+                ppu->spr0_can_hit = false;
 
-                    int oam_entry = 0;
+                int oam_entry = 0;
 
-                    // FIXME: WON'T PROPERLY DETECT OVRFLOW
-                    while (oam_entry < 64 && ppu->spr_count < 9) {
-                        // FIXME: MAYBE NEED TO EXPLICITLY CAST TO SIGNED
-                        int diff = ppu->scanline - ppu->oam[oam_entry].y;
+                // FIXME: WON'T PROPERLY DETECT OVRFLOW
+                while (oam_entry < 64 && ppu->spr_count < 9) {
+                    // FIXME: MAYBE NEED TO EXPLICITLY CAST TO SIGNED
+                    int diff = ppu->scanline - ppu->oam[oam_entry].y;
 
-                        // Sprites can be 16 or 8px tall depending on the mode
-                        if (diff >= 0 && diff < ((ppu->control & PPU_CTRL_SPR_HEIGHT) ? 16 : 8)) {
-                            // Hit a sprite that will be visible
+                    // Sprites can be 16 or 8px tall depending on the mode
+                    if (diff >= 0 && diff < ((ppu->control & PPU_CTRL_SPR_HEIGHT) ? 16 : 8)) {
+                        // Hit a sprite that will be visible
 
-                            // FIXME: THIS SHOULD BE 9
-                            // If I haven't overflowed sprites, copy this sprite's pixel for the line
-                            // from the oam
-                            if (ppu->spr_count < 8) {
-                                if (oam_entry == 0)
-                                    ppu->spr0_can_hit = true;
+                        // FIXME: THIS SHOULD BE 9
+                        // If I haven't overflowed sprites, copy this sprite's pixel for the line
+                        // from the oam
+                        if (ppu->spr_count < 8) {
+                            if (oam_entry == 0)
+                                ppu->spr0_can_hit = true;
 
-                                // TODO: Don't use memcpy, it's clearer to do explicitly
-                                memcpy(&ppu->spr_scanline[ppu->spr_count], &ppu->oam[oam_entry],
-                                    sizeof(OAM));
-                                ppu->spr_count++;
-                            }
+                            // TODO: Don't use memcpy, it's clearer to do explicitly
+                            memcpy(&ppu->spr_scanline[ppu->spr_count], &ppu->oam[oam_entry],
+                                sizeof(OAM));
+                            ppu->spr_count++;
                         }
-
-                        oam_entry++;
                     }
 
-                    // Set sprite overflow flag
-                    if (ppu->spr_count > 8)
-                        ppu->status |= PPU_STATUS_SPR_OVERFLOW;
-                    else
-                        ppu->status &= ~PPU_STATUS_SPR_OVERFLOW;
+                    oam_entry++;
                 }
+
+                // Set sprite overflow flag
+                if (ppu->spr_count > 8)
+                    ppu->status |= PPU_STATUS_SPR_OVERFLOW;
+                else
+                    ppu->status &= ~PPU_STATUS_SPR_OVERFLOW;
             }
-            // Dummy reads that shouldn't affect anything (but could maybe due to
-            // reading changing the state)
-            else if (ppu->cycle == 338 || ppu->cycle == 340) {
-                ppu->bg_next_tile_id = Read(NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
+        }
+        // Dummy reads that shouldn't affect anything (but could maybe due to
+        // reading changing the state)
+        else if (ppu->cycle == 338 || ppu->cycle == 340) {
+            ppu->bg_next_tile_id = Read(NAMETBL_OFFSET | (ppu->vram_addr & 0x0fff));
 
-                // NOTE: THIS IS WHERE THE INACCURACY COMES INTO PLAY (I THINK)
-                // May wanna denest this and make 340 its own if
-                if (ppu->cycle == 340) {
-                    for (int i = 0; i < ppu->spr_count; i++) {
-                        // FIXME: CLEAN THIS CLUSTERFUCK UP
-                        uint8_t spr_pattern_bits_lo, spr_pattern_bits_hi;
-                        uint16_t spr_pattern_addr_lo, spr_pattern_addr_hi;
+            // NOTE: THIS IS WHERE THE INACCURACY COMES INTO PLAY (I THINK)
+            // May wanna denest this and make 340 its own if
+            if (ppu->cycle == 340) {
+                for (int i = 0; i < ppu->spr_count; i++) {
+                    // FIXME: CLEAN THIS CLUSTERFUCK UP
+                    uint8_t spr_pattern_bits_lo, spr_pattern_bits_hi;
+                    uint16_t spr_pattern_addr_lo, spr_pattern_addr_hi;
 
-                        if (ppu->control & PPU_CTRL_SPR_HEIGHT) {
-                            // 16x8
-                            if (ppu->spr_scanline[i].attributes & (1 << 7)) {
-                                // flipped
+                    if (ppu->control & PPU_CTRL_SPR_HEIGHT) {
+                        // 16x8
+                        if (ppu->spr_scanline[i].attributes & (1 << 7)) {
+                            // flipped
 
-                                if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
-                                    // top
-                                    uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = pattern_tbl
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
-                                        | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                                else {
-                                    // bottom
-                                    uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = pattern_tbl
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 0) << 4)
-                                        | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-
-
+                            if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
+                                // top
+                                uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
+                                spr_pattern_addr_lo = pattern_tbl
+                                    | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
+                                    | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
                             }
                             else {
-                                // not flippped
-
-                                if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
-                                    // top
-                                    uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = pattern_tbl
-                                        | ((ppu->spr_scanline[i].tile_id & 0xfe) << 4)
-                                        | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
-                                else {
-                                    // bottom
-                                    uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
-                                    spr_pattern_addr_lo = pattern_tbl
-                                        | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
-                                        | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
-                                }
+                                // bottom
+                                uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
+                                spr_pattern_addr_lo = pattern_tbl
+                                    | (((ppu->spr_scanline[i].tile_id & 0xfe) + 0) << 4)
+                                    | (7 - (ppu->scanline - ppu->spr_scanline[i].y) % 8);
                             }
+
+
                         }
                         else {
-                            // 8x8
-                            if (ppu->spr_scanline[i].attributes & (1 << 7)) {
-                                // flipped
-                                uint16_t pattern_tbl = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
-                                pattern_tbl <<= 12;
+                            // not flippped
 
+                            if (ppu->scanline - ppu->spr_scanline[i].y < 8) {
+                                // top
+                                uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
                                 spr_pattern_addr_lo = pattern_tbl
-                                    | (ppu->spr_scanline[i].tile_id << 4)
-                                    | (7 - (ppu->scanline - ppu->spr_scanline[i].y));
+                                    | ((ppu->spr_scanline[i].tile_id & 0xfe) << 4)
+                                    | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
                             }
                             else {
-                                // not flippped
-                                uint16_t pattern_tbl = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
-                                pattern_tbl <<= 12;
-
+                                // bottom
+                                uint16_t pattern_tbl = (ppu->spr_scanline[i].tile_id & 1) << 12;
                                 spr_pattern_addr_lo = pattern_tbl
-                                    | (ppu->spr_scanline[i].tile_id << 4)
-                                    | (ppu->scanline - ppu->spr_scanline[i].y);
+                                    | (((ppu->spr_scanline[i].tile_id & 0xfe) + 1) << 4)
+                                    | ((ppu->scanline - ppu->spr_scanline[i].y) % 8);
                             }
                         }
-
-                        // Recall pixel data is always 8 bytes apart
-                        spr_pattern_addr_hi = spr_pattern_addr_lo + 8;
-                        spr_pattern_bits_lo = Read(spr_pattern_addr_lo);
-                        spr_pattern_bits_hi = Read(spr_pattern_addr_hi);
-
-                        if (ppu->spr_scanline[i].attributes & (1 << 6)) {
-                            // horizontal flipped
-                            spr_pattern_bits_lo = flip_bits(spr_pattern_bits_lo);
-                            spr_pattern_bits_hi = flip_bits(spr_pattern_bits_hi);
-                        }
-
-                        ppu->spr_shifter_pattern_lo[i] = spr_pattern_bits_lo;
-                        ppu->spr_shifter_pattern_hi[i] = spr_pattern_bits_hi;
-
                     }
+                    else {
+                        // 8x8
+                        if (ppu->spr_scanline[i].attributes & (1 << 7)) {
+                            // flipped
+                            uint16_t pattern_tbl = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
+                            pattern_tbl <<= 12;
+
+                            spr_pattern_addr_lo = pattern_tbl
+                                | (ppu->spr_scanline[i].tile_id << 4)
+                                | (7 - (ppu->scanline - ppu->spr_scanline[i].y));
+                        }
+                        else {
+                            // not flippped
+                            uint16_t pattern_tbl = (ppu->control & PPU_CTRL_SPR_TILE_SELECT) == PPU_CTRL_SPR_TILE_SELECT;
+                            pattern_tbl <<= 12;
+
+                            spr_pattern_addr_lo = pattern_tbl
+                                | (ppu->spr_scanline[i].tile_id << 4)
+                                | (ppu->scanline - ppu->spr_scanline[i].y);
+                        }
+                    }
+
+                    // Recall pixel data is always 8 bytes apart
+                    spr_pattern_addr_hi = spr_pattern_addr_lo + 8;
+                    spr_pattern_bits_lo = Read(spr_pattern_addr_lo);
+                    spr_pattern_bits_hi = Read(spr_pattern_addr_hi);
+
+                    if (ppu->spr_scanline[i].attributes & (1 << 6)) {
+                        // horizontal flipped
+                        spr_pattern_bits_lo = flip_bits(spr_pattern_bits_lo);
+                        spr_pattern_bits_hi = flip_bits(spr_pattern_bits_hi);
+                    }
+
+                    ppu->spr_shifter_pattern_lo[i] = spr_pattern_bits_lo;
+                    ppu->spr_shifter_pattern_hi[i] = spr_pattern_bits_hi;
+
                 }
             }
+        }
 
         /* FG RENDERERING */
         // FIXME: THIS IS CHEATING, ALL OF THE SPRITE STUFF IS SUPPOSED TO HAPPEN IN MANY CYCLES
@@ -626,8 +625,7 @@ break;
     // Dummy scanline, do nothing
     else if (ppu->scanline == PPU::RESOLUTION_Y) {
 
-    }
-    else if (ppu->scanline > PPU::RESOLUTION_Y && ppu->scanline <= 260) {
+    } else if (ppu->scanline > PPU::RESOLUTION_Y && ppu->scanline <= 260) {
         // Enter the VBLANK period and emit an NMI if the control register says to
         if (ppu->scanline == 241 && ppu->cycle == 1) {
             ppu->status |= PPU_STATUS_VBLANK;
