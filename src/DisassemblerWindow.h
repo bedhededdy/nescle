@@ -14,3 +14,16 @@
  * limitations under the License.
  */
 #pragma once
+
+#include "NESCLEWindow.h"
+
+namespace NESCLE {
+class DisassemblerWindow : public NESCLEWindow {
+private:
+    bool* show;
+
+public:
+    DisassemblerWindow(bool* _show) : show(_show) {}
+    void Show(Emulator* emu) override;
+};
+}

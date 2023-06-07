@@ -156,6 +156,8 @@ public:
     void DisassembleLog();
     uint16_t* GenerateOpStartingAddrs();
 
+    uint16_t GetPC() { return pc; }
+
     friend void to_json(nlohmann::json& j, const CPU& cpu);
     friend void from_json(const nlohmann::json& j, CPU& cpu);
 };

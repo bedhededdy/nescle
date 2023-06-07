@@ -14,3 +14,30 @@
  * limitations under the License.
  */
 #include "DisassemblerWindow.h"
+
+#include "CPU.h"
+#include "Emulator.h"
+
+namespace NESCLE {
+void DisassemblerWindow::Show(Emulator* emu) {
+    ImGui::Begin("Disassembler", show);
+    ImGui::Text("Current Instruction");
+    CPU& cpu = emu->GetNES()->GetCPU();
+
+    emu->LockNESState();
+    // FIXME: DISASSEMBLE STRING IS UTTERLY AND COMPLETELY BROKEN
+    std::string instruction = cpu.DisassembleString(cpu.GetPC());
+    emu->UnlockNESState();
+
+    focused = ImGui::IsWindowFocused();
+    if (focused) {
+        if (emu->KeyPushed(SDLK_c)) {
+            // FIXME: YOU NEED TO CLOCK TILL THE END OF THE INSTRUCTION
+            cpu.Clock();
+        }
+    }
+
+    ImGui::Text("%s", instruction.c_str());
+    ImGui::End();
+}
+}

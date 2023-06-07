@@ -44,6 +44,7 @@
 #include <SDL.h>
 
 #include "ControllerWindow.h"
+#include "DisassemblerWindow.h"
 #include "Emulator.h"
 #include "MixerWindow.h"
 #include "NESCLENotification.h"
@@ -183,13 +184,6 @@ void EmulationWindow::SetGLOptions() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-}
-
-void EmulationWindow::RenderDisassembler() {
-    // TODO: LOCK AND RELEASE
-    ImGui::Begin("Disassembler", &show_disassembler);
-    ImGui::Text("This is the disassembler");
-    ImGui::End();
 }
 
 void EmulationWindow::RenderOAM() {
@@ -715,7 +709,8 @@ void EmulationWindow::Show() {
     ImGui::StyleColorsDark();
 
     if (!prev_showing_disassembler && show_disassembler) {
-        // sub_windows[WindowType::DISASSEMBLER] = new DisassemblerWindow(emu);
+        sub_windows[WindowType::DISASSEMBLER] =
+            new DisassemblerWindow(&show_disassembler);
     }
     if (!prev_showing_controller && show_controller) {
         sub_windows[WindowType::CONTROLLER] =
@@ -743,8 +738,8 @@ void EmulationWindow::Show() {
     }
 
     if (prev_showing_disassembler && !show_disassembler) {
-        // delete sub_windows[WindowType::DISASSEMBLER];
-        // sub_windows[WindowType::DISASSEMBLER] = nullptr;
+        delete sub_windows[WindowType::DISASSEMBLER];
+        sub_windows[WindowType::DISASSEMBLER] = nullptr;
     }
     if (prev_showing_pattern && !show_pattern) {
         delete sub_windows[WindowType::PATTERN];

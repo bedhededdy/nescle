@@ -101,9 +101,6 @@ public:
     void PowerOn(); // Sets entire system to powerup state
     void Reset();   // Equivalent to pushing the RESET button on a NES
 
-    bool SaveState(std::ofstream& file);
-    bool LoadState(std::ifstream& file);
-
     void SetSampleFrequency(uint32_t sample_rate);
 
     // Getters and Setters
