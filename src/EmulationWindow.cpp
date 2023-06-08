@@ -855,7 +855,7 @@ void EmulationWindow::Show() {
         const int width = 8*len + 4;
         const int height = 8 + 4;
 
-        glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - 18 - 2*height, 2*width, 2*height);
+        glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT - 2*height, 2*width, 2*height);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, rt.GetPixels());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
