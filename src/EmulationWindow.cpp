@@ -311,8 +311,9 @@ EmulationWindow::EmulationWindow() {
 
     NFD_Init();
 
-    int w = 256 * 3;
-    int h = 240 * 3 + 19;
+    constexpr int scale_factor = 3;
+    int w = PPU::RESOLUTION_X * scale_factor;
+    int h = PPU::RESOLUTION_Y * scale_factor + MAIN_MENU_HEIGHT;
 
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
@@ -763,7 +764,7 @@ void EmulationWindow::Show() {
         sub_windows[WindowType::CONTROLLER] = nullptr;
     }
 
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - 19);
+    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -775,7 +776,7 @@ void EmulationWindow::Show() {
     // INSTEAD OF BEING HARD CODED TO THE CORNERS
     int nearest_multiple = ((int)io.DisplaySize.y - 0) / PPU::RESOLUTION_Y;
     int border_width = ((int)io.DisplaySize.x - nearest_multiple * PPU::RESOLUTION_X) / 2;
-    glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - 19);
+    glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT);
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
     // Since x86 is big endian, we can get away with this, but this should

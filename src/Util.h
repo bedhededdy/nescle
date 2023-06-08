@@ -28,8 +28,6 @@
 #endif
 
 namespace NESCLE {
-constexpr int IMGUI_MAIN_MENU_HEIGHT = 19;
-
 bool Util_CreateDirectoryIfNotExists(const char* path);
 
 void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
