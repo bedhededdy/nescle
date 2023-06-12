@@ -44,9 +44,15 @@ void SettingsWindow::Show(Emulator* emu) {
         }
         ImGui::SameLine();
         if (ImGui::RadioButton("Off", !settings->vsync)) {
-            settings->vsync = false;
-            SDL_GL_SetSwapInterval(0);
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "VSync disabled");
+            if (settings->sync != Emulator::SyncType::VIDEO) {
+                settings->vsync = false;
+                SDL_GL_SetSwapInterval(0);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "VSync disabled");
+            } else {
+                // TODO: MAKE THIS A POPUP
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Vsync cannot be disabled when syncing to video\n");
+            }
         }
 
         ImGui::Text("Aspect Ratio (not implemented)");
@@ -65,6 +71,11 @@ void SettingsWindow::Show(Emulator* emu) {
     if (show_popup) {
         ImGui::OpenPopup("Sync Changed");
         emu->SetRunEmulation(false);
+
+        if (settings->next_sync == Emulator::SyncType::VIDEO) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Vsync will be re-enabled on next run as a prereq to video sync\n");
+        }
     }
 
     if (ImGui::BeginPopupModal("Sync Changed", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -77,7 +88,7 @@ void SettingsWindow::Show(Emulator* emu) {
         float x_space = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(x_space / 2.0f - 60.0f);
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            emu->SetRunEmulation(true);
+            emu->SetRunEmulation(emu->ROMInserted());
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

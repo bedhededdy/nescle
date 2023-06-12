@@ -311,8 +311,9 @@ EmulationWindow::EmulationWindow() {
 
     NFD_Init();
 
-    int w = 256 * 3;
-    int h = 240 * 3 + 19;
+    constexpr int scale_factor = 3;
+    int w = PPU::RESOLUTION_X * scale_factor;
+    int h = PPU::RESOLUTION_Y * scale_factor + MAIN_MENU_HEIGHT;
 
     window = SDL_CreateWindow("NESCLE", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_INPUT_FOCUS
@@ -664,6 +665,13 @@ void EmulationWindow::Show() {
         // SO IF WE END UP GETTING THAT THE GCD OF THE REFRESH AND THE
         // MODULO IS 20 AND THE MODULO WAS 40 AND THE REFRESH WAS 60
         // WE WOULD ADD 2 SAMPLES EVERY 3 FRAMES
+        // WE COULD ALSO USE A CIRCULAR ARRAY WITH A PLAYBACK CURSOR
+        // AND DO AUDIO VIA A CALLBACK BECAUSE WITH QUEUE AUDIO IT COULD
+        // GET DESYNCED OVER SMALL DISCREPANCIES OVER TIME
+        // THE ALTERNATIVE IS USING THE QUEUE AUDIO AND CLEARING THE QUEUE
+        // EACH TIME WE DISCOVER A DISCREPANCY WHEN THIS FUNCTION IS CALLED
+        // IE WE MAY HAVE 5 SAMPLES TO DROP WHEN THIS GETS CALLED EVERY FRAME
+        // WITH A RELATIVELY EVEN PACING BECAUSE OF VSYNC
         float stream[735];
         // this is way inaccurate, will desync fairly fast
 
@@ -763,7 +771,7 @@ void EmulationWindow::Show() {
         sub_windows[WindowType::CONTROLLER] = nullptr;
     }
 
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - 19);
+    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT);
     glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -775,7 +783,7 @@ void EmulationWindow::Show() {
     // INSTEAD OF BEING HARD CODED TO THE CORNERS
     int nearest_multiple = ((int)io.DisplaySize.y - 0) / PPU::RESOLUTION_Y;
     int border_width = ((int)io.DisplaySize.x - nearest_multiple * PPU::RESOLUTION_X) / 2;
-    glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - 19);
+    glViewport(border_width, 0, nearest_multiple * PPU::RESOLUTION_X, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT);
     glBindTexture(GL_TEXTURE_2D, main_texture);
 
     // Since x86 is big endian, we can get away with this, but this should
@@ -854,7 +862,7 @@ void EmulationWindow::Show() {
         const int width = 8*len + 4;
         const int height = 8 + 4;
 
-        glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - 18 - 2*height, 2*width, 2*height);
+        glViewport((int)io.DisplaySize.x - 2*width, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT - 2*height, 2*width, 2*height);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, rt.GetPixels());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

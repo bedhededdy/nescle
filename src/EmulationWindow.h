@@ -25,6 +25,8 @@
 namespace NESCLE {
 class EmulationWindow {
 private:
+    static constexpr int MAIN_MENU_HEIGHT = 19;
+
     SDL_Window* window;
     SDL_GLContext gl_context;
 
