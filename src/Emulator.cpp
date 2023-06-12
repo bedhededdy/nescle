@@ -356,6 +356,11 @@ bool Emulator::LoadSettings(const char* path) {
         return false;
     }
 
+    // emulation window will handle actually enabling the sync
+    settings.sync = settings.next_sync;
+    if (settings.vsync == false && settings.sync == SyncType::VIDEO)
+        settings.vsync = true;
+
     return true;
 }
 
