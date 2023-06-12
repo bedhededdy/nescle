@@ -577,6 +577,11 @@ void EmulationWindow::Loop() {
                         emu->SaveState(path_to_save_str.c_str());
                         emu->GetUsedSaveSlots()[9] = true;
                         NESCLENotification::MakeNotification("Saved state 9");
+                    } else if (emu->KeyPushed(SDLK_d)) {
+                        // TODO: SINCE THE SHOW FUNCTION IS WHERE WE CAPTURE
+                        // THE PREV STATE, SETTING SHOW DISAS TO TRUE HERE
+                        // WILL NOT WORK, WE NEED TO DO SOMETHING SPECIAL
+                        // TO GET THIS TO WORK
                     }
                 }
             } else {

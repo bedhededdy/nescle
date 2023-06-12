@@ -158,6 +158,7 @@ public:
     std::array<uint16_t, NUM_INSTR_TO_DISPLAY> GenerateOpStartingAddrs();
 
     uint16_t GetPC();
+    int GetCyclesRem();
 
     friend void to_json(nlohmann::json& j, const CPU& cpu);
     friend void from_json(const nlohmann::json& j, CPU& cpu);
