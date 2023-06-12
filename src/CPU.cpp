@@ -1264,6 +1264,10 @@ std::string CPU::DisassembleString(uint16_t addr) {
     return ret_typed;
 }
 
+int CPU::GetCyclesRem() {
+    return cycles_rem;
+}
+
 uint16_t CPU::GetPC() {
     return pc;
 }
