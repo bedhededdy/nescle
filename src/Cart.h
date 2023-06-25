@@ -75,6 +75,8 @@ public:
     uint8_t GetChrRomBlocks();
     size_t GetChrRomBytes();
 
+    std::vector<uint8_t>& GetChrRomRef() { return chr_rom;}
+
     uint8_t ReadPrgRom(size_t off);
     void WritePrgRom(size_t off, uint8_t data);
     uint8_t ReadChrRom(size_t off);

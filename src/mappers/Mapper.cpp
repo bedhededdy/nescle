@@ -15,6 +15,8 @@
  */
 #include "Mapper.h"
 
+#include "../Cart.h"
+
 #include "Mapper000.h"
 #include "Mapper001.h"
 #include "Mapper002.h"
@@ -61,11 +63,20 @@ Mapper::CreateMapperFromID(uint8_t id, Cart& cart, MirrorMode mirror_mode) {
 void Mapper::ToJSON(nlohmann::json& json) const {
     json["id"] = id;
     json["mirror_mode"] = mirror_mode;
+    if (cart.GetChrRomBlocks() == 0) {
+        json["memory"] = cart.GetChrRomRef();
+    }
 }
 
 void Mapper::FromJSON(const nlohmann::json& json) {
     json.at("id").get_to(id);
     json.at("mirror_mode").get_to(mirror_mode);
+
+    try {
+        json.at("memory").get_to(cart.GetChrRomRef());
+    } catch (...) {
+
+    }
 }
 
 void to_json(nlohmann::json& json, const Mapper& mapper) {

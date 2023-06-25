@@ -83,10 +83,11 @@ void EmulationWindow::RenderMainGUI() {
                                 "Failed to save state\n");
                         emulator.GetUsedSaveSlots()[i] = true;
 
-                        std::stringstream sstream;
-                        sstream << "Saved state " << i;
-                        std::string str = sstream.str();
-                        NESCLENotification::MakeNotification(str.c_str());
+
+                        std::stringstream notification_stream;
+                        notification_stream << "Saved state " << i;
+                        path = notification_stream.str();
+                        NESCLENotification::MakeNotification(path.c_str());
                     }
                 }
                 ImGui::EndMenu();
@@ -108,10 +109,10 @@ void EmulationWindow::RenderMainGUI() {
                         if (!emulator.LoadState(path.c_str()))
                             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                                 "Failed to load state\n");
-                        std::stringstream sstream;
-                        sstream << "Loaded state " << i;
-                        std::string str = sstream.str();
-                        NESCLENotification::MakeNotification(str.c_str());
+                        std::stringstream notification_stream;
+                        notification_stream << "Loaded state " << i;
+                        path = notification_stream.str();
+                        NESCLENotification::MakeNotification(path.c_str());
                     }
                 }
                 ImGui::EndMenu();
