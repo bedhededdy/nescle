@@ -29,6 +29,7 @@
 #include <SDL_audio.h>
 #include <SDL_mutex.h>
 #include <SDL_keyboard.h>
+#include <SDL_joystick.h>
 
 #include "Bus.h"
 
@@ -111,6 +112,8 @@ private:
     const uint8_t* keys;
     SDL_KeyCode most_recent_key_this_frame;
 
+    SDL_Joystick* joystick;
+
     std::string exe_path;
     std::string user_data_path;
 
@@ -144,6 +147,9 @@ public:
     bool KeyPushed(SDL_Keycode key);
     bool KeyHeld(SDL_Keycode key);
     bool KeyReleased(SDL_Keycode key);
+
+    bool JoystickButtonHeld(ControllerButton button);
+    int ControllerButtonToJoystickButton(ControllerButton btn);
 
     bool MapButton(ControllerButton button, SDL_KeyCode key);
 

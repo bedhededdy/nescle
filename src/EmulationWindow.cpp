@@ -611,6 +611,23 @@ void EmulationWindow::Loop() {
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
                 if (emu->KeyHeld(btn_map->start))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
+
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::UP))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::LEFT))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::DOWN))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::RIGHT))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::SELECT))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::START))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::A))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::B))
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
             }
         }
 

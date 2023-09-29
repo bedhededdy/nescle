@@ -154,7 +154,7 @@ void Emulator::AudioCallback(void* userdata, uint8_t* stream, int len) {
 }
 
 Emulator::Emulator() {
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 
     #ifdef _DEBUG
        SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
@@ -224,6 +224,11 @@ Emulator::Emulator() {
     quit = false;
     run_emulation = false;
 
+    joystick = SDL_JoystickOpen(0);
+    if (joystick) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT, "Joystick connected");
+    }
+
     const uint8_t* state = SDL_GetKeyboardState(&nkeys);
     const size_t sz = nkeys * sizeof(uint8_t);
     prev_keys = new uint8_t[sz];
@@ -248,6 +253,8 @@ Emulator::~Emulator() {
     std::string settings_path_str = user_data_path + "settings.json";
     SaveSettings(settings_path_str.c_str());
 
+    // FIXME: MAY NOT HANDLE NULL
+    SDL_JoystickClose(joystick);
     SDL_DestroyMutex(nes_state_lock);
     SDL_CloseAudioDevice(audio_device);
     delete prev_keys;
@@ -595,5 +602,51 @@ void Emulator::RefreshKeyboardState() {
 
 void Emulator::RefreshPrevKeys() {
     memcpy(prev_keys, keys, sizeof(uint8_t) * nkeys);
+}
+
+int Emulator::ControllerButtonToJoystickButton(ControllerButton button) {
+    /*
+     * Button 0 = Cross
+     * Button 1 = Circle
+     * Button 2 = Square
+     * Button 3 = Triangle
+     * Button 9 = Start
+     * Button 11 = Up
+     * Button 12 = Down
+     * Button 13 = Left
+     * Button 14 = Right
+     * Button 15 = Select
+    */
+    switch (button) {
+        case ControllerButton::A:
+            return 0;
+        case ControllerButton::B:
+            return 2;
+        case ControllerButton::START:
+            return 6;
+        case ControllerButton::SELECT:
+            return 15;
+        case ControllerButton::LEFT:
+            return 13;
+        case ControllerButton::RIGHT:
+            return 14;
+        case ControllerButton::UP:
+            return 11;
+        case ControllerButton::DOWN:
+            return 12;
+        default:
+            return -1;
+    }
+}
+
+bool Emulator::JoystickButtonHeld(ControllerButton button) {
+    if (joystick == NULL)
+        return false;
+    bool res = SDL_JoystickGetButton(joystick, ControllerButtonToJoystickButton(button));
+    // if (res) {
+        // SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            // "JoystickButtonHeld: Button %d held", ControllerButtonToJoystickButton(button));
+    // }
+    return res;
 }
 }
