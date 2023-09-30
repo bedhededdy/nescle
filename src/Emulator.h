@@ -112,7 +112,7 @@ private:
     const uint8_t* keys;
     SDL_KeyCode most_recent_key_this_frame;
 
-    SDL_Joystick* joystick;
+    SDL_Joystick* joystick = NULL;
 
     std::string exe_path;
     std::string user_data_path;
