@@ -52,59 +52,77 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
     }
 }
 
-void ControllerWindow::Show(Emulator* emu) {
+bool ControllerWindow::ShowKeyboardWindow(Emulator* emu) {
     bool open_popup = false;
-    if (ImGui::Begin("Controller", show)) {
-        if (ImGui::Button("Up")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::UP;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Turbo A")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::ATURBO;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Turbo B")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::BTURBO;
-        }
-        if (ImGui::Button("Left")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::LEFT;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Right")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::RIGHT;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Select")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::SELECT;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Start")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::START;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("A")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::A;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("B")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::B;
-        }
-        if (ImGui::Button("Down")) {
-            open_popup = true;
-            btn = Emulator::ControllerButton::DOWN;
-        }
-        ImGui::End();
+    if (ImGui::Button("Up")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::UP;
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Turbo A")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::ATURBO;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Turbo B")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::BTURBO;
+    }
+    if (ImGui::Button("Left")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::LEFT;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Right")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::RIGHT;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Select")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::SELECT;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Start")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::START;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("A")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::A;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("B")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::B;
+    }
+    if (ImGui::Button("Down")) {
+        open_popup = true;
+        btn = Emulator::ControllerButton::DOWN;
+    }
+    return open_popup;
+}
 
+bool ControllerWindow::ShowGamepadWindow(Emulator* emu) {
+    return ShowKeyboardWindow(emu);
+}
+
+void ControllerWindow::Show(Emulator* emu) {
+    const char* options[] = {"Keyboard", "Gamepad"};
+    bool open_popup = false;
+
+    // TODO: MAKE FIT THE SELECTION
+    if (ImGui::Begin("Controller", show)) {
+        ImGui::Combo("Controller Type", (int*)&controller_type, options, IM_ARRAYSIZE(options));
+        if (controller_type == ControllerType::KEYBOARD)
+            open_popup = ShowKeyboardWindow(emu);
+        else if (controller_type == ControllerType::GAMEPAD)
+            open_popup = ShowGamepadWindow(emu);
+    }
+    ImGui::End();
+
+    // FIXME:
     if (open_popup)
         ImGui::OpenPopup("Set Key");
     ShowKeySetWindow(emu);

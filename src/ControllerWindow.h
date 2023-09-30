@@ -22,11 +22,19 @@
 namespace NESCLE {
 class ControllerWindow : public NESCLEWindow {
 private:
+    enum class ControllerType {
+        KEYBOARD,
+        GAMEPAD
+    };
+
     bool* show;
     Emulator::ControllerButton btn;
     SDL_KeyCode last_keypress;
+    ControllerType controller_type = ControllerType::KEYBOARD;
 
     void ShowKeySetWindow(Emulator* emu);
+    bool ShowKeyboardWindow(Emulator* emu);
+    bool ShowGamepadWindow(Emulator* emu);
 
 public:
     ControllerWindow(bool* _show) : show(_show) {}
