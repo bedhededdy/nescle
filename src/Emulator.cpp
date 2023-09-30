@@ -32,12 +32,48 @@
 #include "Util.h"
 
 namespace NESCLE {
+
+std::vector<SDL_KeyCode> Emulator::GetKBButtonMappings(ControllerButton btn) {
+    switch (btn) {
+        case ControllerButton::A:
+            return settings.controller1.a;
+        case ControllerButton::B:
+            return settings.controller1.b;
+        case ControllerButton::SELECT:
+            return settings.controller1.select;
+        case ControllerButton::START:
+            return settings.controller1.start;
+        case ControllerButton::UP:
+            return settings.controller1.up;
+        case ControllerButton::DOWN:
+            return settings.controller1.down;
+        case ControllerButton::LEFT:
+            return settings.controller1.left;
+        case ControllerButton::RIGHT:
+            return settings.controller1.right;
+        case ControllerButton::ATURBO:
+            return settings.controller1.aturbo;
+        case ControllerButton::BTURBO:
+            return settings.controller1.bturbo;
+        default:
+            return std::vector<SDL_KeyCode>();
+    }
+}
+
 SDL_KeyCode Emulator::GetMostRecentKeyThisFrame() {
     return most_recent_key_this_frame;
 }
 
 void Emulator::SetMostRecentKeyThisFrame(SDL_KeyCode key) {
     most_recent_key_this_frame = key;
+}
+
+void Emulator::SetMostRecentButtonThisFrame(int button) {
+    most_recent_button_this_frame = button;
+}
+
+int Emulator::GetMostRecentButtonThisFrame() {
+    return most_recent_button_this_frame;
 }
 
 Emulator::Settings* Emulator::GetSettings() {

@@ -127,6 +127,7 @@ private:
     const uint8_t* keys;
     SDL_KeyCode most_recent_key_this_frame;
 
+    int most_recent_button_this_frame;
     SDL_Joystick* joystick = NULL;
 
     std::string exe_path;
@@ -140,6 +141,7 @@ private:
 
     void LogKeyMaps();
     void LogButtonMaps();
+
 
 public:
     Emulator();
@@ -165,6 +167,9 @@ public:
     bool AnyKeyInMapHeld(std::vector<SDL_KeyCode> key_map);
     bool KeyReleased(SDL_Keycode key);
 
+    void SetMostRecentButtonThisFrame(int button);
+    int GetMostRecentButtonThisFrame();
+
     bool JoystickButtonHeld(ControllerButton button);
     std::vector<int> GetMappingsForControllerButton(ControllerButton button);
 
@@ -189,6 +194,8 @@ public:
     std::vector<SDL_KeyCode> DefaultKBSelectMapping();
     std::vector<SDL_KeyCode> DefaultKBATurboMapping();
     std::vector<SDL_KeyCode> DefaultKBBTurboMapping();
+
+    std::vector<SDL_KeyCode> GetKBButtonMappings(ControllerButton button);
 
     bool MapButton(ControllerButton button, std::vector<SDL_KeyCode> button_mappings);
     bool MapButton(ControllerButton button, std::vector<int> button_mappings);

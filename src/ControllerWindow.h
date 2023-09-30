@@ -30,10 +30,12 @@ private:
 
     bool* show;
     Emulator::ControllerButton btn;
+    Emulator::ControllerButton gamepad_btn;
     std::vector<SDL_KeyCode> key_presses;
     std::vector<int> button_presses;
 
     SDL_KeyCode last_keypress;
+    int last_gamepad_button_press;
     ControllerType controller_type = ControllerType::KEYBOARD;
 
     void ShowKeySetWindow(Emulator* emu);

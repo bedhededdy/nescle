@@ -381,6 +381,7 @@ void EmulationWindow::Loop() {
         uint64_t t0 = SDL_GetTicks64();
 
         emu->SetMostRecentKeyThisFrame(SDLK_UNKNOWN);
+        emu->SetMostRecentButtonThisFrame(-1);
         SDL_Event event;
         if (emulator.LockNESState() < 0) {
             SDL_Log("Failed to lock mutex\n");
@@ -416,6 +417,9 @@ void EmulationWindow::Loop() {
                     //    emulator->run_emulation = true;
                     break;
                 }
+                break;
+            case SDL_JOYBUTTONDOWN:
+                emu->SetMostRecentButtonThisFrame(event.jbutton.button);
                 break;
             case SDL_JOYDEVICEADDED:
                 emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
