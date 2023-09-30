@@ -653,11 +653,9 @@ bool Emulator::JoystickButtonHeld(ControllerButton button) {
         return false;
     }
     std::vector<int> mappings_for_button = GetMappingsForControllerButton(button);
-    for (auto it = mappings_for_button.begin(); it != mappings_for_button.end(); it++) {
-        if (SDL_JoystickGetButton(joystick, *it)) {
+    for (auto it = mappings_for_button.begin(); it != mappings_for_button.end(); it++)
+        if (SDL_JoystickGetButton(joystick, *it))
             return true;
-        }
-    }
     return false;
 }
 

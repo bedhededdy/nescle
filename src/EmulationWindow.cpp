@@ -641,6 +641,15 @@ void EmulationWindow::Loop() {
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
                 if (emu->JoystickButtonHeld(Emulator::ControllerButton::B))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
+
+                if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) < -16384)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
+                else if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) > 16384)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
+                if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) < -16384)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
+                else if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) > 16384)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
             }
         }
 
