@@ -76,47 +76,80 @@ bool* Emulator::GetUsedSaveSlots() {
     return used_saveslots;
 }
 
-void Emulator::LogKeymaps() {
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        GetButtonName(ControllerButton::A),
-        SDL_GetKeyName(settings.controller1.a));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        GetButtonName(ControllerButton::B),
-        SDL_GetKeyName(settings.controller1.b));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        GetButtonName(ControllerButton::SELECT),
-        SDL_GetKeyName(settings.controller1.select));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::START),
-        SDL_GetKeyName(settings.controller1.start));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::UP),
-        SDL_GetKeyName(settings.controller1.up));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::DOWN),
-        SDL_GetKeyName(settings.controller1.down));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::LEFT),
-        SDL_GetKeyName(settings.controller1.left));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::RIGHT),
-        SDL_GetKeyName(settings.controller1.right));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::ATURBO),
-        SDL_GetKeyName(settings.controller1.aturbo));
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s",
-        Emulator::GetButtonName(Emulator::ControllerButton::BTURBO),
-        SDL_GetKeyName(settings.controller1.bturbo));
+bool Emulator::AnyKeyInMapHeld(std::vector<SDL_KeyCode> key_map) {
+    for (auto key : key_map) {
+        if (KeyHeld(key))
+            return true;
+    }
+    return false;
+}
+
+// TODO: IMPLEMENT
+void Emulator::LogButtonMaps() {
+
+}
+
+void Emulator::LogKeyMaps() {
+    for (auto key : settings.controller1.a) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::A),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.b) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::B),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.aturbo) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::ATURBO),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.bturbo) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::BTURBO),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.select) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::SELECT),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.start) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::START),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.up) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::UP),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.left) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::LEFT),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.right) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::RIGHT),
+            SDL_GetKeyName(key));
+    }
+    for (auto key : settings.controller1.down) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s",
+            GetButtonName(ControllerButton::DOWN),
+            SDL_GetKeyName(key));
+    }
 }
 
 bool Emulator::KeyPushed(SDL_Keycode key) {
@@ -239,7 +272,8 @@ Emulator::Emulator() {
     most_recent_key_this_frame = SDLK_UNKNOWN;
 
     // Log the keymaps in debug mode
-    LogKeymaps();
+    LogKeyMaps();
+    LogButtonMaps();
 
     // Set all saveslots as unused
     memset(used_saveslots, false, sizeof(used_saveslots));
@@ -371,6 +405,66 @@ bool Emulator::LoadSettings(const char* path) {
     return true;
 }
 
+std::vector<SDL_KeyCode> Emulator::DefaultKBAMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_k);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBBMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_j);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBSelectMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_BACKSPACE);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBStartMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_RETURN);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBLeftMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_a);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBRightMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_d);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBUpMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_w);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBDownMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_s);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBATurboMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_i);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBBTurboMapping() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_u);
+    return res;
+}
+
 void Emulator::SetDefaultSettings() {
     // NOTE: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
     // YOU WILL BREAK, SO YOU HAVE TO CHANGE ONLY THE NEXT SYNC TYPE
@@ -382,93 +476,93 @@ void Emulator::SetDefaultSettings() {
     settings.tri_vol = 1.0f;
     settings.noise_vol = 0.75f;
     settings.master_vol = 0.5f;
-    settings.controller1.a = SDLK_k;
-    settings.controller1.b = SDLK_j;
-    settings.controller1.select = SDLK_BACKSPACE;
-    settings.controller1.start = SDLK_RETURN;
-    settings.controller1.aturbo = SDLK_i;
-    settings.controller1.bturbo = SDLK_u;
-    settings.controller1.up = SDLK_w;
-    settings.controller1.left = SDLK_a;
-    settings.controller1.right = SDLK_d;
-    settings.controller1.down = SDLK_s;
+    settings.controller1.a = DefaultKBAMapping();
+    settings.controller1.b = DefaultKBBMapping();
+    settings.controller1.select = DefaultKBSelectMapping();
+    settings.controller1.start = DefaultKBStartMapping();
+    settings.controller1.aturbo = DefaultKBATurboMapping();
+    settings.controller1.bturbo = DefaultKBBTurboMapping();
+    settings.controller1.up = DefaultKBUpMapping();
+    settings.controller1.left = DefaultKBLeftMapping();
+    settings.controller1.right = DefaultKBRightMapping();
+    settings.controller1.down = DefaultKBDownMapping();
     settings.aspect_ratio = (float)PPU::RESOLUTION_Y/(float)PPU::RESOLUTION_X;
     settings.scale_factor = 3.0f;
     settings.underscan = false;
 
-    settings.gamepad1.up = DefaultUpMapping();
-    settings.gamepad1.down = DefaultDownMapping();
-    settings.gamepad1.left = DefaultLeftMapping();
-    settings.gamepad1.right = DefaultRightMapping();
-    settings.gamepad1.a = DefaultAMapping();
-    settings.gamepad1.b = DefaultBMapping();
-    settings.gamepad1.start = DefaultStartMapping();
-    settings.gamepad1.select = DefaultSelectMapping();
-    settings.gamepad1.aturbo = DefaultATurboMapping();
-    settings.gamepad1.bturbo = DefaultBTurboMapping();
+    settings.gamepad1.up = DefaultGamepadUpMapping();
+    settings.gamepad1.down = DefaultGamepadDownMapping();
+    settings.gamepad1.left = DefaultGamepadLeftMapping();
+    settings.gamepad1.right = DefaultGamepadRightMapping();
+    settings.gamepad1.a = DefaultGamepadAMapping();
+    settings.gamepad1.b = DefaultGamepadBMapping();
+    settings.gamepad1.start = DefaultGamepadStartMapping();
+    settings.gamepad1.select = DefaultGamepadSelectMapping();
+    settings.gamepad1.aturbo = DefaultGamepadATurboMapping();
+    settings.gamepad1.bturbo = DefaultGamepadBTurboMapping();
 
     // settings.sync = EMULATOR_SYNC_AUDIO;
     // settings.vsync = false;
 }
 
-std::vector<int> Emulator::DefaultUpMapping() {
+std::vector<int> Emulator::DefaultGamepadUpMapping() {
     std::vector<int> res;
     res.push_back(11);
     return res;
 }
 
-std::vector<int> Emulator::DefaultDownMapping() {
+std::vector<int> Emulator::DefaultGamepadDownMapping() {
     std::vector<int> res;
     res.push_back(12);
     return res;
 }
 
-std::vector<int> Emulator::DefaultLeftMapping() {
+std::vector<int> Emulator::DefaultGamepadLeftMapping() {
     std::vector<int> res;
     res.push_back(13);
     return res;
 }
 
-std::vector<int> Emulator::DefaultRightMapping() {
+std::vector<int> Emulator::DefaultGamepadRightMapping() {
     std::vector<int> res;
     res.push_back(14);
     return res;
 }
 
-std::vector<int> Emulator::DefaultAMapping() {
+std::vector<int> Emulator::DefaultGamepadAMapping() {
     std::vector<int> res;
     res.push_back(0);
     res.push_back(1);
     return res;
 }
 
-std::vector<int> Emulator::DefaultBMapping() {
+std::vector<int> Emulator::DefaultGamepadBMapping() {
     std::vector<int> res;
     res.push_back(2);
     res.push_back(3);
     return res;
 }
 
-std::vector<int> Emulator::DefaultStartMapping() {
+std::vector<int> Emulator::DefaultGamepadStartMapping() {
     std::vector<int> res;
     res.push_back(6);
     return res;
 }
 
-std::vector<int> Emulator::DefaultSelectMapping() {
+std::vector<int> Emulator::DefaultGamepadSelectMapping() {
     std::vector<int> res;
     res.push_back(15);
     res.push_back(4);
     return res;
 }
 
-std::vector<int> Emulator::DefaultATurboMapping() {
+std::vector<int> Emulator::DefaultGamepadATurboMapping() {
     std::vector<int> res;
     res.push_back(9);
     return res;
 }
 
-std::vector<int> Emulator::DefaultBTurboMapping() {
+std::vector<int> Emulator::DefaultGamepadBTurboMapping() {
     std::vector<int> res;
     res.push_back(10);
     return res;
@@ -527,9 +621,65 @@ float Emulator::EmulateSample() {
     return 0.25f * (p1 + p2 + tri + noise) * settings.master_vol;
 }
 
+bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings) {
+    if (button_mappings.size() == 0) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
+        return false;
+    }
+
+    // FIXME: CHECK FOR BINDING CONFLICTS
+
+    Gamepad* controller = &settings.gamepad1;
+
+    switch (btn) {
+    case Emulator::ControllerButton::A:
+        controller->a = button_mappings;
+        break;
+    case Emulator::ControllerButton::B:
+        controller->b = button_mappings;
+        break;
+    case Emulator::ControllerButton::SELECT:
+        controller->select = button_mappings;
+        break;
+    case Emulator::ControllerButton::START:
+        controller->start = button_mappings;
+        break;
+    case Emulator::ControllerButton::UP:
+        controller->up = button_mappings;
+        break;
+    case Emulator::ControllerButton::DOWN:
+        controller->down = button_mappings;
+        break;
+    case Emulator::ControllerButton::LEFT:
+        controller->left = button_mappings;
+        break;
+    case Emulator::ControllerButton::RIGHT:
+        controller->right = button_mappings;
+        break;
+    case Emulator::ControllerButton::ATURBO:
+        controller->aturbo = button_mappings;
+        break;
+    case Emulator::ControllerButton::BTURBO:
+        controller->bturbo = button_mappings;
+        break;
+
+    default:
+        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "Invalid button\n");
+        return false;
+        break;
+    }
+
+    for (auto key = button_mappings.begin(); key != button_mappings.end(); key++) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s\n",
+            Emulator::GetButtonName(btn), SDL_GetKeyName(*key));
+    }
+    return true;
+}
+
 // TODO: IMPLEMENT ME
-bool Emulator::MapButton(ControllerButton btn, SDL_KeyCode key) {
-    if (key == SDLK_UNKNOWN) {
+bool Emulator::MapButton(ControllerButton btn, std::vector<SDL_KeyCode> key_mappings) {
+    if (key_mappings.size() == 0) {
         SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
         return false;
     }
@@ -540,34 +690,34 @@ bool Emulator::MapButton(ControllerButton btn, SDL_KeyCode key) {
 
     switch (btn) {
     case Emulator::ControllerButton::A:
-        controller->a = key;
+        controller->a = key_mappings;
         break;
     case Emulator::ControllerButton::B:
-        controller->b = key;
+        controller->b = key_mappings;
         break;
     case Emulator::ControllerButton::SELECT:
-        controller->select = key;
+        controller->select = key_mappings;
         break;
     case Emulator::ControllerButton::START:
-        controller->start = key;
+        controller->start = key_mappings;
         break;
     case Emulator::ControllerButton::UP:
-        controller->up = key;
+        controller->up = key_mappings;
         break;
     case Emulator::ControllerButton::DOWN:
-        controller->down = key;
+        controller->down = key_mappings;
         break;
     case Emulator::ControllerButton::LEFT:
-        controller->left = key;
+        controller->left = key_mappings;
         break;
     case Emulator::ControllerButton::RIGHT:
-        controller->right = key;
+        controller->right = key_mappings;
         break;
     case Emulator::ControllerButton::ATURBO:
-        controller->aturbo = key;
+        controller->aturbo = key_mappings;
         break;
     case Emulator::ControllerButton::BTURBO:
-        controller->bturbo = key;
+        controller->bturbo = key_mappings;
         break;
 
     default:
@@ -576,9 +726,11 @@ bool Emulator::MapButton(ControllerButton btn, SDL_KeyCode key) {
         break;
     }
 
-    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
-        "Button %s mapped to key %s\n",
-        Emulator::GetButtonName(btn), SDL_GetKeyName(key));
+    for (auto key = key_mappings.begin(); key != key_mappings.end(); key++) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+            "Button %s mapped to key %s\n",
+            Emulator::GetButtonName(btn), SDL_GetKeyName(*key));
+    }
     return true;
 }
 

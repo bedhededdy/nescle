@@ -596,8 +596,8 @@ void EmulationWindow::Loop() {
             } else {
                 const Emulator::Controller* btn_map = &emu->GetSettings()->controller1;
 
-                emu->SetATurbo(emu->KeyHeld(btn_map->aturbo));
-                emu->SetBTurbo(emu->KeyHeld(btn_map->bturbo));
+                emu->SetATurbo(emu->AnyKeyInMapHeld(btn_map->aturbo));
+                emu->SetBTurbo(emu->AnyKeyInMapHeld(btn_map->bturbo));
                 if (emu->JoystickButtonHeld(Emulator::ControllerButton::ATURBO))
                     emu->SetATurbo(true);
                 if (emu->JoystickButtonHeld(Emulator::ControllerButton::BTURBO))
@@ -608,21 +608,22 @@ void EmulationWindow::Loop() {
                 if (emu->GetBTurbo())
                     bus->SetController1(bus->GetController1()
                         | (prev_controller1 & (int)Bus::NESButtons::B));
-                if (emu->KeyHeld(btn_map->up))
+
+                if (emu->AnyKeyInMapHeld(btn_map->up))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
-                if (emu->KeyHeld(btn_map->left))
+                if (emu->AnyKeyInMapHeld(btn_map->left))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
-                if (emu->KeyHeld(btn_map->down))
+                if (emu->AnyKeyInMapHeld(btn_map->down))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
-                if (emu->KeyHeld(btn_map->right))
+                if (emu->AnyKeyInMapHeld(btn_map->right))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
-                if (emu->KeyHeld(btn_map->b))
+                if (emu->AnyKeyInMapHeld(btn_map->b))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
-                if (emu->KeyHeld(btn_map->a))
+                if (emu->AnyKeyInMapHeld(btn_map->a))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
-                if (emu->KeyHeld(btn_map->select))
+                if (emu->AnyKeyInMapHeld(btn_map->select))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
-                if (emu->KeyHeld(btn_map->start))
+                if (emu->AnyKeyInMapHeld(btn_map->start))
                     bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
 
                 if (emu->JoystickButtonHeld(Emulator::ControllerButton::UP))

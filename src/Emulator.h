@@ -62,16 +62,16 @@ public:
     // FIXME: REORDER THIS PROPERLY (BUT THIS BREAKS SETTINGS.JSON)
     // TODO: SHOULD ALLOW MULTIPLE MAPPINGS FOR A SINGLE BUTTON
     struct Controller {
-        SDL_KeyCode up;
-        SDL_KeyCode down;
-        SDL_KeyCode left;
-        SDL_KeyCode right;
-        SDL_KeyCode a;
-        SDL_KeyCode b;
-        SDL_KeyCode start;
-        SDL_KeyCode select;
-        SDL_KeyCode aturbo;
-        SDL_KeyCode bturbo;
+        std::vector<SDL_KeyCode> up;
+        std::vector<SDL_KeyCode> down;
+        std::vector<SDL_KeyCode> left;
+        std::vector<SDL_KeyCode> right;
+        std::vector<SDL_KeyCode> a;
+        std::vector<SDL_KeyCode> b;
+        std::vector<SDL_KeyCode> start;
+        std::vector<SDL_KeyCode> select;
+        std::vector<SDL_KeyCode> aturbo;
+        std::vector<SDL_KeyCode> bturbo;
     };
 
     struct Gamepad {
@@ -138,7 +138,8 @@ private:
     bool quit;
     bool run_emulation;
 
-    void LogKeymaps();
+    void LogKeyMaps();
+    void LogButtonMaps();
 
 public:
     Emulator();
@@ -161,23 +162,36 @@ public:
 
     bool KeyPushed(SDL_Keycode key);
     bool KeyHeld(SDL_Keycode key);
+    bool AnyKeyInMapHeld(std::vector<SDL_KeyCode> key_map);
     bool KeyReleased(SDL_Keycode key);
 
     bool JoystickButtonHeld(ControllerButton button);
     std::vector<int> GetMappingsForControllerButton(ControllerButton button);
 
-    std::vector<int> DefaultUpMapping();
-    std::vector<int> DefaultDownMapping();
-    std::vector<int> DefaultLeftMapping();
-    std::vector<int> DefaultRightMapping();
-    std::vector<int> DefaultAMapping();
-    std::vector<int> DefaultBMapping();
-    std::vector<int> DefaultStartMapping();
-    std::vector<int> DefaultSelectMapping();
-    std::vector<int> DefaultATurboMapping();
-    std::vector<int> DefaultBTurboMapping();
+    std::vector<int> DefaultGamepadUpMapping();
+    std::vector<int> DefaultGamepadDownMapping();
+    std::vector<int> DefaultGamepadLeftMapping();
+    std::vector<int> DefaultGamepadRightMapping();
+    std::vector<int> DefaultGamepadAMapping();
+    std::vector<int> DefaultGamepadBMapping();
+    std::vector<int> DefaultGamepadStartMapping();
+    std::vector<int> DefaultGamepadSelectMapping();
+    std::vector<int> DefaultGamepadATurboMapping();
+    std::vector<int> DefaultGamepadBTurboMapping();
 
-    bool MapButton(ControllerButton button, SDL_KeyCode key);
+    std::vector<SDL_KeyCode> DefaultKBUpMapping();
+    std::vector<SDL_KeyCode> DefaultKBDownMapping();
+    std::vector<SDL_KeyCode> DefaultKBLeftMapping();
+    std::vector<SDL_KeyCode> DefaultKBRightMapping();
+    std::vector<SDL_KeyCode> DefaultKBAMapping();
+    std::vector<SDL_KeyCode> DefaultKBBMapping();
+    std::vector<SDL_KeyCode> DefaultKBStartMapping();
+    std::vector<SDL_KeyCode> DefaultKBSelectMapping();
+    std::vector<SDL_KeyCode> DefaultKBATurboMapping();
+    std::vector<SDL_KeyCode> DefaultKBBTurboMapping();
+
+    bool MapButton(ControllerButton button, std::vector<SDL_KeyCode> button_mappings);
+    bool MapButton(ControllerButton button, std::vector<int> button_mappings);
 
     bool ROMInserted();
 

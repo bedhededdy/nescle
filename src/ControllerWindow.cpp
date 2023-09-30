@@ -41,7 +41,9 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
             if (emu->KeyPushed(SDLK_ESCAPE)) {
                 // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
                 // CONTROLLER BUTTON
-                emu->MapButton(btn, last_keypress);
+                std::vector<SDL_KeyCode> key_vec;
+                key_vec.push_back(last_keypress);
+                emu->MapButton(btn, key_vec);
                 ImGui::CloseCurrentPopup();
             }
         }
