@@ -23,6 +23,8 @@ namespace NESCLE {
 // MAYBE SHOULD HAVE A BTN TO SAVE ON THE POPUP
 void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
     // FIXME: HAVE TO HAVE A CHECK FOR INVALID BTN
+    // FIXME: DON'T ALLOW DUPLICATES
+    // FIXME: SHOW EXISTING MAPPINGS IF NO NEW MAPPINGS
     if (ImGui::BeginPopup("Set Key")) {
         // FIXME: THERE WILL BE PROBLEMS IF USER TRIES TO MAP ESC TO SOMETHING
         if (ImGui::IsWindowFocused()) {
@@ -34,6 +36,19 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
             ImGui::Text("Press a key to map button");
         else
             ImGui::Text("Key pressed: %s", SDL_GetKeyName(last_keypress));
+        ImGui::SameLine();
+        if (ImGui::Button("Add")) {
+            key_presses.push_back(last_keypress);
+        }
+        ImGui::Text("New Mappings");
+        for (auto key : key_presses) {
+            if (ImGui::Button(SDL_GetKeyName(key))) {
+                key_presses.erase(std::find(key_presses.begin(), key_presses.end(), key));
+                break;
+            }
+            ImGui::SameLine();
+        }
+        ImGui::NewLine();
         ImGui::Text("Press ESC to save, DEL to clear");
         if (ImGui::IsWindowFocused()) {
             if (emu->KeyPushed(SDLK_DELETE))
@@ -41,14 +56,13 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
             if (emu->KeyPushed(SDLK_ESCAPE)) {
                 // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
                 // CONTROLLER BUTTON
-                std::vector<SDL_KeyCode> key_vec;
-                key_vec.push_back(last_keypress);
-                emu->MapButton(btn, key_vec);
+                emu->MapButton(btn, key_presses);
                 ImGui::CloseCurrentPopup();
             }
         }
         ImGui::EndPopup();
     } else {
+        key_presses.clear();
         last_keypress = SDLK_UNKNOWN;
         btn = Emulator::ControllerButton::INVALID;
     }
@@ -79,7 +93,7 @@ void ControllerWindow::ShowButtonSetWindow(Emulator* emu) {
     //     }
     //     ImGui::EndPopup();
     // } else {
-    //     last_keypress = SDLK_UNKNOWN;
+    //     button_presses.clear();
     //     btn = Emulator::ControllerButton::INVALID;
     // }
 }

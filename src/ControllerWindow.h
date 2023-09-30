@@ -30,6 +30,9 @@ private:
 
     bool* show;
     Emulator::ControllerButton btn;
+    std::vector<SDL_KeyCode> key_presses;
+    std::vector<int> button_presses;
+
     SDL_KeyCode last_keypress;
     ControllerType controller_type = ControllerType::KEYBOARD;
 
