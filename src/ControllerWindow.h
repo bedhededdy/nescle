@@ -33,6 +33,7 @@ private:
     ControllerType controller_type = ControllerType::KEYBOARD;
 
     void ShowKeySetWindow(Emulator* emu);
+    void ShowButtonSetWindow(Emulator* emu);
     bool ShowKeyboardWindow(Emulator* emu);
     bool ShowGamepadWindow(Emulator* emu);
 

@@ -52,6 +52,36 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
     }
 }
 
+void ControllerWindow::ShowButtonSetWindow(Emulator* emu) {
+    // if (ImGui::BeginPopup("Set Button")) {
+    //     // FIXME: THERE WILL BE PROBLEMS IF USER TRIES TO MAP ESC TO SOMETHING
+    //     if (ImGui::IsWindowFocused()) {
+    //         if (emu->GetMostRecentKeyThisFrame() != SDLK_ESCAPE &&
+    //             emu->GetMostRecentKeyThisFrame() != SDLK_UNKNOWN)
+    //             last_keypress = emu->GetMostRecentKeyThisFrame();
+    //     }
+    //     if (last_keypress == SDLK_UNKNOWN)
+    //         ImGui::Text("Press a key to map button");
+    //     else
+    //         ImGui::Text("Key pressed: %s", SDL_GetKeyName(last_keypress));
+    //     ImGui::Text("Press ESC to save, DEL to clear");
+    //     if (ImGui::IsWindowFocused()) {
+    //         if (emu->KeyPushed(SDLK_DELETE))
+    //             last_keypress = SDLK_UNKNOWN;
+    //         if (emu->KeyPushed(SDLK_ESCAPE)) {
+    //             // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
+    //             // CONTROLLER BUTTON
+    //             emu->MapButton(btn, last_keypress);
+    //             ImGui::CloseCurrentPopup();
+    //         }
+    //     }
+    //     ImGui::EndPopup();
+    // } else {
+    //     last_keypress = SDLK_UNKNOWN;
+    //     btn = Emulator::ControllerButton::INVALID;
+    // }
+}
+
 bool ControllerWindow::ShowKeyboardWindow(Emulator* emu) {
     bool open_popup = false;
     if (ImGui::Button("Up")) {
@@ -123,8 +153,11 @@ void ControllerWindow::Show(Emulator* emu) {
     ImGui::End();
 
     // FIXME:
-    if (open_popup)
+    if (open_popup && controller_type == ControllerType::KEYBOARD)
         ImGui::OpenPopup("Set Key");
+    else if (open_popup && controller_type == ControllerType::GAMEPAD)
+        ImGui::OpenPopup("Set Button");
     ShowKeySetWindow(emu);
+    ShowButtonSetWindow(emu);
 }
 }

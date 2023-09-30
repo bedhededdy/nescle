@@ -60,6 +60,7 @@ public:
     };
 
     // FIXME: REORDER THIS PROPERLY (BUT THIS BREAKS SETTINGS.JSON)
+    // TODO: SHOULD ALLOW MULTIPLE MAPPINGS FOR A SINGLE BUTTON
     struct Controller {
         SDL_KeyCode up;
         SDL_KeyCode down;
@@ -71,6 +72,19 @@ public:
         SDL_KeyCode select;
         SDL_KeyCode aturbo;
         SDL_KeyCode bturbo;
+    };
+
+    struct Gamepad {
+        std::vector<int> up;
+        std::vector<int> down;
+        std::vector<int> left;
+        std::vector<int> right;
+        std::vector<int> a;
+        std::vector<int> b;
+        std::vector<int> start;
+        std::vector<int> select;
+        std::vector<int> aturbo;
+        std::vector<int> bturbo;
     };
 
     struct Settings {
@@ -88,6 +102,7 @@ public:
 
         // controls
         Controller controller1;
+        Gamepad gamepad1;
 
         // visuals
         float aspect_ratio;
@@ -151,6 +166,17 @@ public:
     bool JoystickButtonHeld(ControllerButton button);
     std::vector<int> GetMappingsForControllerButton(ControllerButton button);
 
+    std::vector<int> DefaultUpMapping();
+    std::vector<int> DefaultDownMapping();
+    std::vector<int> DefaultLeftMapping();
+    std::vector<int> DefaultRightMapping();
+    std::vector<int> DefaultAMapping();
+    std::vector<int> DefaultBMapping();
+    std::vector<int> DefaultStartMapping();
+    std::vector<int> DefaultSelectMapping();
+    std::vector<int> DefaultATurboMapping();
+    std::vector<int> DefaultBTurboMapping();
+
     bool MapButton(ControllerButton button, SDL_KeyCode key);
 
     bool ROMInserted();
@@ -192,8 +218,10 @@ public:
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Controller, up, down, left, right, a, b,
         start, select, aturbo, bturbo)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Gamepad, up, down, left, right, a, b, start,
+        select, aturbo, bturbo)
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol,
-        p2_vol, tri_vol, noise_vol, master_vol, controller1, aspect_ratio,
-        scale_factor, underscan)
+        p2_vol, tri_vol, noise_vol, master_vol, controller1, gamepad1,
+        aspect_ratio, scale_factor, underscan)
 };
 }

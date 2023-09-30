@@ -253,8 +253,8 @@ Emulator::~Emulator() {
     std::string settings_path_str = user_data_path + "settings.json";
     SaveSettings(settings_path_str.c_str());
 
-    // FIXME: MAY NOT HANDLE NULL
-    SDL_JoystickClose(joystick);
+    if (joystick != NULL)
+        SDL_JoystickClose(joystick);
     SDL_DestroyMutex(nes_state_lock);
     SDL_CloseAudioDevice(audio_device);
     delete prev_keys;
@@ -396,8 +396,82 @@ void Emulator::SetDefaultSettings() {
     settings.scale_factor = 3.0f;
     settings.underscan = false;
 
+    settings.gamepad1.up = DefaultUpMapping();
+    settings.gamepad1.down = DefaultDownMapping();
+    settings.gamepad1.left = DefaultLeftMapping();
+    settings.gamepad1.right = DefaultRightMapping();
+    settings.gamepad1.a = DefaultAMapping();
+    settings.gamepad1.b = DefaultBMapping();
+    settings.gamepad1.start = DefaultStartMapping();
+    settings.gamepad1.select = DefaultSelectMapping();
+    settings.gamepad1.aturbo = DefaultATurboMapping();
+    settings.gamepad1.bturbo = DefaultBTurboMapping();
+
     // settings.sync = EMULATOR_SYNC_AUDIO;
     // settings.vsync = false;
+}
+
+std::vector<int> Emulator::DefaultUpMapping() {
+    std::vector<int> res;
+    res.push_back(11);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultDownMapping() {
+    std::vector<int> res;
+    res.push_back(12);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultLeftMapping() {
+    std::vector<int> res;
+    res.push_back(13);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultRightMapping() {
+    std::vector<int> res;
+    res.push_back(14);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultAMapping() {
+    std::vector<int> res;
+    res.push_back(0);
+    res.push_back(1);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultBMapping() {
+    std::vector<int> res;
+    res.push_back(2);
+    res.push_back(3);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultStartMapping() {
+    std::vector<int> res;
+    res.push_back(6);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultSelectMapping() {
+    std::vector<int> res;
+    res.push_back(15);
+    res.push_back(4);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultATurboMapping() {
+    std::vector<int> res;
+    res.push_back(9);
+    return res;
+}
+
+std::vector<int> Emulator::DefaultBTurboMapping() {
+    std::vector<int> res;
+    res.push_back(10);
+    return res;
 }
 
 void Emulator::SetATurbo(bool turbo) {
@@ -609,37 +683,34 @@ std::vector<int> Emulator::GetMappingsForControllerButton(ControllerButton butto
     std::vector<int> res;
     switch (button) {
         case ControllerButton::A:
-            res.push_back(0);
-            res.push_back(1);
+            res = settings.gamepad1.a;
             break;
         case ControllerButton::B:
-            res.push_back(2);
-            res.push_back(3);
+            res = settings.gamepad1.b;
             break;
         case ControllerButton::START:
-            res.push_back(6);
+            res = settings.gamepad1.start;
             break;
         case ControllerButton::SELECT:
-            res.push_back(15);
-            res.push_back(4);
+            res = settings.gamepad1.select;
             break;
         case ControllerButton::LEFT:
-            res.push_back(13);
+            res = settings.gamepad1.left;
             break;
         case ControllerButton::RIGHT:
-            res.push_back(14);
+            res = settings.gamepad1.right;
             break;
         case ControllerButton::UP:
-            res.push_back(11);
+            res = settings.gamepad1.up;
             break;
         case ControllerButton::DOWN:
-            res.push_back(12);
+            res = settings.gamepad1.down;
             break;
         case ControllerButton::ATURBO:
-            res.push_back(9);
+            res = settings.gamepad1.aturbo;
             break;
         case ControllerButton::BTURBO:
-            res.push_back(10);
+            res = settings.gamepad1.bturbo;
             break;
         default:
             res.push_back(-1);
