@@ -636,10 +636,10 @@ std::vector<int> Emulator::GetMappingsForControllerButton(ControllerButton butto
             res.push_back(12);
             break;
         case ControllerButton::ATURBO:
-            res.push_back(10);
+            res.push_back(9);
             break;
         case ControllerButton::BTURBO:
-            res.push_back(9);
+            res.push_back(10);
             break;
         default:
             res.push_back(-1);
