@@ -417,7 +417,16 @@ void EmulationWindow::Loop() {
                     break;
                 }
                 break;
-
+            case SDL_JOYDEVICEADDED:
+                emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
+                SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                    "Joystick %d added\n", event.jdevice.which);
+                break;
+            case SDL_JOYDEVICEREMOVED:
+                SDL_JoystickClose(emulator.GetJoystick());
+                SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                    "Joystick %d REMOVED\n", event.jdevice.which);
+                emulator.SetJoystick(nullptr);
             default:
                 break;
             }
@@ -589,6 +598,10 @@ void EmulationWindow::Loop() {
 
                 emu->SetATurbo(emu->KeyHeld(btn_map->aturbo));
                 emu->SetBTurbo(emu->KeyHeld(btn_map->bturbo));
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::ATURBO))
+                    emu->SetATurbo(true);
+                if (emu->JoystickButtonHeld(Emulator::ControllerButton::BTURBO))
+                    emu->SetBTurbo(true);
                 if (emu->GetATurbo())
                     bus->SetController1(bus->GetController1()
                         | (prev_controller1 & (int)Bus::NESButtons::A));

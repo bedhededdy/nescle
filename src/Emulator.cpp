@@ -224,10 +224,10 @@ Emulator::Emulator() {
     quit = false;
     run_emulation = false;
 
-    joystick = SDL_JoystickOpen(0);
-    if (joystick) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT, "Joystick connected");
-    }
+    // joystick = SDL_JoystickOpen(0);
+    // if (joystick) {
+    //     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT, "Joystick connected");
+    // }
 
     const uint8_t* state = SDL_GetKeyboardState(&nkeys);
     const size_t sz = nkeys * sizeof(uint8_t);
@@ -604,49 +604,68 @@ void Emulator::RefreshPrevKeys() {
     memcpy(prev_keys, keys, sizeof(uint8_t) * nkeys);
 }
 
-int Emulator::ControllerButtonToJoystickButton(ControllerButton button) {
-    /*
-     * Button 0 = Cross
-     * Button 1 = Circle
-     * Button 2 = Square
-     * Button 3 = Triangle
-     * Button 9 = Start
-     * Button 11 = Up
-     * Button 12 = Down
-     * Button 13 = Left
-     * Button 14 = Right
-     * Button 15 = Select
-    */
+std::vector<int> Emulator::GetMappingsForControllerButton(ControllerButton button) {
+    // NOTE: SDL JOYSTICK DOES NOT DETECT R2 AND L2
+    std::vector<int> res;
     switch (button) {
         case ControllerButton::A:
-            return 0;
+            res.push_back(0);
+            res.push_back(1);
+            break;
         case ControllerButton::B:
-            return 2;
+            res.push_back(2);
+            res.push_back(3);
+            break;
         case ControllerButton::START:
-            return 6;
+            res.push_back(6);
+            break;
         case ControllerButton::SELECT:
-            return 15;
+            res.push_back(15);
+            res.push_back(4);
+            break;
         case ControllerButton::LEFT:
-            return 13;
+            res.push_back(13);
+            break;
         case ControllerButton::RIGHT:
-            return 14;
+            res.push_back(14);
+            break;
         case ControllerButton::UP:
-            return 11;
+            res.push_back(11);
+            break;
         case ControllerButton::DOWN:
-            return 12;
+            res.push_back(12);
+            break;
+        case ControllerButton::ATURBO:
+            res.push_back(10);
+            break;
+        case ControllerButton::BTURBO:
+            res.push_back(9);
+            break;
         default:
-            return -1;
+            res.push_back(-1);
+            break;
     }
+    return res;
 }
 
 bool Emulator::JoystickButtonHeld(ControllerButton button) {
-    if (joystick == NULL)
+    if (joystick == NULL) {
         return false;
-    bool res = SDL_JoystickGetButton(joystick, ControllerButtonToJoystickButton(button));
-    // if (res) {
-        // SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            // "JoystickButtonHeld: Button %d held", ControllerButtonToJoystickButton(button));
-    // }
-    return res;
+    }
+    std::vector<int> mappings_for_button = GetMappingsForControllerButton(button);
+    for (auto it = mappings_for_button.begin(); it != mappings_for_button.end(); it++) {
+        if (SDL_JoystickGetButton(joystick, *it)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Emulator::SetJoystick(SDL_Joystick* _joystick) {
+    joystick = _joystick;
+}
+
+SDL_Joystick* Emulator::GetJoystick() {
+    return joystick;
 }
 }

@@ -149,7 +149,7 @@ public:
     bool KeyReleased(SDL_Keycode key);
 
     bool JoystickButtonHeld(ControllerButton button);
-    int ControllerButtonToJoystickButton(ControllerButton btn);
+    std::vector<int> GetMappingsForControllerButton(ControllerButton button);
 
     bool MapButton(ControllerButton button, SDL_KeyCode key);
 
@@ -184,6 +184,9 @@ public:
 
     void RefreshKeyboardState();
     void RefreshPrevKeys();
+
+    void SetJoystick(SDL_Joystick* joystick);
+    SDL_Joystick* GetJoystick();
 
     SDL_AudioDeviceID GetAudioDevice();
 
