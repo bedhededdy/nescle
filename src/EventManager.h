@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "NESCLETypes.h"
+
 namespace NESCLE {
 // TODO: MAYBE I SHOULD HAVE MY OWN EVENT TYPE SO THAT I CAN
 //       HANDLE MY OWN EVENTS
@@ -46,20 +48,28 @@ private:
     // event subscriptions though, so we could potentially actually optimize
     // by using the ordered ones as they use a tree structure in exchange
     // for O(lg n) lookup time instead of O(1) lookup time
-    std::unordered_map<SDL_EventType, std::vector<Subscriber>> events_to_subscribers;
-    std::unordered_map<std::string, std::unordered_set<SDL_EventType>> key_event_index;
+    static std::unordered_map<SDL_EventType, std::vector<Subscriber>> events_to_subscribers;
+    static std::unordered_map<std::string, std::unordered_set<SDL_EventType>> key_event_index;
 
-    std::queue<SDL_Event> event_queue;
+    // Alt approach
+    // event key index
+    // key event index
+    // key subscriber index
+    // then a subscriber would just be a map of events to callbacks and
+    // theoretically it would no longer even need to hold its own key
+    // as it would be maintainted by the key subscriber index
+
+    static std::queue<SDL_Event> event_queue;
+
+public:
+    static void Init();
+    static bool Subscribe(SDL_EventType event_type, std::string key, std::function<int(SDL_Event&)> callback);
+    static bool Unsubscribe(SDL_EventType event_type, std::string key);
+    static void ProcessEvents(Emulator& emu);
+    static void Quit();
 
     // We need the event to create a copy here
     // TODO: MAKE SURE THIS HOLDS NO POINTERS OR WE ARE FUCKED
-    void Publish(SDL_Event event);
-
-public:
-    void Init();
-    bool Subscribe(SDL_EventType event_type, std::string key, std::function<int(SDL_Event&)> callback);
-    bool Unsubscribe(SDL_EventType event_type, std::string key);
-    void ProcessEvents();
-    void Quit();
+    static void Publish(SDL_Event event);
 };
 }

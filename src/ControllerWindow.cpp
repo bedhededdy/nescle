@@ -57,14 +57,15 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
                 // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
                 // CONTROLLER BUTTON
                 emu->MapButton(btn, key_presses);
+
+                key_presses.clear();
+                last_keypress = SDLK_UNKNOWN;
+                btn = Emulator::ControllerButton::INVALID;
+
                 ImGui::CloseCurrentPopup();
             }
         }
         ImGui::EndPopup();
-    } else {
-        key_presses.clear();
-        last_keypress = SDLK_UNKNOWN;
-        btn = Emulator::ControllerButton::INVALID;
     }
 }
 
@@ -97,15 +98,16 @@ void ControllerWindow::ShowButtonSetWindow(Emulator* emu) {
             if (ImGui::IsWindowFocused()) {
                 if (emu->KeyPushed(SDLK_ESCAPE)) {
                     emu->MapButton(gamepad_btn, button_presses);
+
+                    button_presses.clear();
+                    last_gamepad_button_press = -1;
+                    gamepad_btn = Emulator::ControllerButton::INVALID;
+
                     ImGui::CloseCurrentPopup();
                 }
             }
         }
         ImGui::EndPopup();
-    } else {
-        button_presses.clear();
-        last_gamepad_button_press = -1;
-        gamepad_btn = Emulator::ControllerButton::INVALID;
     }
 }
 

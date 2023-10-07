@@ -29,6 +29,7 @@ class Mapper066;
 // Windows
 class NESCLEWindow;
 class WindowManager;
+class EventManager;
 
 // Other GUI
 class NESCLENotification;

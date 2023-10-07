@@ -70,7 +70,6 @@ private:
     void RenderMainGUI();
     void SetupMainFrame();
 
-    void ProcessEvents(SDL_Event& event);
     void ProcessInputs(bool emu_win_active, bool imgui_inactive, uint8_t prev_controller1);
 
 public:

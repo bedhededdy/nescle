@@ -22,7 +22,7 @@
 ### Backend
 #### WindowManager
 * Static class
-* This will be the main loop which polls the SDL events
+* This will be the main loop
 * It will spawn the emulation window when created and call the show function for all windows
 * Will init everything
 * Will have the render loop that is called by main

@@ -29,13 +29,13 @@ private:
     };
 
     bool* show;
-    Emulator::ControllerButton btn;
-    Emulator::ControllerButton gamepad_btn;
+    Emulator::ControllerButton btn = Emulator::ControllerButton::INVALID;
+    Emulator::ControllerButton gamepad_btn = Emulator::ControllerButton::INVALID;
     std::vector<SDL_KeyCode> key_presses;
     std::vector<int> button_presses;
 
-    SDL_KeyCode last_keypress;
-    int last_gamepad_button_press;
+    SDL_KeyCode last_keypress = SDLK_UNKNOWN;
+    int last_gamepad_button_press = -1;
     ControllerType controller_type = ControllerType::KEYBOARD;
 
     void ShowKeySetWindow(Emulator* emu);

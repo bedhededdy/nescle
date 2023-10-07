@@ -46,6 +46,7 @@
 #include "ControllerWindow.h"
 #include "DisassemblerWindow.h"
 #include "Emulator.h"
+#include "EventManager.h"
 #include "MixerWindow.h"
 #include "NESCLENotification.h"
 #include "PatternWindow.h"
@@ -300,6 +301,8 @@ EmulationWindow::EmulationWindow() {
     RetroText::Init();
     NESCLENotification::Init();
 
+    EventManager::Init();
+
     // TODO: CHANGE SDL LOGGING FUNCTION TO A CUSTOM FUNCTION
     Bus* bus = emulator.GetNES();
 
@@ -371,54 +374,48 @@ EmulationWindow::EmulationWindow() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     SetupMainFrame();
-}
 
-void EmulationWindow::ProcessEvents(SDL_Event& event) {
-    Emulator* emu = &emulator;
-    switch (event.type) {
-    case SDL_QUIT:
-        emu->SetQuit(true);
-        break;
-    case SDL_KEYDOWN:
-        emu->SetMostRecentKeyThisFrame(
+    // Subscribe to all the events we are interested in
+    EventManager::Subscribe(SDL_QUIT, "EmulationWindow", [this](SDL_Event& event) {
+        emulator.SetQuit(true);
+        return 0;
+    });
+    EventManager::Subscribe(SDL_KEYDOWN, "EmulationWindow", [this](SDL_Event& event) {
+        emulator.SetMostRecentKeyThisFrame(
             static_cast<SDL_KeyCode>(event.key.keysym.sym));
-    case SDL_WINDOWEVENT:
+        return 0;
+    });
+    EventManager::Subscribe(SDL_WINDOWEVENT, "EmulationWindow", [this](SDL_Event& event) {
         switch (event.window.event)
         {
         case SDL_WINDOWEVENT_CLOSE:
             if (event.window.windowID == GetWindowID())
-                emu->SetQuit(true);
+                emulator.SetQuit(true);
             break;
         case SDL_WINDOWEVENT_FOCUS_LOST:
-            // FIXME: WOULD NEED TO CHECK IF RUN EMULATION WAS
-            // SILENCED BY THIS OR NOT
-            // ALSO WOULD NEED TO CHECK THE WINDOW ID THAT IT IS
-            // THE MAIN WINDOW
-            // CUZ IF IT WAS WE SHOULD RESUME ON FOCUS_GAINED
-            // emulator->run_emulation = false;
             break;
         case SDL_WINDOWEVENT_FOCUS_GAINED:
-            // if (focus_lost_triggered && cart is inserted)
-            //    emulator->run_emulation = true;
             break;
         }
-        break;
-    case SDL_JOYBUTTONDOWN:
-        emu->SetMostRecentButtonThisFrame(event.jbutton.button);
-        break;
-    case SDL_JOYDEVICEADDED:
+        return 0;
+    });
+    EventManager::Subscribe(SDL_JOYBUTTONDOWN, "EmulationWindow", [this](SDL_Event& event) {
+        emulator.SetMostRecentButtonThisFrame(event.jbutton.button);
+        return 0;
+    });
+    EventManager::Subscribe(SDL_JOYDEVICEADDED, "EmulationWindow", [this](SDL_Event& event) {
         emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
         SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
             "Joystick %d added\n", event.jdevice.which);
-        break;
-    case SDL_JOYDEVICEREMOVED:
+        return 0;
+    });
+    EventManager::Subscribe(SDL_JOYDEVICEREMOVED, "EmulationWindow", [this](SDL_Event& event) {
         SDL_JoystickClose(emulator.GetJoystick());
         SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
             "Joystick %d REMOVED\n", event.jdevice.which);
         emulator.SetJoystick(nullptr);
-    default:
-        break;
-    }
+        return 0;
+    });
 }
 
 void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_inactive, uint8_t prev_controller1) {
@@ -645,19 +642,15 @@ void EmulationWindow::Loop() {
 
         emu->SetMostRecentKeyThisFrame(SDLK_UNKNOWN);
         emu->SetMostRecentButtonThisFrame(-1);
-        SDL_Event event;
+
         if (emulator.LockNESState() < 0) {
             SDL_Log("Failed to lock mutex\n");
             continue;
         }
-        while (SDL_PollEvent(&event)) {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            ProcessEvents(event);
-        }
+        EventManager::ProcessEvents(emulator);
 
         uint8_t prev_controller1 = bus->GetController1();
         bus->SetController1(0);
-        emu->RefreshKeyboardState();
 
         uint32_t window_flags = SDL_GetWindowFlags(window);
         bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
@@ -691,6 +684,7 @@ void EmulationWindow::Loop() {
 
 EmulationWindow::~EmulationWindow() {
     NFD_Quit();
+    EventManager::Quit();
 
     for (int i = 0; i < WindowType::COUNT; i++)
         delete sub_windows[i];
