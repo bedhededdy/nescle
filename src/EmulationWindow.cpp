@@ -373,6 +373,269 @@ EmulationWindow::EmulationWindow() {
     SetupMainFrame();
 }
 
+void EmulationWindow::ProcessEvents(SDL_Event& event) {
+    Emulator* emu = &emulator;
+    switch (event.type) {
+    case SDL_QUIT:
+        emu->SetQuit(true);
+        break;
+    case SDL_KEYDOWN:
+        emu->SetMostRecentKeyThisFrame(
+            static_cast<SDL_KeyCode>(event.key.keysym.sym));
+    case SDL_WINDOWEVENT:
+        switch (event.window.event)
+        {
+        case SDL_WINDOWEVENT_CLOSE:
+            if (event.window.windowID == GetWindowID())
+                emu->SetQuit(true);
+            break;
+        case SDL_WINDOWEVENT_FOCUS_LOST:
+            // FIXME: WOULD NEED TO CHECK IF RUN EMULATION WAS
+            // SILENCED BY THIS OR NOT
+            // ALSO WOULD NEED TO CHECK THE WINDOW ID THAT IT IS
+            // THE MAIN WINDOW
+            // CUZ IF IT WAS WE SHOULD RESUME ON FOCUS_GAINED
+            // emulator->run_emulation = false;
+            break;
+        case SDL_WINDOWEVENT_FOCUS_GAINED:
+            // if (focus_lost_triggered && cart is inserted)
+            //    emulator->run_emulation = true;
+            break;
+        }
+        break;
+    case SDL_JOYBUTTONDOWN:
+        emu->SetMostRecentButtonThisFrame(event.jbutton.button);
+        break;
+    case SDL_JOYDEVICEADDED:
+        emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Joystick %d added\n", event.jdevice.which);
+        break;
+    case SDL_JOYDEVICEREMOVED:
+        SDL_JoystickClose(emulator.GetJoystick());
+        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+            "Joystick %d REMOVED\n", event.jdevice.which);
+        emulator.SetJoystick(nullptr);
+    default:
+        break;
+    }
+}
+
+void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_inactive, uint8_t prev_controller1) {
+    Emulator* emu = &emulator;
+    Bus* bus = emu->GetNES();
+    emu->SetATurbo(false); emu->SetBTurbo(false);
+    if (emulation_window_active && imgui_inactive) {
+        if (emu->KeyHeld(SDLK_LCTRL) || emu->KeyHeld(SDLK_RCTRL)) {
+            if (emu->KeyHeld(SDLK_LSHIFT) || emu->KeyHeld(SDLK_RSHIFT)) {
+                // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
+                // BEFORE CALLING LOAD STATE?
+                const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
+                std::stringstream path_to_save;
+                path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
+
+                if (emu->KeyPushed(SDLK_0)) {
+                    path_to_save << "slot0.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 0");
+                } else if (emu->KeyPushed(SDLK_1)) {
+                    path_to_save << "slot1.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 1");
+                } else if (emu->KeyPushed(SDLK_2)) {
+                    path_to_save << "slot2.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 2");
+                } else if (emu->KeyPushed(SDLK_3)) {
+                    path_to_save << "slot3.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 3");
+                } else if (emu->KeyPushed(SDLK_4)) {
+                    path_to_save << "slot4.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 4");
+                } else if (emu->KeyPushed(SDLK_5)) {
+                    path_to_save << "slot5.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 5");
+                } else if (emu->KeyPushed(SDLK_6)) {
+                    path_to_save << "slot6.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 6");
+                } else if (emu->KeyPushed(SDLK_7)) {
+                    path_to_save << "slot7.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 7");
+                } else if (emu->KeyPushed(SDLK_8)) {
+                    path_to_save << "slot8.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 8");
+                } else if (emu->KeyPushed(SDLK_9)) {
+                    path_to_save << "slot9.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->LoadState(path_to_save_str.c_str());
+                    NESCLENotification::MakeNotification("Loaded state 9");
+                }
+            } else {
+                // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
+                const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
+                std::stringstream path_to_save;
+                path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
+
+                // only process one of these if multiple are pressed
+                if (emu->KeyPushed(SDLK_o)) {
+                    emu->LoadROM();
+                    // TODO: SHOW POPUP
+                } else if (emu->KeyPushed(SDLK_p)) {
+                    emu->SetRunEmulation(!emu->GetRunEmulation());
+                } else if (emu->KeyPushed(SDLK_r)) {
+                    bus->Reset();
+                } else if (emu->KeyPushed(SDLK_f)) {
+                    show_frametime = !show_frametime;
+                } else if (emu->KeyPushed(SDLK_0)) {
+                    path_to_save << "slot0.sav";
+                    // Can't use .str().c_str() because the string is inline
+                    // and will get destroyed immediately
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[0] = true;
+                    NESCLENotification::MakeNotification("Saved state 0");
+                } else if (emu->KeyPushed(SDLK_1)) {
+                    path_to_save << "slot1.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[1] = true;
+                    NESCLENotification::MakeNotification("Saved state 1");
+                } else if (emu->KeyPushed(SDLK_2)) {
+                    path_to_save << "slot2.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[2] = true;
+                    NESCLENotification::MakeNotification("Saved state 2");
+                } else if (emu->KeyPushed(SDLK_3)) {
+                    path_to_save << "slot3.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[3] = true;
+                    NESCLENotification::MakeNotification("Saved state 3");
+                } else if (emu->KeyPushed(SDLK_4)) {
+                    path_to_save << "slot4.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[4] = true;
+                    NESCLENotification::MakeNotification("Saved state 4");
+                } else if (emu->KeyPushed(SDLK_5)) {
+                    path_to_save << "slot5.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[5] = true;
+                    NESCLENotification::MakeNotification("Saved state 5");
+                } else if (emu->KeyPushed(SDLK_6)) {
+                    // FIXME: HAVE TO CHECK THAT SAVE WAS SUCCESSFUL
+                    path_to_save << "slot6.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[6] = true;
+                    NESCLENotification::MakeNotification("Saved state 6");
+                } else if (emu->KeyPushed(SDLK_7)) {
+                    path_to_save << "slot7.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[7] = true;
+                    NESCLENotification::MakeNotification("Saved state 7");
+                } else if (emu->KeyPushed(SDLK_8)) {
+                    path_to_save << "slot8.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[8] = true;
+                    NESCLENotification::MakeNotification("Saved state 8");
+                } else if (emu->KeyPushed(SDLK_9)) {
+                    path_to_save << "slot9.sav";
+                    std::string path_to_save_str = path_to_save.str();
+                    emu->SaveState(path_to_save_str.c_str());
+                    emu->GetUsedSaveSlots()[9] = true;
+                    NESCLENotification::MakeNotification("Saved state 9");
+                } else if (emu->KeyPushed(SDLK_d)) {
+                    // TODO: SINCE THE SHOW FUNCTION IS WHERE WE CAPTURE
+                    // THE PREV STATE, SETTING SHOW DISAS TO TRUE HERE
+                    // WILL NOT WORK, WE NEED TO DO SOMETHING SPECIAL
+                    // TO GET THIS TO WORK
+                }
+            }
+        } else {
+            const Emulator::Controller* btn_map = &emu->GetSettings()->controller1;
+
+            emu->SetATurbo(emu->AnyKeyInMapHeld(btn_map->aturbo));
+            emu->SetBTurbo(emu->AnyKeyInMapHeld(btn_map->bturbo));
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::ATURBO))
+                emu->SetATurbo(true);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::BTURBO))
+                emu->SetBTurbo(true);
+            if (emu->GetATurbo())
+                bus->SetController1(bus->GetController1()
+                    | (prev_controller1 & (int)Bus::NESButtons::A));
+            if (emu->GetBTurbo())
+                bus->SetController1(bus->GetController1()
+                    | (prev_controller1 & (int)Bus::NESButtons::B));
+
+            if (emu->AnyKeyInMapHeld(btn_map->up))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
+            if (emu->AnyKeyInMapHeld(btn_map->left))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
+            if (emu->AnyKeyInMapHeld(btn_map->down))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
+            if (emu->AnyKeyInMapHeld(btn_map->right))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
+            if (emu->AnyKeyInMapHeld(btn_map->b))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
+            if (emu->AnyKeyInMapHeld(btn_map->a))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
+            if (emu->AnyKeyInMapHeld(btn_map->select))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
+            if (emu->AnyKeyInMapHeld(btn_map->start))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
+
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::UP))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::LEFT))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::DOWN))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::RIGHT))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::SELECT))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::START))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::A))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
+            if (emu->JoystickButtonHeld(Emulator::ControllerButton::B))
+                bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
+
+            // Only register joystick input if more than 25% of the way
+            if (emu->GetJoystick() != NULL) {
+                if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) < -16384/2)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
+                else if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) > 16384/2)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
+                if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) < -16384/2)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
+                else if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) > 16384/2)
+                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
+            }
+        }
+    }
+}
+
 void EmulationWindow::Loop() {
     Emulator* emu = &emulator;
     Bus *bus = emu->GetNES();
@@ -389,51 +652,7 @@ void EmulationWindow::Loop() {
         }
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
-
-            switch (event.type) {
-            case SDL_QUIT:
-                emu->SetQuit(true);
-                break;
-            case SDL_KEYDOWN:
-                emu->SetMostRecentKeyThisFrame(
-                    static_cast<SDL_KeyCode>(event.key.keysym.sym));
-            case SDL_WINDOWEVENT:
-                switch (event.window.event)
-                {
-                case SDL_WINDOWEVENT_CLOSE:
-                    if (event.window.windowID == GetWindowID())
-                        emu->SetQuit(true);
-                    break;
-                case SDL_WINDOWEVENT_FOCUS_LOST:
-                    // FIXME: WOULD NEED TO CHECK IF RUN EMULATION WAS
-                    // SILENCED BY THIS OR NOT
-                    // ALSO WOULD NEED TO CHECK THE WINDOW ID THAT IT IS
-                    // THE MAIN WINDOW
-                    // CUZ IF IT WAS WE SHOULD RESUME ON FOCUS_GAINED
-                    // emulator->run_emulation = false;
-                    break;
-                case SDL_WINDOWEVENT_FOCUS_GAINED:
-                    // if (focus_lost_triggered && cart is inserted)
-                    //    emulator->run_emulation = true;
-                    break;
-                }
-                break;
-            case SDL_JOYBUTTONDOWN:
-                emu->SetMostRecentButtonThisFrame(event.jbutton.button);
-                break;
-            case SDL_JOYDEVICEADDED:
-                emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
-                SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                    "Joystick %d added\n", event.jdevice.which);
-                break;
-            case SDL_JOYDEVICEREMOVED:
-                SDL_JoystickClose(emulator.GetJoystick());
-                SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                    "Joystick %d REMOVED\n", event.jdevice.which);
-                emulator.SetJoystick(nullptr);
-            default:
-                break;
-            }
+            ProcessEvents(event);
         }
 
         uint8_t prev_controller1 = bus->GetController1();
@@ -450,216 +669,7 @@ void EmulationWindow::Loop() {
             if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
                 imgui_inactive = false;
 
-        emu->SetATurbo(false); emu->SetBTurbo(false);
-        if (emulation_window_active && imgui_inactive) {
-            if (emu->KeyHeld(SDLK_LCTRL) || emu->KeyHeld(SDLK_RCTRL)) {
-                if (emu->KeyHeld(SDLK_LSHIFT) || emu->KeyHeld(SDLK_RSHIFT)) {
-                    // FIXME: YOU PROBABLY NEED TO CHECK FOR THE SAVE EXISTING
-                    // BEFORE CALLING LOAD STATE?
-                    const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
-                    std::stringstream path_to_save;
-                    path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
-
-                    if (emu->KeyPushed(SDLK_0)) {
-                        path_to_save << "slot0.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 0");
-                    } else if (emu->KeyPushed(SDLK_1)) {
-                        path_to_save << "slot1.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 1");
-                    } else if (emu->KeyPushed(SDLK_2)) {
-                        path_to_save << "slot2.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 2");
-                    } else if (emu->KeyPushed(SDLK_3)) {
-                        path_to_save << "slot3.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 3");
-                    } else if (emu->KeyPushed(SDLK_4)) {
-                        path_to_save << "slot4.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 4");
-                    } else if (emu->KeyPushed(SDLK_5)) {
-                        path_to_save << "slot5.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 5");
-                    } else if (emu->KeyPushed(SDLK_6)) {
-                        path_to_save << "slot6.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 6");
-                    } else if (emu->KeyPushed(SDLK_7)) {
-                        path_to_save << "slot7.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 7");
-                    } else if (emu->KeyPushed(SDLK_8)) {
-                        path_to_save << "slot8.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 8");
-                    } else if (emu->KeyPushed(SDLK_9)) {
-                        path_to_save << "slot9.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->LoadState(path_to_save_str.c_str());
-                        NESCLENotification::MakeNotification("Loaded state 9");
-                    }
-                } else {
-                    // FIXME: THERE IS BOUND TO BE A BUG HERE WITH AN UNINSERTED CART
-                    const char* game_name = Util_GetFileName(bus->GetCart().GetROMPath().c_str());
-                    std::stringstream path_to_save;
-                    path_to_save << emu->GetUserDataPath() << "saves/" << game_name;
-
-                    // only process one of these if multiple are pressed
-                    if (emu->KeyPushed(SDLK_o)) {
-                        emu->LoadROM();
-                        // TODO: SHOW POPUP
-                    } else if (emu->KeyPushed(SDLK_p)) {
-                        emu->SetRunEmulation(!emu->GetRunEmulation());
-                    } else if (emu->KeyPushed(SDLK_r)) {
-                        bus->Reset();
-                    } else if (emu->KeyPushed(SDLK_f)) {
-                        show_frametime = !show_frametime;
-                    } else if (emu->KeyPushed(SDLK_0)) {
-                        path_to_save << "slot0.sav";
-                        // Can't use .str().c_str() because the string is inline
-                        // and will get destroyed immediately
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[0] = true;
-                        NESCLENotification::MakeNotification("Saved state 0");
-                    } else if (emu->KeyPushed(SDLK_1)) {
-                        path_to_save << "slot1.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[1] = true;
-                        NESCLENotification::MakeNotification("Saved state 1");
-                    } else if (emu->KeyPushed(SDLK_2)) {
-                        path_to_save << "slot2.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[2] = true;
-                        NESCLENotification::MakeNotification("Saved state 2");
-                    } else if (emu->KeyPushed(SDLK_3)) {
-                        path_to_save << "slot3.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[3] = true;
-                        NESCLENotification::MakeNotification("Saved state 3");
-                    } else if (emu->KeyPushed(SDLK_4)) {
-                        path_to_save << "slot4.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[4] = true;
-                        NESCLENotification::MakeNotification("Saved state 4");
-                    } else if (emu->KeyPushed(SDLK_5)) {
-                        path_to_save << "slot5.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[5] = true;
-                        NESCLENotification::MakeNotification("Saved state 5");
-                    } else if (emu->KeyPushed(SDLK_6)) {
-                        // FIXME: HAVE TO CHECK THAT SAVE WAS SUCCESSFUL
-                        path_to_save << "slot6.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[6] = true;
-                        NESCLENotification::MakeNotification("Saved state 6");
-                    } else if (emu->KeyPushed(SDLK_7)) {
-                        path_to_save << "slot7.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[7] = true;
-                        NESCLENotification::MakeNotification("Saved state 7");
-                    } else if (emu->KeyPushed(SDLK_8)) {
-                        path_to_save << "slot8.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[8] = true;
-                        NESCLENotification::MakeNotification("Saved state 8");
-                    } else if (emu->KeyPushed(SDLK_9)) {
-                        path_to_save << "slot9.sav";
-                        std::string path_to_save_str = path_to_save.str();
-                        emu->SaveState(path_to_save_str.c_str());
-                        emu->GetUsedSaveSlots()[9] = true;
-                        NESCLENotification::MakeNotification("Saved state 9");
-                    } else if (emu->KeyPushed(SDLK_d)) {
-                        // TODO: SINCE THE SHOW FUNCTION IS WHERE WE CAPTURE
-                        // THE PREV STATE, SETTING SHOW DISAS TO TRUE HERE
-                        // WILL NOT WORK, WE NEED TO DO SOMETHING SPECIAL
-                        // TO GET THIS TO WORK
-                    }
-                }
-            } else {
-                const Emulator::Controller* btn_map = &emu->GetSettings()->controller1;
-
-                emu->SetATurbo(emu->AnyKeyInMapHeld(btn_map->aturbo));
-                emu->SetBTurbo(emu->AnyKeyInMapHeld(btn_map->bturbo));
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::ATURBO))
-                    emu->SetATurbo(true);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::BTURBO))
-                    emu->SetBTurbo(true);
-                if (emu->GetATurbo())
-                    bus->SetController1(bus->GetController1()
-                        | (prev_controller1 & (int)Bus::NESButtons::A));
-                if (emu->GetBTurbo())
-                    bus->SetController1(bus->GetController1()
-                        | (prev_controller1 & (int)Bus::NESButtons::B));
-
-                if (emu->AnyKeyInMapHeld(btn_map->up))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
-                if (emu->AnyKeyInMapHeld(btn_map->left))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
-                if (emu->AnyKeyInMapHeld(btn_map->down))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
-                if (emu->AnyKeyInMapHeld(btn_map->right))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
-                if (emu->AnyKeyInMapHeld(btn_map->b))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
-                if (emu->AnyKeyInMapHeld(btn_map->a))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
-                if (emu->AnyKeyInMapHeld(btn_map->select))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
-                if (emu->AnyKeyInMapHeld(btn_map->start))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
-
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::UP))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::LEFT))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::DOWN))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::RIGHT))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::SELECT))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::START))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::A))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::A);
-                if (emu->JoystickButtonHeld(Emulator::ControllerButton::B))
-                    bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::B);
-
-                // Only register joystick input if more than 25% of the way
-                if (emu->GetJoystick() != NULL) {
-                    if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) < -16384/2)
-                        bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::LEFT);
-                    else if (SDL_JoystickGetAxis(emu->GetJoystick(), 0) > 16384/2)
-                        bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::RIGHT);
-                    if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) < -16384/2)
-                        bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
-                    else if (SDL_JoystickGetAxis(emu->GetJoystick(), 1) > 16384/2)
-                        bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::DOWN);
-                }
-            }
-        }
+        ProcessInputs(emulation_window_active, imgui_inactive, prev_controller1);
 
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,
