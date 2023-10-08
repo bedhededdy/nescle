@@ -52,6 +52,7 @@
 #include "PatternWindow.h"
 #include "RetroText.h"
 #include "SettingsWindow.h"
+#include "WatchWindow.h"
 #include "Util.h"
 
 namespace NESCLE {
@@ -140,6 +141,7 @@ void EmulationWindow::RenderMainGUI() {
             ImGui::MenuItem("Show OAM (not implemented)", nullptr, &show_oam, cart_loaded);
             ImGui::MenuItem("Show Frametime", "Ctrl+F", &show_frametime,
                 cart_loaded);
+            ImGui::MenuItem("Show Watch", nullptr, &show_watch, true);
 
             ImGui::EndMenu();
         }
@@ -760,6 +762,7 @@ void EmulationWindow::Show() {
     bool prev_showing_mixer = show_mixer;
     bool prev_showing_options = show_options;
     bool prev_showing_controller = show_controller;
+    bool prev_showing_watch = show_watch;
 
     // Show this in light
     ImGui::StyleColorsLight();
@@ -794,6 +797,9 @@ void EmulationWindow::Show() {
     if (!prev_showing_oam && show_oam) {
         //sub_windows[WindowType::OAM] = new OAMWindow(emu);
     }
+    if (!prev_showing_watch && show_watch) {
+        sub_windows[WindowType::WATCH] = new WatchWindow(&show_watch);
+    }
 
     // iterate over the map to show each window that exists
     for (size_t i = 0; i < WindowType::COUNT; i++) {
@@ -825,6 +831,10 @@ void EmulationWindow::Show() {
     if (prev_showing_controller && !show_controller) {
         delete sub_windows[WindowType::CONTROLLER];
         sub_windows[WindowType::CONTROLLER] = nullptr;
+    }
+    if (prev_showing_watch && !show_watch) {
+        delete sub_windows[WindowType::WATCH];
+        sub_windows[WindowType::WATCH] = nullptr;
     }
 
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y - MAIN_MENU_HEIGHT);

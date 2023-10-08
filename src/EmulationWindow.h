@@ -45,6 +45,7 @@ private:
     bool show_mixer = false;
     bool show_options = false;
     bool show_controller = false;
+    bool show_watch = false;
 
     bool show_frametime = false;
 
@@ -58,6 +59,7 @@ private:
         SETTINGS,
         MIXER,
         CONTROLLER,
+        WATCH,
         COUNT
     };
 

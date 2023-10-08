@@ -103,14 +103,9 @@ void EventManager::ProcessEvents(Emulator& emu) {
 }
 
 void EventManager::Quit() {
-    // while (!event_queue.empty())
-    //     event_queue.pop();
-    // events_to_subscribers.clear();
-    // key_event_index.clear();
-
-    // Still "leaks" some memory, less than clearing, but it's a false positive
-    event_queue = std::queue<SDL_Event>();
-    events_to_subscribers = std::unordered_map<SDL_EventType, std::vector<Subscriber>>();
-    key_event_index = std::unordered_map<std::string, std::unordered_set<SDL_EventType>>();
+    while (!event_queue.empty())
+        event_queue.pop();
+    events_to_subscribers.clear();
+    key_event_index.clear();
 }
 }

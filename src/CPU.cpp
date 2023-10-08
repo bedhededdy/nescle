@@ -15,6 +15,8 @@
  */
 #include "CPU.h"
 
+#include <SDL_log.h>
+
 #include <cstdlib>
 #include <functional>
 #include <sstream>
@@ -116,6 +118,24 @@ const CPU::Instr* CPU::Decode(uint8_t opcode) {
 
 /* Helper Functions */
 // Stack helper functions
+void CPU::SetPC(uint16_t _pc) {
+    pc = _pc;
+}
+
+bool CPU::DumpRAM() {
+    std::ofstream file("c:/Users/edwar/OneDrive/Documents/Personal Code/nescle/logs/ram_dump.bin", std::ios::binary);
+    if (!file.is_open())
+        return false;
+
+    char ram[2048];
+    for (int i = 0; i < 2048; i++) {
+        ram[i] = bus.Read(i);
+    }
+    file.write(ram, 2048);
+
+    return true;
+}
+
 uint8_t CPU::StackPop() {
     return bus.Read(SP_BASE_ADDR + ++sp);
 }

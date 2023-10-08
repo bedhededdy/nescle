@@ -34,6 +34,10 @@ private:
     std::vector<SDL_KeyCode> key_presses;
     std::vector<int> button_presses;
 
+    // TODO: IT WOULD BE BETTER FOR US TO SUBSCRIBE TO THE KEYDOWN EVENT
+    //       AND SET OUR LAST KEYPRESS IF WE ARE FOCUSED RATHER THAN HAVING
+    //       THE EMULATOR TRACK KEYDOWNS AND THEN ONLY TAKING IT IF A KEY
+    //       WAS PRESSED
     SDL_KeyCode last_keypress = SDLK_UNKNOWN;
     int last_gamepad_button_press = -1;
     ControllerType controller_type = ControllerType::KEYBOARD;
