@@ -101,7 +101,8 @@ private:
     };
 
     struct SampleChannel {
-        int bar;
+        bool enable;
+        float sample;
     };
 
     int GetAmp(int index);
@@ -139,6 +140,7 @@ public:
     float GetPulse2Sample();
     float GetTriangleSample();
     float GetNoiseSample();
+    float GetSampleSample();
 
     // Allows us to serialize the APU
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Sequencer, timer, reload)
@@ -153,7 +155,7 @@ public:
         linear_counter, linear_counter_reload_value, sequencer)
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(NoiseChannel, enable, halt, length, sample,
         prev_sample, volume, shift_register, mode, envelope, sequencer)
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampleChannel, bar)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampleChannel, enable, sample)
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(APU, pulse1, pulse2, triangle, noise,
         sample, clock_count, frame_clock_count)

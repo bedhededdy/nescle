@@ -135,7 +135,7 @@ uint16_t Bus::Read16(uint16_t addr) {
 }
 
 bool Bus::Write16(uint16_t addr, uint16_t data) {
-    return Write(addr, (uint8_t)data) && Write(addr, data >> 8);
+    return Write(addr, (uint8_t)data) && Write(addr + 1, data >> 8);
 }
 
 /* NES functions */

@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <SDL_log.h>
 
 namespace NESCLE {
 int APU::GetAmp(int index) {
@@ -147,11 +148,17 @@ bool APU::Write(uint16_t addr, uint8_t data) {
        noise.envelope.start = true;
        noise.length = GetLength(data >> 3);
        break;
+    case 0x4011:
+        // Samples can use full range of the audio, so we
+        // divide by 127 here
+        sample.sample = 1.0f/127.0f * (data & 0x7f);
+        break;
     case 0x4015:
         pulse1.enable = data & 1;
         pulse2.enable = data & 2;
         triangle.enable = data & 4;
         noise.enable = data & 8;
+        sample.enable = data & 16;
         if (!triangle.enable)
             triangle.length = 0;
         if (!pulse1.enable)
@@ -160,6 +167,9 @@ bool APU::Write(uint16_t addr, uint8_t data) {
             pulse2.length = 0;
         if (!noise.enable)
             noise.length = 0;
+        // FIXME: SAMPLE CHANNEL MAY NEED TO DO OTHER THINGS
+        // if (!sample.enable)
+            // sample.sample = 0;
         break;
     case 0x4017:
         // Frame counter
@@ -362,6 +372,9 @@ void APU::PowerOn() {
     triangle.volume = prev_t;
     noise.volume = prev_n;
 
+    // FIXME: DPCM
+    // sample.volume = 1.0f;
+
     Reset();
 }
 
@@ -376,10 +389,13 @@ void APU::Reset() {
     pulse2.volume = prev_p2;
     triangle.volume = prev_t;
     noise.volume = prev_n;
+
+    // sample.volume = 1.0f;
 }
 
 float APU::GetPulse1Sample() { return pulse1.sample; }
 float APU::GetPulse2Sample() { return pulse2.sample; }
 float APU::GetTriangleSample() { return triangle.sample; }
 float APU::GetNoiseSample() { return noise.sample; }
+float APU::GetSampleSample() { return sample.sample; }
 }

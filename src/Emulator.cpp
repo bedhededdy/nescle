@@ -653,8 +653,10 @@ float Emulator::EmulateSample() {
     float p2 = apu.GetPulse2Sample() * settings.p2_vol;
     float tri = apu.GetTriangleSample() * settings.tri_vol;
     float noise = apu.GetNoiseSample() * settings.noise_vol;
+    // FIXME: ADD A SETTING FOR THIS
+    float sample = apu.GetSampleSample() * 1.0f;
 
-    return 0.25f * (p1 + p2 + tri + noise) * settings.master_vol;
+    return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;
 }
 
 bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings) {

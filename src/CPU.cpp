@@ -117,11 +117,15 @@ const CPU::Instr* CPU::Decode(uint8_t opcode) {
 }
 
 /* Helper Functions */
-// Stack helper functions
+// Only for force getting error codes in 0x7fff running nestest
+// It only sets the error code in memory if you perform an autorun by setting
+// The PC to 0xC000
+// NOTE: The nestest documentation lies and says it will be in bytes 0x2 and 0x3
 void CPU::SetPC(uint16_t _pc) {
     pc = _pc;
 }
 
+// Stack helper functions
 bool CPU::DumpRAM() {
     std::ofstream file("c:/Users/edwar/OneDrive/Documents/Personal Code/nescle/logs/ram_dump.bin", std::ios::binary);
     if (!file.is_open())
