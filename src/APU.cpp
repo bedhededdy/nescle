@@ -449,7 +449,7 @@ void APU::ClockSample() {
 
                 sample.has_sample = false;
                 if (sample.length > 0) {
-                    sample.dmc_shifter =
+                    sample.dmc_shifter = 0; // FIXME WE NEED TO READ FROM BUS
                     // FIXME: WE SHOULD BE HALTING DURING DMA, NEED TO DO THIS ON THE BUS
                     // TECHNICALLY THERE IS VARIABILITY IN CYCLES HALTED, BUT WE WILL HARDCODE IT TO 4
                     sample.length--;
