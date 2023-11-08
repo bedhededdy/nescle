@@ -654,7 +654,7 @@ float Emulator::EmulateSample() {
     float tri = apu.GetTriangleSample() * settings.tri_vol;
     float noise = apu.GetNoiseSample() * settings.noise_vol;
     // FIXME: ADD A SETTING FOR THIS
-    float sample = apu.GetSampleSample() * 1.0f;
+    float sample = apu.GetSampleSample() * 1.0f; // This is usually quiet, so I will risk clipping to mix it right
 
     // we force mute the sample channel because it is correct rhythmically, but sounds very bad
     return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;

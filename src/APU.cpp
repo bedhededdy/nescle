@@ -426,8 +426,6 @@ int APU::GetDMAFreq(uint8_t index) {
 
 void APU::ClockSample() {
     if (sample.enable) {
-        // sample.freq_counter -= 16;
-        // FIXME: This sounds better, but 16 should be correct?
         sample.freq_counter -= 1;
         while (sample.freq_counter <= 0 && sample.freq_counter_reset > 0) {
             // it is possible that we missed generating two samples
