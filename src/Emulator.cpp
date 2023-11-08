@@ -657,7 +657,7 @@ float Emulator::EmulateSample() {
     float sample = apu.GetSampleSample() * 1.0f;
 
     // we force mute the sample channel because it is correct rhythmically, but sounds very bad
-    return 0.20f * (p1 + p2 + tri + noise + 0) * settings.master_vol;
+    return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;
 }
 
 bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings) {

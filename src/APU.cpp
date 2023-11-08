@@ -171,7 +171,7 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         sample.dmc_lsb = data & 1;
         break;
     case 0x4012:
-        sample.addr = 0xc000 + data;
+        sample.addr = 0xc000 + (data << 6);
         sample.reset_addr = sample.addr;
         break;
     case 0x4013:
@@ -415,17 +415,22 @@ void APU::Clock() {
 
 int APU::GetDMAFreq(uint8_t index) {
     // FIXME: THIS IS DIFFERETN FOR PAL
+    // This table uses CPU cycles and since we clock on every other CPU
+    // clock we need to halve the result
     static constexpr int freq_table[0x10] = {
         428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84,
         72, 54
     };
-    return freq_table[index];
+    return freq_table[index]/2;
 }
 
 void APU::ClockSample() {
     if (sample.enable) {
+        // sample.freq_counter -= 16;
+        // FIXME: This sounds better, but 16 should be correct?
         sample.freq_counter -= 1;
-        if (sample.freq_counter <= 0 && sample.freq_counter_reset > 0) {
+        while (sample.freq_counter <= 0 && sample.freq_counter_reset > 0) {
+            // it is possible that we missed generating two samples
             sample.freq_counter += sample.freq_counter_reset;
 
             // If we have a sample
