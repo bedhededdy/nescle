@@ -103,6 +103,19 @@ private:
     struct SampleChannel {
         bool enable;
         float sample;
+        bool irq;
+        bool loop;
+        int freq_counter_reset;
+        int freq_counter;
+        int addr;
+        int reset_addr;
+        int length;
+        int reset_length;
+        int dmc_shifter;
+        int dmc_lsb;
+        int dmc_shifter_bits_remaining;
+        int dmc_delta;
+        bool has_sample;
     };
 
     int GetAmp(int index);
@@ -115,6 +128,9 @@ private:
     void ClockNoise();
     void ClockTriangle();
     void ClockEnvelope(Envelope& envelope, bool halt);
+    void ClockSample();
+
+    int GetDMAFreq(uint8_t index);
 
     PulseChannel pulse1;
     PulseChannel pulse2;
@@ -155,7 +171,9 @@ public:
         linear_counter, linear_counter_reload_value, sequencer)
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(NoiseChannel, enable, halt, length, sample,
         prev_sample, volume, shift_register, mode, envelope, sequencer)
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampleChannel, enable, sample)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SampleChannel, enable, sample, irq, loop,
+        freq_counter_reset, freq_counter, addr, length, reset_addr, reset_length,
+        dmc_shifter, dmc_lsb, dmc_shifter_bits_remaining, dmc_delta, has_sample)
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(APU, pulse1, pulse2, triangle, noise,
         sample, clock_count, frame_clock_count)

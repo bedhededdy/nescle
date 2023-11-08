@@ -148,10 +148,36 @@ bool APU::Write(uint16_t addr, uint8_t data) {
        noise.envelope.start = true;
        noise.length = GetLength(data >> 3);
        break;
+    case 0x4010:
+        sample.irq = data & 0x80;
+        if (sample.irq)
+            SDL_Log("APU IRQ ENABLED");
+        sample.loop = data & 0x40;
+        // FIXME: YOU NEED TO USE THE DATA
+        // VALUE AS AN INDEX INTO A LOOKUP TABLE
+        sample.freq_counter = GetDMAFreq(data & 0xf);
+        sample.freq_counter_reset = sample.freq_counter;
+        break;
     case 0x4011:
         // Samples can use full range of the audio, so we
         // divide by 127 here
+        // FIXME: LOAD THE DELTA COUNTER
+        SDL_Log("Direct write to PCM\n");
         sample.sample = 1.0f/127.0f * (data & 0x7f);
+        // FIXME: IT MAY NOT BE THE SHIFTER, BUT IN FACT ANOTHER REGISTER??
+        sample.dmc_delta = data & 0x7e;
+        sample.dmc_lsb = data & 1;
+        break;
+    case 0x4012:
+        // FIXME: THIS ADDRESS GETS OFFSET BY 0XC000
+        sample.addr = 0xc000 + data;
+        sample.reset_addr = data;
+        break;
+    case 0x4013:
+        // Sample length is data * 16 + 1
+        // The +1 is a bug in hardware, it shouldn't be there
+        sample.length = (data << 4) + 1;
+        sample.reset_length = sample.length;
         break;
     case 0x4015:
         pulse1.enable = data & 1;
@@ -159,6 +185,8 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         triangle.enable = data & 4;
         noise.enable = data & 8;
         sample.enable = data & 16;
+        if (sample.enable)
+            SDL_Log("DPCM CHANNEL ENABLED\n");
         if (!triangle.enable)
             triangle.length = 0;
         if (!pulse1.enable)
@@ -168,8 +196,13 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         if (!noise.enable)
             noise.length = 0;
         // FIXME: SAMPLE CHANNEL MAY NEED TO DO OTHER THINGS
-        // if (!sample.enable)
-            // sample.sample = 0;
+        if (sample.enable) {
+            sample.addr = sample.reset_addr;
+            sample.length = sample.reset_length;
+        } else {
+            sample.length = 0;
+        }
+        sample.irq = false;
         break;
     case 0x4017:
         // Frame counter
@@ -180,6 +213,14 @@ bool APU::Write(uint16_t addr, uint8_t data) {
 }
 
 uint8_t APU::Read(uint16_t addr) {
+    switch (addr) {
+    case 0x4015:
+        // FIXME: I DON'T THINK BIT 6 IS THE LOOP BIT
+        return (sample.irq << 7) | (sample.loop << 6) | (sample.enable << 5) | (noise.length > 0 ? 0x8 : 0)
+            | (triangle.length > 0 ? 0x4 : 0) | (pulse2.length > 0 ? 0x2 : 0)
+            | (pulse1.length > 0 ? 0x1 : 0);
+    }
+
     return 0;
 }
 
@@ -354,10 +395,78 @@ void APU::Clock() {
         ClockNoise();
     }
 
+
     // The triangle wave clocks at the rate of the CPU
-    if (clock_count % 3 == 0)
+    if (clock_count % 3 == 0) {
         ClockTriangle();
+
+        // In reality this clocks at 8x the CPU rate
+        // but we can account for this with some math
+        ClockSample();
+    }
+
     clock_count++;
+
+}
+
+int APU::GetDMAFreq(uint8_t index) {
+    // FIXME: THIS IS DIFFERETN FOR PAL
+    static constexpr int freq_table[0x10] = {
+        428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84,
+        72, 54
+    };
+    return freq_table[index];
+}
+
+void APU::ClockSample() {
+    if (sample.enable) {
+        sample.freq_counter -= 8;
+        if (sample.freq_counter <= 0 && sample.freq_counter_reset > 0) {
+            sample.freq_counter += sample.freq_counter_reset;
+
+            // If we have a sample
+            if (sample.has_sample) {
+                if (sample.dmc_shifter & 1) {
+                    // Increment delta
+                    if (sample.dmc_delta < 63)
+                        sample.dmc_delta++;
+                } else {
+                    // Decrement delta
+                    if (sample.dmc_delta > 0)
+                        sample.dmc_delta--;
+                }
+
+                sample.sample = (sample.dmc_delta << 1) | sample.dmc_lsb;
+                sample.dmc_shifter >>= 1;
+            }
+
+            sample.dmc_shifter_bits_remaining--;
+            if (sample.dmc_shifter_bits_remaining <= 0) {
+                if (sample.loop && sample.length == 0) {
+                    sample.addr = sample.reset_addr;
+                    sample.length = sample.reset_length;
+                }
+
+                sample.has_sample = false;
+                if (sample.length > 0) {
+                    sample.dmc_shifter =
+                    // FIXME: WE SHOULD BE HALTING DURING DMA, NEED TO DO THIS ON THE BUS
+                    // TECHNICALLY THERE IS VARIABILITY IN CYCLES HALTED, BUT WE WILL HARDCODE IT TO 4
+                    sample.length--;
+                    sample.addr++;
+                    if (sample.addr > 0xffff)
+                        sample.addr = 0x8000;
+                    sample.has_sample = true;
+                }
+                sample.dmc_shifter_bits_remaining = 8;
+            }
+        }
+
+        if (sample.length > 0 && sample.irq) {
+            // FIXME: EMIT IRQ IF APPLICABLE
+
+        }
+    }
 }
 
 void APU::PowerOn() {
