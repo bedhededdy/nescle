@@ -86,7 +86,7 @@ public:
         RIGHT = 0x80
     };
 
-    Bus() : cpu(*this), ppu(*this) {}
+    Bus() : cpu(*this), ppu(*this), apu(*this) {}
 
     /* Read/Write */
     void ClearMem();        // Sets contents of RAM to a deterministic value

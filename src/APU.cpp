@@ -20,6 +20,8 @@
 #include <cstring>
 #include <SDL_log.h>
 
+#include "Bus.h"
+
 namespace NESCLE {
 int APU::GetAmp(int index) {
     assert(index >= 0 && index < 32);
@@ -169,9 +171,8 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         sample.dmc_lsb = data & 1;
         break;
     case 0x4012:
-        // FIXME: THIS ADDRESS GETS OFFSET BY 0XC000
         sample.addr = 0xc000 + data;
-        sample.reset_addr = data;
+        sample.reset_addr = sample.addr;
         break;
     case 0x4013:
         // Sample length is data * 16 + 1
@@ -436,7 +437,7 @@ void APU::ClockSample() {
                         sample.dmc_delta--;
                 }
 
-                sample.sample = (sample.dmc_delta << 1) | sample.dmc_lsb;
+                sample.sample = 1.0f/127.0f * ((sample.dmc_delta << 1) | sample.dmc_lsb);
                 sample.dmc_shifter >>= 1;
             }
 
@@ -449,7 +450,7 @@ void APU::ClockSample() {
 
                 sample.has_sample = false;
                 if (sample.length > 0) {
-                    sample.dmc_shifter = 0; // FIXME WE NEED TO READ FROM BUS
+                    sample.dmc_shifter = bus.Read(sample.addr);
                     // FIXME: WE SHOULD BE HALTING DURING DMA, NEED TO DO THIS ON THE BUS
                     // TECHNICALLY THERE IS VARIABILITY IN CYCLES HALTED, BUT WE WILL HARDCODE IT TO 4
                     sample.length--;
@@ -474,12 +475,23 @@ void APU::PowerOn() {
     float prev_p2 = pulse2.volume;
     float prev_t = triangle.volume;
     float prev_n = noise.volume;
-    std::memset(this, 0, sizeof(APU));
+
+    // NEED TO MANUALLY MEMSET ALL FO THESE TO AVOID KILLING THE BUS REFERENCE
+    memset(&pulse1, 0, sizeof(PulseChannel));
+    memset(&pulse2, 0, sizeof(PulseChannel));
+    memset(&triangle, 0, sizeof(TriangleChannel));
+    memset(&noise, 0, sizeof(NoiseChannel));
+    memset(&sample, 0, sizeof(SampleChannel));
+
     noise.shift_register = 1;
     pulse1.volume = prev_p1;
     pulse2.volume = prev_p2;
     triangle.volume = prev_t;
     noise.volume = prev_n;
+    sample.addr = 0xc000;
+    sample.reset_addr = 0xc000;
+    clock_count = 0;
+    frame_clock_count = 0;
 
     // FIXME: DPCM
     // sample.volume = 1.0f;
@@ -492,12 +504,23 @@ void APU::Reset() {
     float prev_p2 = pulse2.volume;
     float prev_t = triangle.volume;
     float prev_n = noise.volume;
-    std::memset(this, 0, sizeof(APU));
+
+    // NEED TO MANUALLY MEMSET ALL OF THESE TO AVOID KILLING THE BUS REFERENCE
+    memset(&pulse1, 0, sizeof(PulseChannel));
+    memset(&pulse2, 0, sizeof(PulseChannel));
+    memset(&triangle, 0, sizeof(TriangleChannel));
+    memset(&noise, 0, sizeof(NoiseChannel));
+    memset(&sample, 0, sizeof(SampleChannel));
+
     noise.shift_register = 1;
     pulse1.volume = prev_p1;
     pulse2.volume = prev_p2;
     triangle.volume = prev_t;
     noise.volume = prev_n;
+    sample.addr = 0xc000;
+    sample.reset_addr = 0xc000;
+    clock_count = 0;
+    frame_clock_count = 0;
 
     // sample.volume = 1.0f;
 }

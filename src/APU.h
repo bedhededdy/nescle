@@ -32,6 +32,10 @@ private:
     // bit length for simplicity. We could of course store these values in
     // "registers", but it would be a pointless refactor of the code that makes
     // it harder to read and understand.
+
+    // THIS NEEDS TO BE FIRST SO IT DOESN'T GET KILLED BY THE MEMSET
+    Bus& bus;
+
     struct Sequencer {
         int timer;
         int reload;
@@ -141,8 +145,11 @@ private:
     uint64_t clock_count;
     uint64_t frame_clock_count;
 
+
 public:
     static constexpr int SAMPLE_RATE = 44100;
+
+    APU(Bus& _bus) : bus(_bus) {}
 
     void PowerOn();
     void Reset();
