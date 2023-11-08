@@ -164,7 +164,7 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         // Samples can use full range of the audio, so we
         // divide by 127 here
         // FIXME: LOAD THE DELTA COUNTER
-        SDL_Log("Direct write to PCM\n");
+        // SDL_Log("Direct write to PCM\n");
         sample.sample = 1.0f/127.0f * (data & 0x7f);
         // FIXME: IT MAY NOT BE THE SHIFTER, BUT IN FACT ANOTHER REGISTER??
         sample.dmc_delta = data & 0x7e;
@@ -186,8 +186,8 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         triangle.enable = data & 4;
         noise.enable = data & 8;
         sample.enable = data & 16;
-        if (sample.enable)
-            SDL_Log("DPCM CHANNEL ENABLED\n");
+        // if (sample.enable)
+            // SDL_Log("DPCM CHANNEL ENABLED\n");
         if (!triangle.enable)
             triangle.length = 0;
         if (!pulse1.enable)
@@ -198,10 +198,13 @@ bool APU::Write(uint16_t addr, uint8_t data) {
             noise.length = 0;
         // FIXME: SAMPLE CHANNEL MAY NEED TO DO OTHER THINGS
         if (sample.enable) {
-            sample.addr = sample.reset_addr;
-            sample.length = sample.reset_length;
+            if (sample.dmc_shifter_bits_remaining == 0) {
+                sample.addr = sample.reset_addr;
+                sample.length = sample.reset_length;
+            }
         } else {
             sample.length = 0;
+            sample.has_sample = false;
         }
         sample.irq = false;
         break;
@@ -394,16 +397,16 @@ void APU::Clock() {
         ClockPulse(pulse1);
         ClockPulse(pulse2);
         ClockNoise();
+
+        // In reality this clocks at 8x the CPU rate
+        // but we can account for this with some math
+        ClockSample();
     }
 
 
     // The triangle wave clocks at the rate of the CPU
     if (clock_count % 3 == 0) {
         ClockTriangle();
-
-        // In reality this clocks at 8x the CPU rate
-        // but we can account for this with some math
-        ClockSample();
     }
 
     clock_count++;
@@ -421,7 +424,7 @@ int APU::GetDMAFreq(uint8_t index) {
 
 void APU::ClockSample() {
     if (sample.enable) {
-        sample.freq_counter -= 8;
+        sample.freq_counter -= 1;
         if (sample.freq_counter <= 0 && sample.freq_counter_reset > 0) {
             sample.freq_counter += sample.freq_counter_reset;
 
