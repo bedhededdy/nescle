@@ -53,7 +53,7 @@ uint8_t Bus::Read(uint16_t addr) {
         /* PPU Registers */
         return ppu.RegisterRead(addr);
     }
-    else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017) {
+    else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015) {
         return apu.Read(addr);
     }
     else if (addr == 0x4016 || addr == 0x4017) {
@@ -67,6 +67,11 @@ uint8_t Bus::Read(uint16_t addr) {
             controller1_shifter >>= 1;
         }
         else {
+            // There is technically a bus conflict with the frame counter here
+            // In games, they actually poll this 2-3 times to check for
+            // consistency, because we can get some open bus behavior with
+            // the APU frame counter. In our case, we will just always return
+            // the controller value since the 4017 register is write-only
             ret = controller2_shifter & 1;
             controller2_shifter >>= 1;
         }
@@ -111,14 +116,15 @@ bool Bus::Write(uint16_t addr, uint8_t data) {
         // FIXME: ADDRESS CONFLICT BETWEEN CONTROLLER 2 AND APU
         return apu.Write(addr, data);
     }
-    else if (addr == 0x4016 || addr == 0x4017) {
+    else if (addr == 0x4016) {
         /* Controller */
         // Writing saves the current state of the controller to
         // the controller's serialized shift register
-        if (addr == 0x4016)
-            controller1_shifter = controller1;
-        else
-            controller2_shifter = controller2;
+        // The way this actually works in hardware is that you write 1 to start
+        // a poll and 0 to finish it, but in our case we will just write the
+        // values of both controllers to the shift register
+        controller1_shifter = controller1;
+        controller2_shifter = controller2;
         return true;
     }
     else if (addr >= 0x4020 && addr <= 0xffff) {

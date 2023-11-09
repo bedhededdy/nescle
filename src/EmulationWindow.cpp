@@ -420,7 +420,7 @@ EmulationWindow::EmulationWindow() {
     });
 }
 
-void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_inactive, uint8_t prev_controller1) {
+void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_inactive, uint8_t prev_controller1, uint8_t prev_controller2) {
     Emulator* emu = &emulator;
     Bus* bus = emu->GetNES();
     emu->SetATurbo(false); emu->SetBTurbo(false);
@@ -572,9 +572,12 @@ void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_ina
             }
         } else {
             const Emulator::Controller* btn_map = &emu->GetSettings()->controller1;
+            const Emulator::Controller* btn_map2 = &emu->GetSettings()->controller2;
 
             emu->SetATurbo(emu->AnyKeyInMapHeld(btn_map->aturbo));
             emu->SetBTurbo(emu->AnyKeyInMapHeld(btn_map->bturbo));
+            emu->SetBTurbo2(emu->AnyKeyInMapHeld(btn_map2->bturbo));
+            emu->SetATurbo2(emu->AnyKeyInMapHeld(btn_map2->aturbo));
             if (emu->JoystickButtonHeld(Emulator::ControllerButton::ATURBO))
                 emu->SetATurbo(true);
             if (emu->JoystickButtonHeld(Emulator::ControllerButton::BTURBO))
@@ -585,6 +588,13 @@ void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_ina
             if (emu->GetBTurbo())
                 bus->SetController1(bus->GetController1()
                     | (prev_controller1 & (int)Bus::NESButtons::B));
+            if (emu->GetATurbo2())
+                bus->SetController2(bus->GetController2()
+                    | (prev_controller2 & (int)Bus::NESButtons::A));
+            if (emu->GetBTurbo2())
+                bus->SetController2(bus->GetController2()
+                    | (prev_controller2 & (int)Bus::NESButtons::B));
+
 
             if (emu->AnyKeyInMapHeld(btn_map->up))
                 bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
@@ -602,6 +612,22 @@ void EmulationWindow::ProcessInputs(bool emulation_window_active, bool imgui_ina
                 bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::SELECT);
             if (emu->AnyKeyInMapHeld(btn_map->start))
                 bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::START);
+            if (emu->AnyKeyInMapHeld(btn_map2->up))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::UP);
+            if (emu->AnyKeyInMapHeld(btn_map2->left))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::LEFT);
+            if (emu->AnyKeyInMapHeld(btn_map2->down))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::DOWN);
+            if (emu->AnyKeyInMapHeld(btn_map2->right))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::RIGHT);
+            if (emu->AnyKeyInMapHeld(btn_map2->b))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::B);
+            if (emu->AnyKeyInMapHeld(btn_map2->a))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::A);
+            if (emu->AnyKeyInMapHeld(btn_map2->select))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::SELECT);
+            if (emu->AnyKeyInMapHeld(btn_map2->start))
+                bus->SetController2(bus->GetController2() | (int)Bus::NESButtons::START);
 
             if (emu->JoystickButtonHeld(Emulator::ControllerButton::UP))
                 bus->SetController1(bus->GetController1() | (int)Bus::NESButtons::UP);
@@ -653,6 +679,8 @@ void EmulationWindow::Loop() {
 
         uint8_t prev_controller1 = bus->GetController1();
         bus->SetController1(0);
+        uint8_t prev_controller2 = bus->GetController2();
+        bus->SetController2(0);
 
         uint32_t window_flags = SDL_GetWindowFlags(window);
         bool emulation_window_active = window_flags & SDL_WINDOW_INPUT_FOCUS;
@@ -664,7 +692,7 @@ void EmulationWindow::Loop() {
             if (sub_windows[i] != nullptr && sub_windows[i]->IsFocused())
                 imgui_inactive = false;
 
-        ProcessInputs(emulation_window_active, imgui_inactive, prev_controller1);
+        ProcessInputs(emulation_window_active, imgui_inactive, prev_controller1, prev_controller2);
 
         // Note that the event loop blocks this, so when moving the window,
         // we still emulate since the emulation is on the audio thread,

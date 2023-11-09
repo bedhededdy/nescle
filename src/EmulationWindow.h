@@ -72,7 +72,7 @@ private:
     void RenderMainGUI();
     void SetupMainFrame();
 
-    void ProcessInputs(bool emu_win_active, bool imgui_inactive, uint8_t prev_controller1);
+    void ProcessInputs(bool emu_win_active, bool imgui_inactive, uint8_t prev_controller1, uint8_t prev_controller2);
 
 public:
     EmulationWindow();

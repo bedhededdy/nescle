@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: IMPLEMENT LAST CHANNEL, BATTLETOADS PAUSE MUSIC USES IT
+// FIXME: THERE IS AN ISSUE WITH THE NOISE CHANNEL. LISTEN TO SMB
 #include "APU.h"
 
 #include <cassert>

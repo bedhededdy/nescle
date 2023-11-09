@@ -501,18 +501,80 @@ std::vector<SDL_KeyCode> Emulator::DefaultKBBTurboMapping() {
     return res;
 }
 
+std::vector<SDL_KeyCode> Emulator::DefaultKBAMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_x);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBBMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_z);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBATurboMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_v);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBBTurboMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_c);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBStartMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_HOME);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBSelectMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_END);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBUpMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_UP);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBDownMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_DOWN);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBLeftMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_LEFT);
+    return res;
+}
+
+std::vector<SDL_KeyCode> Emulator::DefaultKBRightMapping2() {
+    std::vector<SDL_KeyCode> res;
+    res.push_back(SDLK_RIGHT);
+    return res;
+}
+
 void Emulator::SetDefaultSettings() {
     // NOTE: CAN'T ACTUALLY CHANGE THE SYNC TYPE, CUZ IF YOU RESET
     // YOU WILL BREAK, SO YOU HAVE TO CHANGE ONLY THE NEXT SYNC TYPE
     // settings.sync = EMULATOR_SYNC_VIDEO;
     settings.next_sync = SyncType::VIDEO;
     settings.vsync = true;
+
     settings.p1_vol = 0.5f;
     settings.p2_vol = 0.5f;
     settings.tri_vol = 0.5f;
     settings.noise_vol = 0.33f;
     settings.dmc_vol = 1.0f;
     settings.master_vol = 0.75f;
+
     settings.controller1.a = DefaultKBAMapping();
     settings.controller1.b = DefaultKBBMapping();
     settings.controller1.select = DefaultKBSelectMapping();
@@ -523,9 +585,17 @@ void Emulator::SetDefaultSettings() {
     settings.controller1.left = DefaultKBLeftMapping();
     settings.controller1.right = DefaultKBRightMapping();
     settings.controller1.down = DefaultKBDownMapping();
-    settings.aspect_ratio = (float)PPU::RESOLUTION_Y/(float)PPU::RESOLUTION_X;
-    settings.scale_factor = 3.0f;
-    settings.underscan = false;
+
+    settings.controller2.a = DefaultKBAMapping2();
+    settings.controller2.b = DefaultKBBMapping2();
+    settings.controller2.select = DefaultKBSelectMapping2();
+    settings.controller2.start = DefaultKBStartMapping2();
+    settings.controller2.aturbo = DefaultKBATurboMapping2();
+    settings.controller2.bturbo = DefaultKBBTurboMapping2();
+    settings.controller2.up = DefaultKBUpMapping2();
+    settings.controller2.left = DefaultKBLeftMapping2();
+    settings.controller2.right = DefaultKBRightMapping2();
+    settings.controller2.down = DefaultKBDownMapping2();
 
     settings.gamepad1.up = DefaultGamepadUpMapping();
     settings.gamepad1.down = DefaultGamepadDownMapping();
@@ -538,8 +608,20 @@ void Emulator::SetDefaultSettings() {
     settings.gamepad1.aturbo = DefaultGamepadATurboMapping();
     settings.gamepad1.bturbo = DefaultGamepadBTurboMapping();
 
-    // settings.sync = EMULATOR_SYNC_AUDIO;
-    // settings.vsync = false;
+    settings.gamepad2.up = DefaultGamepadUpMapping();
+    settings.gamepad2.down = DefaultGamepadDownMapping();
+    settings.gamepad2.left = DefaultGamepadLeftMapping();
+    settings.gamepad2.right = DefaultGamepadRightMapping();
+    settings.gamepad2.a = DefaultGamepadAMapping();
+    settings.gamepad2.b = DefaultGamepadBMapping();
+    settings.gamepad2.start = DefaultGamepadStartMapping();
+    settings.gamepad2.select = DefaultGamepadSelectMapping();
+    settings.gamepad2.aturbo = DefaultGamepadATurboMapping();
+    settings.gamepad2.bturbo = DefaultGamepadBTurboMapping();
+
+    settings.aspect_ratio = (float)PPU::RESOLUTION_Y/(float)PPU::RESOLUTION_X;
+    settings.scale_factor = 3.0f;
+    settings.underscan = false;
 }
 
 std::vector<int> Emulator::DefaultGamepadUpMapping() {
@@ -621,6 +703,22 @@ bool Emulator::GetBTurbo() {
     return bturbo;
 }
 
+void Emulator::SetATurbo2(bool turbo) {
+    aturbo2 = turbo;
+}
+
+void Emulator::SetBTurbo2(bool turbo) {
+    bturbo2 = turbo;
+}
+
+bool Emulator::GetATurbo2() {
+    return aturbo2;
+}
+
+bool Emulator::GetBTurbo2() {
+    return bturbo2;
+}
+
 SDL_AudioDeviceID Emulator::GetAudioDevice() {
     return audio_device;
 }
@@ -645,6 +743,18 @@ float Emulator::EmulateSample() {
                     nes.SetController1(nes.GetController1() & ~(int)Bus::NESButtons::B);
                 else
                     nes.SetController1(nes.GetController1() | (int)Bus::NESButtons::B);
+            }
+            if (aturbo2) {
+                if (nes.GetController2() & (int)Bus::NESButtons::A)
+                    nes.SetController2(nes.GetController2() & ~(int)Bus::NESButtons::A);
+                else
+                    nes.SetController2(nes.GetController2() | (int)Bus::NESButtons::A);
+            }
+            if (bturbo2) {
+                if (nes.GetController2() & (int)Bus::NESButtons::B)
+                    nes.SetController2(nes.GetController2() & ~(int)Bus::NESButtons::B);
+                else
+                    nes.SetController2(nes.GetController2() | (int)Bus::NESButtons::B);
             }
         }
     }

@@ -100,7 +100,10 @@ public:
 
         // controls
         Controller controller1;
+        Controller controller2;
+
         Gamepad gamepad1;
+        Gamepad gamepad2;
 
         // visuals
         float aspect_ratio;
@@ -133,13 +136,14 @@ private:
 
     bool aturbo;
     bool bturbo;
+    bool aturbo2;
+    bool bturbo2;
 
     bool quit;
     bool run_emulation;
 
     void LogKeyMaps();
     void LogButtonMaps();
-
 
 public:
     Emulator();
@@ -192,6 +196,16 @@ public:
     std::vector<SDL_KeyCode> DefaultKBSelectMapping();
     std::vector<SDL_KeyCode> DefaultKBATurboMapping();
     std::vector<SDL_KeyCode> DefaultKBBTurboMapping();
+    std::vector<SDL_KeyCode> DefaultKBUpMapping2();
+    std::vector<SDL_KeyCode> DefaultKBDownMapping2();
+    std::vector<SDL_KeyCode> DefaultKBLeftMapping2();
+    std::vector<SDL_KeyCode> DefaultKBRightMapping2();
+    std::vector<SDL_KeyCode> DefaultKBAMapping2();
+    std::vector<SDL_KeyCode> DefaultKBBMapping2();
+    std::vector<SDL_KeyCode> DefaultKBStartMapping2();
+    std::vector<SDL_KeyCode> DefaultKBSelectMapping2();
+    std::vector<SDL_KeyCode> DefaultKBATurboMapping2();
+    std::vector<SDL_KeyCode> DefaultKBBTurboMapping2();
 
     std::vector<SDL_KeyCode> GetKBButtonMappings(ControllerButton button);
 
@@ -226,6 +240,10 @@ public:
     void SetBTurbo(bool turbo);
     bool GetATurbo();
     bool GetBTurbo();
+    void SetATurbo2(bool turbo);
+    void SetBTurbo2(bool turbo);
+    bool GetATurbo2();
+    bool GetBTurbo2();
 
     void RefreshKeyboardState();
     void RefreshPrevKeys();
@@ -240,7 +258,8 @@ public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Gamepad, up, down, left, right, a, b, start,
         select, aturbo, bturbo)
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol,
-        p2_vol, tri_vol, noise_vol, dmc_vol, master_vol, controller1, gamepad1,
+        p2_vol, tri_vol, noise_vol, dmc_vol, master_vol, controller1,
+        controller2, gamepad1, gamepad2,
         aspect_ratio, scale_factor, underscan)
 };
 }
