@@ -28,6 +28,11 @@ private:
         GAMEPAD
     };
 
+    enum class ControllerPort {
+        PORT1,
+        PORT2
+    };
+
     bool* show;
     Emulator::ControllerButton btn = Emulator::ControllerButton::INVALID;
     Emulator::ControllerButton gamepad_btn = Emulator::ControllerButton::INVALID;
@@ -41,6 +46,7 @@ private:
     SDL_KeyCode last_keypress = SDLK_UNKNOWN;
     int last_gamepad_button_press = -1;
     ControllerType controller_type = ControllerType::KEYBOARD;
+    ControllerPort player = ControllerPort::PORT1;
 
     void ShowKeySetWindow(Emulator* emu);
     void ShowButtonSetWindow(Emulator* emu);

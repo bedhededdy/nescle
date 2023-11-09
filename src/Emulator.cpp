@@ -33,28 +33,34 @@
 
 namespace NESCLE {
 
-std::vector<SDL_KeyCode> Emulator::GetKBButtonMappings(ControllerButton btn) {
+std::vector<SDL_KeyCode> Emulator::GetKBButtonMappings(ControllerButton btn, int port) {
+    Controller* controller_ptr = nullptr;
+    if (port == 1)
+        controller_ptr = &settings.controller1;
+    else
+        controller_ptr = &settings.controller2;
+    Controller& controller = *controller_ptr;
     switch (btn) {
         case ControllerButton::A:
-            return settings.controller1.a;
+            return controller.a;
         case ControllerButton::B:
-            return settings.controller1.b;
+            return controller.b;
         case ControllerButton::SELECT:
-            return settings.controller1.select;
+            return controller.select;
         case ControllerButton::START:
-            return settings.controller1.start;
+            return controller.start;
         case ControllerButton::UP:
-            return settings.controller1.up;
+            return controller.up;
         case ControllerButton::DOWN:
-            return settings.controller1.down;
+            return controller.down;
         case ControllerButton::LEFT:
-            return settings.controller1.left;
+            return controller.left;
         case ControllerButton::RIGHT:
-            return settings.controller1.right;
+            return controller.right;
         case ControllerButton::ATURBO:
-            return settings.controller1.aturbo;
+            return controller.aturbo;
         case ControllerButton::BTURBO:
-            return settings.controller1.bturbo;
+            return controller.bturbo;
         default:
             return std::vector<SDL_KeyCode>();
     }
@@ -771,7 +777,7 @@ float Emulator::EmulateSample() {
     return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;
 }
 
-bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings) {
+bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings, int port) {
     if (button_mappings.size() == 0) {
         SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
         return false;
@@ -779,7 +785,11 @@ bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings)
 
     // FIXME: CHECK FOR BINDING CONFLICTS
 
-    Gamepad* controller = &settings.gamepad1;
+    Gamepad* controller;
+    if (port == 1)
+        controller = &settings.gamepad1;
+    else
+        controller = &settings.gamepad2;
 
     switch (btn) {
     case Emulator::ControllerButton::A:
@@ -828,15 +838,18 @@ bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings)
 }
 
 // TODO: IMPLEMENT ME
-bool Emulator::MapButton(ControllerButton btn, std::vector<SDL_KeyCode> key_mappings) {
+bool Emulator::MapButton(ControllerButton btn, std::vector<SDL_KeyCode> key_mappings, int port) {
     if (key_mappings.size() == 0) {
         SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
         return false;
     }
 
     // FIXME: CHECK FOR BINDING CONFLICTS
-
-    Controller* controller = &settings.controller1;
+    Controller* controller;
+    if (port == 1)
+        controller = &settings.controller1;
+    else
+        controller = &settings.controller2;
 
     switch (btn) {
     case Emulator::ControllerButton::A:
@@ -980,39 +993,45 @@ void Emulator::RefreshPrevKeys() {
     memcpy(prev_keys, keys, sizeof(uint8_t) * nkeys);
 }
 
-std::vector<int> Emulator::GetMappingsForControllerButton(ControllerButton button) {
+std::vector<int> Emulator::GetMappingsForControllerButton(ControllerButton button, int port) {
     // NOTE: SDL JOYSTICK DOES NOT DETECT R2 AND L2
     std::vector<int> res;
+    Gamepad* gamepad_ptr = nullptr;
+    if (port == 1)
+        gamepad_ptr = &settings.gamepad1;
+    else
+        gamepad_ptr = &settings.gamepad2;
+    Gamepad gamepad = *gamepad_ptr;
     switch (button) {
         case ControllerButton::A:
-            res = settings.gamepad1.a;
+            res = gamepad.a;
             break;
         case ControllerButton::B:
-            res = settings.gamepad1.b;
+            res = gamepad.b;
             break;
         case ControllerButton::START:
-            res = settings.gamepad1.start;
+            res = gamepad.start;
             break;
         case ControllerButton::SELECT:
-            res = settings.gamepad1.select;
+            res = gamepad.select;
             break;
         case ControllerButton::LEFT:
-            res = settings.gamepad1.left;
+            res = gamepad.left;
             break;
         case ControllerButton::RIGHT:
-            res = settings.gamepad1.right;
+            res = gamepad.right;
             break;
         case ControllerButton::UP:
-            res = settings.gamepad1.up;
+            res = gamepad.up;
             break;
         case ControllerButton::DOWN:
-            res = settings.gamepad1.down;
+            res = gamepad.down;
             break;
         case ControllerButton::ATURBO:
-            res = settings.gamepad1.aturbo;
+            res = gamepad.aturbo;
             break;
         case ControllerButton::BTURBO:
-            res = settings.gamepad1.bturbo;
+            res = gamepad.bturbo;
             break;
         default:
             res.push_back(-1);
@@ -1025,7 +1044,8 @@ bool Emulator::JoystickButtonHeld(ControllerButton button) {
     if (joystick == NULL) {
         return false;
     }
-    std::vector<int> mappings_for_button = GetMappingsForControllerButton(button);
+    // FIXME: NEED TO EDIT THE INPUT HANDLING TO DEAL WITH MULTI CONTROLLER
+    std::vector<int> mappings_for_button = GetMappingsForControllerButton(button, 1);
     for (auto it = mappings_for_button.begin(); it != mappings_for_button.end(); it++)
         if (SDL_JoystickGetButton(joystick, *it))
             return true;

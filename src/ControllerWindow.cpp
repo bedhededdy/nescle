@@ -56,7 +56,7 @@ void ControllerWindow::ShowKeySetWindow(Emulator* emu) {
             if (emu->KeyPushed(SDLK_ESCAPE)) {
                 // TODO: WRITE A FUNCTION THAT WILL BIND A KEY CODE TO A
                 // CONTROLLER BUTTON
-                emu->MapButton(btn, key_presses);
+                emu->MapButton(btn, key_presses, (player == ControllerPort::PORT1 ? 1 : 2));
 
                 key_presses.clear();
                 last_keypress = SDLK_UNKNOWN;
@@ -97,7 +97,7 @@ void ControllerWindow::ShowButtonSetWindow(Emulator* emu) {
             ImGui::Text("Press ESC to save");
             if (ImGui::IsWindowFocused()) {
                 if (emu->KeyPushed(SDLK_ESCAPE)) {
-                    emu->MapButton(gamepad_btn, button_presses);
+                    emu->MapButton(gamepad_btn, button_presses, (player == ControllerPort::PORT1 ? 1 : 2));
 
                     button_presses.clear();
                     last_gamepad_button_press = -1;
@@ -216,12 +216,15 @@ bool ControllerWindow::ShowGamepadWindow(Emulator* emu) {
 }
 
 void ControllerWindow::Show(Emulator* emu) {
-    const char* options[] = {"Keyboard", "Gamepad"};
+    static const char* options[] = {"Keyboard", "Gamepad"};
+    static const char* port[] = {"1", "2"};
     bool open_popup = false;
 
     // TODO: MAKE FIT THE SELECTION
     if (ImGui::Begin("Controller", show)) {
         ImGui::Combo("Controller Type", (int*)&controller_type, options, IM_ARRAYSIZE(options));
+        ImGui::SameLine();
+        ImGui::Combo("Player", (int*)&player, port, IM_ARRAYSIZE(port));
         if (controller_type == ControllerType::KEYBOARD)
             open_popup = ShowKeyboardWindow(emu);
         else if (controller_type == ControllerType::GAMEPAD)
@@ -232,11 +235,11 @@ void ControllerWindow::Show(Emulator* emu) {
     // FIXME:
     if (open_popup && controller_type == ControllerType::KEYBOARD) {
         ImGui::OpenPopup("Set Key");
-        key_presses = emu->GetKBButtonMappings(btn);
+        key_presses = emu->GetKBButtonMappings(btn, (player == ControllerPort::PORT1 ? 1 : 2));
     }
     else if (open_popup && controller_type == ControllerType::GAMEPAD) {
         ImGui::OpenPopup("Set Button");
-        button_presses = emu->GetMappingsForControllerButton(gamepad_btn);
+        button_presses = emu->GetMappingsForControllerButton(gamepad_btn, (player == ControllerPort::PORT1 ? 1 : 2));
     }
     ShowKeySetWindow(emu);
     ShowButtonSetWindow(emu);

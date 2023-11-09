@@ -173,7 +173,7 @@ public:
     int GetMostRecentButtonThisFrame();
 
     bool JoystickButtonHeld(ControllerButton button);
-    std::vector<int> GetMappingsForControllerButton(ControllerButton button);
+    std::vector<int> GetMappingsForControllerButton(ControllerButton button, int port);
 
     std::vector<int> DefaultGamepadUpMapping();
     std::vector<int> DefaultGamepadDownMapping();
@@ -207,10 +207,10 @@ public:
     std::vector<SDL_KeyCode> DefaultKBATurboMapping2();
     std::vector<SDL_KeyCode> DefaultKBBTurboMapping2();
 
-    std::vector<SDL_KeyCode> GetKBButtonMappings(ControllerButton button);
+    std::vector<SDL_KeyCode> GetKBButtonMappings(ControllerButton button, int port);
 
-    bool MapButton(ControllerButton button, std::vector<SDL_KeyCode> button_mappings);
-    bool MapButton(ControllerButton button, std::vector<int> button_mappings);
+    bool MapButton(ControllerButton button, std::vector<SDL_KeyCode> button_mappings, int port);
+    bool MapButton(ControllerButton button, std::vector<int> button_mappings, int port);
 
     bool ROMInserted();
 
