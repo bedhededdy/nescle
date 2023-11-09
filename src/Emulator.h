@@ -28,7 +28,7 @@
 #include <SDL_keyboard.h>
 #include <SDL_joystick.h>
 
-#include "Bus.h"
+#include "emu-core/Bus.h"
 
 namespace NESCLE {
 class Emulator {

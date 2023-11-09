@@ -16,7 +16,7 @@
 #pragma once
 
 #include <SDL_keyboard.h>
-#include "Emulator.h"
+#include "../Emulator.h"
 #include "NESCLEWindow.h"
 #include <vector>
 

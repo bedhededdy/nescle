@@ -23,9 +23,9 @@
 #include "Cart.h"
 #include "mappers/Mapper.h"
 #include "PPU.h"
-#include "Util.h"
+#include "../Util.h"
 
-#include "NESCLETypes.h"
+#include "../NESCLETypes.h"
 
 namespace NESCLE {
 /* R/W */

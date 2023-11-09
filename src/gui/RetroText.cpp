@@ -19,7 +19,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "Cart.h"
+#include "../emu-core/Cart.h"
 
 namespace NESCLE {
 std::array<uint8_t, 4096> RetroText::font;

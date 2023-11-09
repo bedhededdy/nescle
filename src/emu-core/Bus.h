@@ -24,7 +24,7 @@
 #include "APU.h"
 #include "CPU.h"
 #include "Cart.h"
-#include "NESCLETypes.h"
+#include "../NESCLETypes.h"
 #include "PPU.h"
 
 namespace NESCLE {

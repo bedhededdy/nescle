@@ -24,7 +24,7 @@
 #include "Bus.h"
 #include "Cart.h"
 #include "PPU.h"
-#include "Util.h"
+#include "../Util.h"
 
 // Returns if the operand is a negative 8-bit integer
 #define CPU_IS_NEG(x)   ((x) & 0x80)

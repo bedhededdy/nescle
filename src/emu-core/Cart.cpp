@@ -23,7 +23,7 @@
 
 #include "mappers/Mapper.h"
 #include "PPU.h"
-#include "Util.h"
+#include "../Util.h"
 
 namespace NESCLE {
 bool Cart::LoadROM(const char* path) {

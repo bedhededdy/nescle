@@ -23,12 +23,12 @@
 #include <string>
 #include <cstring>
 
-#include "APU.h"
-#include "Bus.h"
-#include "CPU.h"
-#include "Cart.h"
-#include "PPU.h"
-#include "mappers/Mapper.h"
+#include "emu-core/APU.h"
+#include "emu-core/Bus.h"
+#include "emu-core/CPU.h"
+#include "emu-core/Cart.h"
+#include "emu-core/PPU.h"
+#include "emu-core/mappers/Mapper.h"
 #include "Util.h"
 
 namespace NESCLE {

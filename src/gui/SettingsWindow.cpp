@@ -16,7 +16,7 @@
 #include "SettingsWindow.h"
 
 #include <SDL.h>
-#include "Emulator.h"
+#include "../Emulator.h"
 
 namespace NESCLE {
 void SettingsWindow::Show(Emulator* emu) {

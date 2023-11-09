@@ -19,7 +19,7 @@
 #include <imgui.h>
 #include <glad/glad.h>
 
-#include "Emulator.h"
+#include "../Emulator.h"
 #include "NESCLEWindow.h"
 
 namespace NESCLE {

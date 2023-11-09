@@ -17,7 +17,7 @@
 
 // Literally every one of these is going to use imgui
 #include <imgui.h>
-#include "NESCLETypes.h"
+#include "../NESCLETypes.h"
 
 namespace NESCLE {
 class NESCLEWindow {

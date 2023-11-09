@@ -15,8 +15,8 @@
  */
 #include "DisassemblerWindow.h"
 
-#include "CPU.h"
-#include "Emulator.h"
+#include "../emu-core/CPU.h"
+#include "../Emulator.h"
 
 namespace NESCLE {
 void DisassemblerWindow::Show(Emulator* emu) {

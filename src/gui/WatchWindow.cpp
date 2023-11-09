@@ -17,8 +17,8 @@
 
 #include <SDL_log.h>
 
-#include "Bus.h"
-#include "Emulator.h"
+#include "../emu-core/Bus.h"
+#include "../Emulator.h"
 
 namespace NESCLE {
 WatchWindow::WatchWindow(bool* _show) : show(_show) {

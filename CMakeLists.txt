@@ -131,18 +131,23 @@ find_package(OpenGL REQUIRED)
 
 # Add nescle as executable
 set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-set(MAPPER_SRC_DIR ${NESCLE_SRC_DIR}/mappers)
-set(NESCLE_SRC Bus.cpp Cart.cpp CPU.cpp Emulator.cpp RetroText.cpp NESCLETexture.cpp
-      EmulationWindow.cpp PatternWindow.cpp Main.cpp PPU.cpp APU.cpp
-      DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
-      MixerWindow.cpp Util.cpp NESCLENotification.cpp EventManager.cpp WatchWindow.cpp)
+set(NESCLE_CORE_SRC_DIR ${NESCLE_SRC_DIR}/emu-core)
+set(NESCLE_GUI_SRC_DIR ${NESCLE_SRC_DIR}/gui)
+set(MAPPER_SRC_DIR ${NESCLE_CORE_SRC_DIR}/mappers)
+set(NESCLE_SRC Emulator.cpp  Main.cpp Util.cpp  EventManager.cpp)
+set(NESCLE_GUI_SRC RetroText.cpp NESCLETexture.cpp EmulationWindow.cpp PatternWindow.cpp
+   DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
+      MixerWindow.cpp NESCLENotification.cpp WatchWindow.cpp)
+set(NESCLE_CORE_SRC Bus.cpp Cart.cpp CPU.cpp PPU.cpp APU.cpp)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper004.cpp Mapper007.cpp Mapper066.cpp Mapper.cpp)
 
 PREPEND(NESCLE_SRC ${NESCLE_SRC_DIR} ${NESCLE_SRC})
 PREPEND(MAPPER_SRC ${MAPPER_SRC_DIR} ${MAPPER_SRC})
+PREPEND(NESCLE_CORE_SRC ${NESCLE_CORE_SRC_DIR} ${NESCLE_CORE_SRC})
+PREPEND(NESCLE_GUI_SRC ${NESCLE_GUI_SRC_DIR} ${NESCLE_GUI_SRC})
 
-set(SRC ${NESCLE_SRC} ${MAPPER_SRC})
+set(SRC ${NESCLE_SRC} ${MAPPER_SRC} ${NESCLE_CORE_SRC} ${NESCLE_GUI_SRC})
 set(INC ${TINY_DIR} ${SDL2_INCLUDE_DIRECTORIES})
 
 add_executable(nescle ${SRC})

@@ -21,9 +21,9 @@
 
 #include <SDL_log.h>
 
-#include "Bus.h"
-#include "Emulator.h"
-#include "PPU.h"
+#include "../emu-core/Bus.h"
+#include "../Emulator.h"
+#include "../emu-core/PPU.h"
 
 namespace NESCLE {
 PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shader(shader), main_vao(vao), show(show) {

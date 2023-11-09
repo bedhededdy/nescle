@@ -32,7 +32,7 @@
 #include "Bus.h"
 #include "Cart.h"
 #include "mappers/Mapper.h"
-#include "Util.h"
+#include "../Util.h"
 
 namespace NESCLE {
 /* Helper Functions */

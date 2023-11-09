@@ -45,15 +45,15 @@
 
 #include "ControllerWindow.h"
 #include "DisassemblerWindow.h"
-#include "Emulator.h"
-#include "EventManager.h"
+#include "../Emulator.h"
+#include "../EventManager.h"
 #include "MixerWindow.h"
 #include "NESCLENotification.h"
 #include "PatternWindow.h"
 #include "RetroText.h"
 #include "SettingsWindow.h"
 #include "WatchWindow.h"
-#include "Util.h"
+#include "../Util.h"
 
 namespace NESCLE {
 void EmulationWindow::RenderMainGUI() {

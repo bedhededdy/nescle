@@ -20,7 +20,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "NESCLETypes.h"
+#include "../NESCLETypes.h"
 
 namespace NESCLE {
 class APU {

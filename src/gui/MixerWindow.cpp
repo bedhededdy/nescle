@@ -15,9 +15,8 @@
  */
 #include "MixerWindow.h"
 
-#include "Bus.h"
-#include "Emulator.h"
-#include "APU.h"
+#include "../emu-core/Bus.h"
+#include "../Emulator.h"
 
 namespace NESCLE {
 MixerWindow::MixerWindow(bool* show) {

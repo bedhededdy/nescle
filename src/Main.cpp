@@ -19,7 +19,7 @@
 #include <crtdbg.h>
 #endif
 
-#include "EmulationWindow.h"
+#include "gui/EmulationWindow.h"
 #include <SDL.h>
 
 // SDL defines main as a macro to SDL_main, so we need the cmdline args
