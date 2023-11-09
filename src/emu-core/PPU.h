@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef PPU_H_
+#define PPU_H_
 
 #include <array>
 #include <cstdint>
 #include <cstdio>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include "../NESCLETypes.h"
 
@@ -206,3 +209,4 @@ public:
     friend void from_json(const nlohmann::json& j, PPU& ppu);
 };
 }
+#endif // PPU_H_

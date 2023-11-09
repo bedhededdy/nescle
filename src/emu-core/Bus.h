@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef BUS_H_
+#define BUS_H_
 
 #include <array>
 #include <cstdint>
 #include <fstream>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include "APU.h"
 #include "CPU.h"
@@ -124,3 +127,4 @@ public:
     )
 };
 }
+#endif BUS_H_

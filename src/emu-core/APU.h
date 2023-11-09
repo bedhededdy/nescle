@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef APU_H_
+#define APU_H_
 
 #include <cstdint>
 #include <fstream>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include "../NESCLETypes.h"
 
@@ -186,3 +189,4 @@ public:
         sample, clock_count, frame_clock_count)
 };
 }
+#endif // APU_H_

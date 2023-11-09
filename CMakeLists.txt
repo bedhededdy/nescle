@@ -134,10 +134,10 @@ set(NESCLE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(NESCLE_CORE_SRC_DIR ${NESCLE_SRC_DIR}/emu-core)
 set(NESCLE_GUI_SRC_DIR ${NESCLE_SRC_DIR}/gui)
 set(MAPPER_SRC_DIR ${NESCLE_CORE_SRC_DIR}/mappers)
-set(NESCLE_SRC Emulator.cpp  Main.cpp Util.cpp  EventManager.cpp)
+set(NESCLE_SRC Emulator.cpp Main.cpp Util.cpp)
 set(NESCLE_GUI_SRC RetroText.cpp NESCLETexture.cpp EmulationWindow.cpp PatternWindow.cpp
    DisassemblerWindow.cpp OAMWindow.cpp SettingsWindow.cpp ControllerWindow.cpp
-      MixerWindow.cpp NESCLENotification.cpp WatchWindow.cpp)
+      MixerWindow.cpp NESCLENotification.cpp WatchWindow.cpp EventManager.cpp)
 set(NESCLE_CORE_SRC Bus.cpp Cart.cpp CPU.cpp PPU.cpp APU.cpp)
 set(MAPPER_SRC Mapper000.cpp Mapper001.cpp Mapper002.cpp Mapper003.cpp
         Mapper004.cpp Mapper007.cpp Mapper066.cpp Mapper.cpp)

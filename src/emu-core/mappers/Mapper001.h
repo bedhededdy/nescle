@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef MAPPER001_H_
+#define MAPPER001_H_
 
 #include <array>
 
@@ -58,3 +59,4 @@ public:
     bool MapPPUWrite(uint16_t addr, uint8_t data) override;
 };
 }
+#endif // MAPPER001_H_

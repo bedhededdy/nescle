@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 // https://nesdev.org/wiki/NROM
-#pragma once
+#ifndef MAPPER000_H_
+#define MAPPER000_H_
 
 #include "Mapper.h"
 
@@ -34,3 +35,4 @@ protected:
     void FromJSON(const nlohmann::json& json) override;
 };
 }
+#endif // MAPPER000_H_

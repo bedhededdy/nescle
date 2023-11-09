@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef NESCLE_TYPES_H_
+#define NESCLE_TYPES_H_
 
 namespace NESCLE {
 // Mappers
@@ -44,3 +45,4 @@ class CPU;
 class Emulator;
 class PPU;
 }
+#endif // NESCLE_TYPES_H_

@@ -46,7 +46,7 @@
 #include "ControllerWindow.h"
 #include "DisassemblerWindow.h"
 #include "../Emulator.h"
-#include "../EventManager.h"
+#include "EventManager.h"
 #include "MixerWindow.h"
 #include "NESCLENotification.h"
 #include "PatternWindow.h"

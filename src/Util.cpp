@@ -22,13 +22,15 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifndef EMSCRIPTEN
 #ifdef UTIL_WINDOWS
 #include <direct.h>
 #define mkdir(path, mode) _mkdir(path)
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
-#endif
+#endif // UTIL_WINDOWS
+#endif // EMSCRIPTEN
 
 namespace NESCLE {
 bool Util_FloatEquals(float a, float b) {
@@ -40,7 +42,7 @@ void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem) {
         ptr[i] = val;
 }
 
-
+#ifndef EMSCRIPTEN
 const char* Util_GetFileName(const char* path) {
     if (path == NULL)
         return NULL;
@@ -72,6 +74,7 @@ bool Util_CreateDirectoryIfNotExists(const char* path) {
     int res = mkdir(path, 0777);
     return res == 0 || errno == EEXIST;
 }
+#endif // EMSCRIPTEN
 
 template<typename T>
 constexpr auto Util_CastEnumToUnderlyingType(T t) {

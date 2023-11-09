@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef CART_H_
+#define CART_H_
 
 #include <cstdint>
 #include <fstream>
@@ -21,7 +22,9 @@
 #include <string>
 #include <vector>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include "mappers/Mapper.h"
 #include "../NESCLETypes.h"
@@ -94,3 +97,4 @@ public:
     friend void from_json(const nlohmann::json& j, Cart& cart);
 };
 }
+#endif // CART_H_

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef MAPPER003_H_
+#define MAPPER003_H_
 
 #include "Mapper.h"
 
@@ -38,3 +39,4 @@ protected:
     void FromJSON(const nlohmann::json& json) override;
 };
 }
+#endif // MAPPER003_H_

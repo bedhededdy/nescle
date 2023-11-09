@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef NESCLE_UTIL_H_
+#define NESCLE_UTIL_H_
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include <type_traits>
 
@@ -28,16 +31,16 @@
 #endif
 
 namespace NESCLE {
+#ifndef EMSCRIPTEN
 bool Util_CreateDirectoryIfNotExists(const char* path);
+const char* Util_GetFileName(const char* path);
+bool Util_FileExists(const char* path);
+#endif // EMSCRIPTEN
 
 void Util_MemsetU32(uint32_t* ptr, uint32_t val, size_t nelem);
-
-const char* Util_GetFileName(const char* path);
-
-bool Util_FileExists(const char* path);
-
 bool Util_FloatEquals(float a, float b);
 
 template<typename T>
 constexpr auto Util_CastEnumToUnderlyingType(T t);
 }
+#endif // NESCLE_UTIL_H_

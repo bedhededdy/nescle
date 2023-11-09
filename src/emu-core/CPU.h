@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 // TODO: ADD SUPPORT FOR UNOFFICIAL/UNSUPPORTED OPCODES
-#pragma once
+#ifndef CPU_H_
+#define CPU_H_
 
 #include <cstdint>
 #include <cstdio>
 #include <string>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif EMSCRIPTEN
 
 #include "../NESCLETypes.h"
 
@@ -241,3 +244,4 @@ static void op_txs(CPU* cpu);    // transfer index x to stack pointer
 static void op_tya(CPU* cpu);    // transfer index y to accumulator          (N Z)
 */
 }
+#endif // CPU_H_

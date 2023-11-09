@@ -17,7 +17,7 @@
 
 #include <imgui_impl_sdl2.h>
 
-#include "Emulator.h"
+#include "../Emulator.h"
 
 namespace NESCLE {
 std::unordered_map<SDL_EventType, std::vector<EventManager::Subscriber>> EventManager::events_to_subscribers;

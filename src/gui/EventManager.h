@@ -25,7 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "NESCLETypes.h"
+#include "../NESCLETypes.h"
 
 namespace NESCLE {
 // TODO: MAYBE I SHOULD HAVE MY OWN EVENT TYPE SO THAT I CAN

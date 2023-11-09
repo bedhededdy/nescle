@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef MAPPER_H_
+#define MAPPER_H_
 
 #include <cstdint>
 #include <fstream>
 #include <memory>
 
+#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
+#endif // EMSCRIPTEN
 
 #include "../../NESCLETypes.h"
 
@@ -73,3 +76,4 @@ public:
     friend void from_json(const nlohmann::json& j, Mapper& mapper);
 };
 }
+#endif // MAPPER_H_
