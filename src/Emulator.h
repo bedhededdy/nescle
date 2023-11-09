@@ -95,6 +95,7 @@ public:
         float p2_vol;
         float tri_vol;
         float noise_vol;
+        float dmc_vol;
         float master_vol;
 
         // controls
@@ -239,7 +240,7 @@ public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Gamepad, up, down, left, right, a, b, start,
         select, aturbo, bturbo)
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Settings, sync, next_sync, vsync, p1_vol,
-        p2_vol, tri_vol, noise_vol, master_vol, controller1, gamepad1,
+        p2_vol, tri_vol, noise_vol, dmc_vol, master_vol, controller1, gamepad1,
         aspect_ratio, scale_factor, underscan)
 };
 }

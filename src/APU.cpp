@@ -153,7 +153,7 @@ bool APU::Write(uint16_t addr, uint8_t data) {
     case 0x4010:
         sample.irq = data & 0x80;
         if (sample.irq)
-            SDL_Log("APU IRQ ENABLED");
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "APU IRQ ENABLED");
         sample.loop = data & 0x40;
         // FIXME: YOU NEED TO USE THE DATA
         // VALUE AS AN INDEX INTO A LOOKUP TABLE
@@ -204,6 +204,8 @@ bool APU::Write(uint16_t addr, uint8_t data) {
             }
         } else {
             sample.length = 0;
+            // NOTE: THIS MAY LEAD TO LESS CLIPPING
+            // sample.dmc_delta = 0;
             sample.has_sample = false;
         }
         sample.irq = false;

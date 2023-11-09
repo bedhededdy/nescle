@@ -507,11 +507,12 @@ void Emulator::SetDefaultSettings() {
     // settings.sync = EMULATOR_SYNC_VIDEO;
     settings.next_sync = SyncType::VIDEO;
     settings.vsync = true;
-    settings.p1_vol = 1.0f;
-    settings.p2_vol = 1.0f;
-    settings.tri_vol = 1.0f;
-    settings.noise_vol = 0.75f;
-    settings.master_vol = 0.5f;
+    settings.p1_vol = 0.5f;
+    settings.p2_vol = 0.5f;
+    settings.tri_vol = 0.5f;
+    settings.noise_vol = 0.33f;
+    settings.dmc_vol = 1.0f;
+    settings.master_vol = 0.75f;
     settings.controller1.a = DefaultKBAMapping();
     settings.controller1.b = DefaultKBBMapping();
     settings.controller1.select = DefaultKBSelectMapping();
@@ -654,7 +655,7 @@ float Emulator::EmulateSample() {
     float tri = apu.GetTriangleSample() * settings.tri_vol;
     float noise = apu.GetNoiseSample() * settings.noise_vol;
     // FIXME: ADD A SETTING FOR THIS
-    float sample = apu.GetSampleSample() * 1.0f; // This is usually quiet, so I will risk clipping to mix it right
+    float sample = apu.GetSampleSample() * settings.dmc_vol;
 
     // we force mute the sample channel because it is correct rhythmically, but sounds very bad
     return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;

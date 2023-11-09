@@ -28,7 +28,7 @@ void MixerWindow::Show(Emulator* emu) {
     constexpr ImVec2 slider_dim(25, 150);
 
     if (ImGui::Begin("Mixer", show)) {
-        if (ImGui::BeginTable("##tbl", 5)) {
+        if (ImGui::BeginTable("##tbl", 6)) {
             float x, mid;
 
             // FIXME: MAKE DYNAMIC
@@ -69,6 +69,15 @@ void MixerWindow::Show(Emulator* emu) {
             mid = x + 50.0f - ImGui::CalcTextSize("Noise").x / 2.0f;
             ImGui::SetCursorPosX(mid);
             ImGui::Text("Noise");
+
+            ImGui::TableNextColumn();
+            x = ImGui::GetCursorPosX();
+            mid = x + 50.0f - slider_dim.x / 2.0f;
+            ImGui::SetCursorPosX(mid);
+            ImGui::VSliderFloat("##dmc", slider_dim, &emu->GetSettings()->dmc_vol, 0.0f, 1.0f, "");
+            mid = x += 50.0f - ImGui::CalcTextSize("DMC").x / 2.0f;
+            ImGui::SetCursorPosX(mid);
+            ImGui::Text("DMC");
 
             ImGui::TableNextColumn();
             x = ImGui::GetCursorPosX();
