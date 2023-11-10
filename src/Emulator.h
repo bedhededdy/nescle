@@ -142,7 +142,7 @@ private:
     bool quit;
     bool run_emulation;
 
-    void LogKeyMaps();
+    void LogKeyMaps(int controller_num);
     void LogButtonMaps();
 
 public:

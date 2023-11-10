@@ -19,11 +19,10 @@
 // PPU SAYS
 #include "PatternWindow.h"
 
-#include <SDL_log.h>
-
 #include "../emu-core/Bus.h"
 #include "../Emulator.h"
 #include "../emu-core/PPU.h"
+#include "../Util.h"
 
 namespace NESCLE {
 PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shader(shader), main_vao(vao), show(show) {
@@ -51,7 +50,7 @@ PatternWindow::PatternWindow(GLuint shader, GLuint vao, bool* show) : main_shade
         GL_TEXTURE_2D, palette_texture, 0);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        SDL_LogError(SDL_LOG_CATEGORY_RENDER,
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::VIDEO,
             "Failed to create framebuffer for palette window");
     }
 
@@ -131,7 +130,7 @@ void PatternWindow::Show(Emulator* emu) {
     // FIXME: EACH INDIVIDUAL TILE SHOULD BE CLICKABLE
     if (ImGui::ImageButton(imguiptr_tex, ImVec2(256*4, 128 * 4),
         ImVec2(0, 1), ImVec2(1, 0))) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Click img btn\n");
+
     }
 
     ImGui::End();

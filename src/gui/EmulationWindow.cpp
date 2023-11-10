@@ -81,8 +81,8 @@ void EmulationWindow::RenderMainGUI() {
                             << "saves/" << game_name << "slot" << i << ".sav";
                         std::string path = path_stream.str();
                         if (!emulator.SaveState(path.c_str()))
-                            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                                "Failed to save state\n");
+                            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+                                "Failed to save state");
                         emulator.GetUsedSaveSlots()[i] = true;
 
 
@@ -109,8 +109,8 @@ void EmulationWindow::RenderMainGUI() {
                             << "saves/" << game_name << "slot" << i << ".sav";
                         std::string path = path_stream.str();
                         if (!emulator.LoadState(path.c_str()))
-                            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                                "Failed to load state\n");
+                            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+                                "Failed to load state");
                         std::stringstream notification_stream;
                         notification_stream << "Loaded state " << i;
                         path = notification_stream.str();
@@ -162,8 +162,8 @@ void EmulationWindow::RenderMainGUI() {
 
         ImGui::EndMainMenuBar();
     } else {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                     "EmulationWindow::Show(): unable to create MainMenuBar");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "EmulationWindow::Show(): unable to create MainMenuBar");
     }
 
     if (show_popup)
@@ -279,7 +279,7 @@ void EmulationWindow::SetupMainFrame() {
 
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
     if (!success)
-        SDL_Log("vshader fail");
+        Util_Log(Util_LogLevel::CRITICAL, Util_LogCategory::ERROR, "vshader fail");
 
     GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fshader, 1, &fshader_src, NULL);
@@ -287,7 +287,7 @@ void EmulationWindow::SetupMainFrame() {
 
     glGetShaderiv(fshader, GL_COMPILE_STATUS, &success);
     if (!success)
-        SDL_Log("fshader fail");
+        Util_Log(Util_LogLevel::CRITICAL, Util_LogCategory::ERROR, "fshader fail");
 
     main_shader = glCreateProgram();
     glAttachShader(main_shader, vshader);
@@ -334,10 +334,10 @@ EmulationWindow::EmulationWindow() {
     // IT MAY BE POSSIBLE THAT ADAPTIVE SYNC KICKS IN WITHOUT ME TELLING IT
     // YOU CAN CHECK THIS BY SETTING THE GSYNC INDICATOR IN NVCP
     if (emulator.GetSettings()->vsync) {
-        SDL_Log("Vsync enabled\n");
+        Util_Log(Util_LogLevel::INFO, Util_LogCategory::VIDEO, "Vsync enabled");
         SDL_GL_SetSwapInterval(1);
     } else {
-        SDL_Log("Vsync disabled\n");
+        Util_Log(Util_LogLevel::INFO, Util_LogCategory::VIDEO, "Vsync disabled");
         SDL_GL_SetSwapInterval(0);
     }
 
@@ -407,14 +407,14 @@ EmulationWindow::EmulationWindow() {
     });
     EventManager::Subscribe(SDL_JOYDEVICEADDED, "EmulationWindow", [this](SDL_Event& event) {
         emulator.SetJoystick(SDL_JoystickOpen(event.jdevice.which));
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Joystick %d added\n", event.jdevice.which);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT,
+            "Joystick " + std::to_string(event.jdevice.which) + " added");
         return 0;
     });
     EventManager::Subscribe(SDL_JOYDEVICEREMOVED, "EmulationWindow", [this](SDL_Event& event) {
         SDL_JoystickClose(emulator.GetJoystick());
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Joystick %d REMOVED\n", event.jdevice.which);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT,
+            "Joystick " + std::to_string(event.jdevice.which) + " removed");
         emulator.SetJoystick(nullptr);
         return 0;
     });
@@ -672,7 +672,7 @@ void EmulationWindow::Loop() {
         emu->SetMostRecentButtonThisFrame(-1);
 
         if (emulator.LockNESState() < 0) {
-            SDL_Log("Failed to lock mutex\n");
+            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR, "Failed to lock mutex");
             continue;
         }
         EventManager::ProcessEvents(emulator);
@@ -728,6 +728,7 @@ EmulationWindow::~EmulationWindow() {
     SDL_DestroyWindow(window);
 
     NESCLENotification::Shutdown();
+    Util_Shutdown();
 }
 
 void EmulationWindow::Show() {
@@ -779,7 +780,7 @@ void EmulationWindow::Show() {
             sizeof(stream));
 
         if (SDL_QueueAudio(emu->GetAudioDevice(), stream, sizeof(stream)) < 0)
-            SDL_Log("SDL_QueueAudio failed: %s", SDL_GetError());
+            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::AUDIO, "SDL_QueueAudio failed: " + std::string(SDL_GetError()));
     }
 
     glUseProgram(main_shader);
@@ -912,13 +913,7 @@ void EmulationWindow::Show() {
     std::array<uint32_t, PPU::RESOLUTION_X * PPU::RESOLUTION_Y> ppu_framebuffer;
     memcpy(ppu_framebuffer.data(), bus->GetPPU().GetFramebuffer(), PPU::RESOLUTION_X * PPU::RESOLUTION_Y * sizeof(uint32_t));
 
-    // FIXME: THIS IS HOW THE PPU SHOULD CANCEL THIS SHIT OUT, BUT IT DOESN'T
-    // should 0 out the first 8 pixels of each scanline
-    //for (int i = 0; i < PPU_RESOLUTION_Y; i++) {
-    //    memset(ppu_framebuffer + i * PPU_RESOLUTION_X, 0, 8 * sizeof(uint32_t));
-    //}
     emu->UnlockNESState();
-    // SDL_Log("cycles taken: %llu", SDL_GetPerformanceCounter() - t0);
 
     // THIS CALL CAN BE BLOCKING
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PPU::RESOLUTION_X, PPU::RESOLUTION_Y,
@@ -933,7 +928,6 @@ void EmulationWindow::Show() {
     // same thing for notifications because they need to draw over
     // the game, so order is important
     if (show_frametime) {
-        // SDL_Log("Frametime: %llu\n", frametime);
         // HORRIBLY INEFFICIENT, BUT FINE FOR NOW
         GLuint ftime_tex;
         glGenTextures(1, &ftime_tex);

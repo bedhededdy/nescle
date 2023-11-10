@@ -15,8 +15,6 @@
  */
 #include "WatchWindow.h"
 
-#include <SDL_log.h>
-
 #include "../emu-core/Bus.h"
 #include "../Emulator.h"
 
@@ -50,7 +48,8 @@ void WatchWindow::Show(Emulator* emu) {
         ImGui::NewLine();
         if (ImGui::Button("Dump RAM")) {
             if (!bus->GetCPU().DumpRAM()) {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to dump RAM");
+                Util_Log(Util_LogLevel::ERROR, Util_LogCategory::APPLICATION,
+                    "Failed to dump RAM");
             }
         }
     }

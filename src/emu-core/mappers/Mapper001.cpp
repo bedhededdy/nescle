@@ -49,8 +49,6 @@
 // TODO: MAYBE WE DON'T WANNA BACK UP SRAM
 #include "Mapper001.h"
 
-#include <SDL_log.h>
-
 #include "../Cart.h"
 
 namespace NESCLE {
@@ -182,8 +180,8 @@ bool Mapper001::MapPPUWrite(uint16_t addr, uint8_t data) {
         return true;
     }
 
-    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                "Attempted to write to CHR ROM at %04x", addr);
+    Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
+             "Attempted to write to CHR ROM at decimal" + std::to_string(addr));
     return false;
 }
 

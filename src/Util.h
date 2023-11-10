@@ -19,10 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-
-#ifndef EMSCRIPTEN
-#include <nlohmann/json.hpp>
-#endif // EMSCRIPTEN
+#include <string>
 
 #include <type_traits>
 
@@ -31,6 +28,28 @@
 #endif
 
 namespace NESCLE {
+enum class Util_LogLevel {
+    VERBOSE,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    CRITICAL
+};
+
+enum class Util_LogCategory {
+    APPLICATION,
+    AUDIO,
+    VIDEO,
+    INPUT,
+    ERROR
+};
+
+void Util_Init();
+void Util_Log(Util_LogLevel level, Util_LogCategory category, const char* msg);
+void Util_Log(Util_LogLevel level, Util_LogCategory category, std::string msg);
+void Util_Shutdown();
+
 #ifndef EMSCRIPTEN
 bool Util_CreateDirectoryIfNotExists(const char* path);
 const char* Util_GetFileName(const char* path);

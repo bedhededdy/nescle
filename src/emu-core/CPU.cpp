@@ -15,8 +15,6 @@
  */
 #include "CPU.h"
 
-#include <SDL_log.h>
-
 #include <cstdlib>
 #include <functional>
 #include <sstream>

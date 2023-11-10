@@ -22,9 +22,7 @@
 #include <string>
 #include <vector>
 
-#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
-#endif // EMSCRIPTEN
 
 #include "mappers/Mapper.h"
 #include "../NESCLETypes.h"

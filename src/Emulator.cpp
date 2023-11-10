@@ -131,66 +131,55 @@ void Emulator::LogButtonMaps() {
 
 }
 
-void Emulator::LogKeyMaps() {
-    for (auto key : settings.controller1.a) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::A),
-            SDL_GetKeyName(key));
+void Emulator::LogKeyMaps(int controller_num) {
+    Controller* controller_ptr = nullptr;
+    if (controller_num == 1) {
+        controller_ptr = &settings.controller1;
+    } else {
+        controller_ptr = &settings.controller2;
     }
-    for (auto key : settings.controller1.b) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::B),
-            SDL_GetKeyName(key));
+    Controller& controller = *controller_ptr;
+    std::string log_str = "Player " + std::to_string(controller_num) + " key mappings:";
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
+    for (auto key : controller.a) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::A)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.aturbo) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::ATURBO),
-            SDL_GetKeyName(key));
+    for (auto key : controller.b) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::B)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.bturbo) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::BTURBO),
-            SDL_GetKeyName(key));
+    for (auto key : controller.aturbo) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::ATURBO)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.select) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::SELECT),
-            SDL_GetKeyName(key));
+    for (auto key : controller.bturbo) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::BTURBO)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.start) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::START),
-            SDL_GetKeyName(key));
+    for (auto key : controller.select) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::SELECT)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.up) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::UP),
-            SDL_GetKeyName(key));
+    for (auto key : controller.start) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::START)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.left) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::LEFT),
-            SDL_GetKeyName(key));
+    for (auto key : controller.up) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::UP)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.right) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::RIGHT),
-            SDL_GetKeyName(key));
+    for (auto key : controller.left) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::LEFT)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
-    for (auto key : settings.controller1.down) {
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s",
-            GetButtonName(ControllerButton::DOWN),
-            SDL_GetKeyName(key));
+    for (auto key : controller.right) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::RIGHT)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
+    }
+    for (auto key : controller.down) {
+        log_str = "Button " + std::string(GetButtonName(ControllerButton::DOWN)) + " mapped to key " + SDL_GetKeyName(key);
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::INPUT, log_str.c_str());
     }
 }
 
@@ -215,7 +204,7 @@ void Emulator::AudioCallback(void* userdata, uint8_t* stream, int len) {
     if (SDL_LockMutex(nes_state_lock) < 0) {
         for (size_t i = 0; i < (size_t)len/sizeof(float); i++)
             streamF32[i] = 0.0f;
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
             "Emulator_AudioCallback: Could not lock mutex");
         return;
     }
@@ -231,16 +220,14 @@ void Emulator::AudioCallback(void* userdata, uint8_t* stream, int len) {
 Emulator::Emulator() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 
-    #ifdef _DEBUG
-       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
-    #else
-       SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
-    #endif
+    // FIXME: SET LOGGING LEVELS IN HERE FOR THE LIBRARY IF PASSING AS PARAM
+    Util_Init();
 
     nes_state_lock = SDL_CreateMutex();
     if (nes_state_lock == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
             "Emulator_Create: Bad alloc SDL_Mutex");
+        exit(EXIT_FAILURE);
     }
 
     // Get the exe and user data paths
@@ -257,16 +244,16 @@ Emulator::Emulator() {
     Util_CreateDirectoryIfNotExists(saves_path.c_str());
 
     std::string settings_path_str = user_data_path + "settings.json";
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "settings_path_str: %s", settings_path_str.c_str());
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "settings_path_str: " + settings_path_str);
     // settings_path_str = "settings.json";
     if (!Emulator::LoadSettings(settings_path_str.c_str())) {
         Emulator::SetDefaultSettings();
         settings.sync = SyncType::VIDEO;
         if (!Emulator::SaveSettings(settings_path_str.c_str()))
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+            Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
                 "Emulator_Create: Could not save settings");
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
             "Emulator_Create: Could not load settings, using defaults");
     }
     aturbo = false;
@@ -299,11 +286,6 @@ Emulator::Emulator() {
     quit = false;
     run_emulation = false;
 
-    // joystick = SDL_JoystickOpen(0);
-    // if (joystick) {
-    //     SDL_LogDebug(SDL_LOG_CATEGORY_INPUT, "Joystick connected");
-    // }
-
     const uint8_t* state = SDL_GetKeyboardState(&nkeys);
     const size_t sz = nkeys * sizeof(uint8_t);
     prev_keys = new uint8_t[sz];
@@ -314,7 +296,8 @@ Emulator::Emulator() {
     most_recent_key_this_frame = SDLK_UNKNOWN;
 
     // Log the keymaps in debug mode
-    LogKeyMaps();
+    LogKeyMaps(1);
+    LogKeyMaps(2);
     LogButtonMaps();
 
     // Set all saveslots as unused
@@ -336,32 +319,33 @@ Emulator::~Emulator() {
     delete prev_keys;
 
     SDL_Quit();
-    SDL_Log("SDL Remaining Allocations: %d", SDL_GetNumAllocations());
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "SDL Remaining Allocations: " + std::to_string(SDL_GetNumAllocations()));
 }
 
 // TODO: REFACTOR TO JUST TAKE A GAME NAME AND A SLOT
 // TODO: ALSO SAVE IN SOME BINARY FORMAT AND INVESTIGATE THE PERFORMANCE AND
 // SIZE VS SAVING TO JSON
 bool Emulator::SaveState(const char* path) {
+    std::string path_as_str = path;
     if (!ROMInserted()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-            "Emulator_LoadState: Cannot save state with no cart loaded");
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
+            "Emulator_SaveState: Cannot save state with no cart loaded");
         return false;
     }
 
     std::ofstream savestate(path);
     if (!savestate.is_open()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-            "Emulator_LoadState: Could not open file %s", path);
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
+            "Emulator_SaveState: Could not open file " + path_as_str);
         return false;
     }
     nlohmann::json j;
     uint64_t t0 = SDL_GetPerformanceCounter();
     j["bus"] = nes;
     savestate << j;
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Emulator_SaveState: Took %fms to save",
-        1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency());
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Emulator_SaveState: Took %fms to save" + std::to_string(1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency()));
     return !savestate.fail();
 }
 
@@ -372,23 +356,24 @@ const char* Emulator::GetGameName() {
 }
 
 bool Emulator::LoadState(const char* path) {
+    std::string path_as_str = path;
     if (!ROMInserted()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
             "Emulator_LoadState: Cannot load state with no cart loaded");
         return false;
     }
 
     std::string backup_path = user_data_path + "saves/tmp.sav";
     if (!SaveState(backup_path.c_str())) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
             "Emulator_LoadState: Could not backup current state");
         return false;
     }
 
     std::ifstream savestate(path);
     if (!savestate.is_open()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-            "Emulator_LoadState: Could not open file %s", path);
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
+            "Emulator_LoadState: Could not open file " + path_as_str);
         return false;
     }
     nlohmann::json j;
@@ -402,9 +387,9 @@ bool Emulator::LoadState(const char* path) {
     // throws some exception on fail, but I don't know what so we just need to
     // wait and see
     from_json(j.at("bus"), nes);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Emulator_LoadState: Took %fms to load",
-        1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency());
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Emulator_SaveState: Took %fms to load"
+        + std::to_string(1000.0 * (double)(SDL_GetPerformanceCounter() - t0)/(double)SDL_GetPerformanceFrequency()));
 
     // FIXME: RETURN WHETHER WE SUCCEEDED AND IF WE DIDN'T, LOAD THE BACKUP
     // BACK IN
@@ -774,12 +759,17 @@ float Emulator::EmulateSample() {
     float sample = apu.GetSampleSample() * settings.dmc_vol;
 
     // we force mute the sample channel because it is correct rhythmically, but sounds very bad
-    return 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;
+    float res = 0.20f * (p1 + p2 + tri + noise + sample) * settings.master_vol;
+    if (res > 1.0f)
+        Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::AUDIO,
+            "Emulator_EmulateSample: Sample value out of range: " + std::to_string(res));
+    return res;
 }
 
 bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings, int port) {
     if (button_mappings.size() == 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::INPUT,
+            "Emulator_MapButton: No key given");
         return false;
     }
 
@@ -824,15 +814,15 @@ bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings,
         break;
 
     default:
-        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "Invalid button\n");
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::INPUT,
+            "Emulator_MapButton: Invalid button");
         return false;
         break;
     }
 
     for (auto key = button_mappings.begin(); key != button_mappings.end(); key++) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s\n",
-            Emulator::GetButtonName(btn), SDL_GetKeyName(*key));
+        Util_Log(Util_LogLevel::INFO, Util_LogCategory::INPUT,
+            "Button " + std::string(Emulator::GetButtonName(btn)) + " mapped to key " + SDL_GetKeyName(*key));
     }
     return true;
 }
@@ -840,7 +830,8 @@ bool Emulator::MapButton(ControllerButton btn, std::vector<int> button_mappings,
 // TODO: IMPLEMENT ME
 bool Emulator::MapButton(ControllerButton btn, std::vector<SDL_KeyCode> key_mappings, int port) {
     if (key_mappings.size() == 0) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "No key given\n");
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::INPUT,
+            "Emulator_MapButton: No key given");
         return false;
     }
 
@@ -884,15 +875,15 @@ bool Emulator::MapButton(ControllerButton btn, std::vector<SDL_KeyCode> key_mapp
         break;
 
     default:
-        SDL_LogWarn(SDL_LOG_CATEGORY_INPUT, "Invalid button\n");
+        Util_Log(Util_LogLevel::WARN, Util_LogCategory::INPUT,
+            "Emulator_MapButton: Invalid button");
         return false;
         break;
     }
 
     for (auto key = key_mappings.begin(); key != key_mappings.end(); key++) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
-            "Button %s mapped to key %s\n",
-            Emulator::GetButtonName(btn), SDL_GetKeyName(*key));
+        Util_Log(Util_LogLevel::INFO, Util_LogCategory::INPUT,
+            "Button " + std::string(Emulator::GetButtonName(btn)) + " mapped to key " + SDL_GetKeyName(*key));
     }
     return true;
 }
@@ -912,7 +903,8 @@ nfdresult_t Emulator::LoadROM() {
         cancelled = true;
     } else {
         rom = NULL;
-        SDL_Log("Error opening file: %s\n", NFD_GetError());
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Emulator_LoadROM: Error opening file: " + std::string(NFD_GetError()));
     }
 
     if (!bus->GetCart().LoadROM((const char*)rom)) {

@@ -15,8 +15,6 @@
  */
 #include "Util.h"
 
-#include <SDL_log.h>
-
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +31,28 @@
 #endif // EMSCRIPTEN
 
 namespace NESCLE {
+Util_LogLevel NESCLELogLevelGlobal = Util_LogLevel::INFO;
+
+void Util_Init() {
+    #ifdef _DEBUG
+    NESCLELogLevelGlobal = Util_LogLevel::DEBUG;
+    #endif
+}
+
+void Util_Log(Util_LogLevel level, Util_LogCategory category, const char* msg) {
+    // TODO: WE NEED TO FIGURE OUT THE EASYLOGPP STUFF AND ADD IT TO THE CMAKE FILE
+    if ((int)level >= (int)NESCLELogLevelGlobal)
+        printf("%s\n", msg);
+}
+
+void Util_Log(Util_LogLevel level, Util_LogCategory category, std::string msg) {
+    Util_Log(level, category, msg.c_str());
+}
+
+void Util_Shutdown() {
+
+}
+
 bool Util_FloatEquals(float a, float b) {
     return fabs(a - b) < 0.0001f;
 }

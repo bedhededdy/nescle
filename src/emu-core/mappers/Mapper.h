@@ -20,9 +20,7 @@
 #include <fstream>
 #include <memory>
 
-#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
-#endif // EMSCRIPTEN
 
 #include "../../NESCLETypes.h"
 

@@ -40,18 +40,20 @@ void SettingsWindow::Show(Emulator* emu) {
         if (ImGui::RadioButton("On", settings->vsync)) {
             settings->vsync = true;
             SDL_GL_SetSwapInterval(1);
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "VSync enabled");
+            Util_Log(Util_LogLevel::INFO, Util_LogCategory::VIDEO,
+                "VSync enabled");
         }
         ImGui::SameLine();
         if (ImGui::RadioButton("Off", !settings->vsync)) {
             if (settings->sync != Emulator::SyncType::VIDEO) {
                 settings->vsync = false;
                 SDL_GL_SetSwapInterval(0);
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "VSync disabled");
+                Util_Log(Util_LogLevel::INFO, Util_LogCategory::VIDEO,
+                    "VSync disabled");
             } else {
                 // TODO: MAKE THIS A POPUP
-                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Vsync cannot be disabled when syncing to video\n");
+                Util_Log(Util_LogLevel::WARN, Util_LogCategory::VIDEO,
+                    "Vsync cannot be disabled when syncing to video");
             }
         }
 
@@ -73,8 +75,8 @@ void SettingsWindow::Show(Emulator* emu) {
         emu->SetRunEmulation(false);
 
         if (settings->next_sync == Emulator::SyncType::VIDEO) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                "Vsync will be re-enabled on next run as a prereq to video sync\n");
+            Util_Log(Util_LogLevel::INFO, Util_LogCategory::APPLICATION,
+                "Vsync will be re-enabled on next run as a prereq to video sync");
         }
     }
 

@@ -18,9 +18,9 @@
 
 #include <cassert>
 #include <cstring>
-#include <SDL_log.h>
 
 #include "Bus.h"
+#include "../Util.h"
 
 namespace NESCLE {
 int APU::GetAmp(int index) {
@@ -153,7 +153,7 @@ bool APU::Write(uint16_t addr, uint8_t data) {
     case 0x4010:
         sample.irq = data & 0x80;
         if (sample.irq)
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "APU IRQ ENABLED");
+            Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION, "APU IRQ ENABLED");
         sample.loop = data & 0x40;
         // FIXME: YOU NEED TO USE THE DATA
         // VALUE AS AN INDEX INTO A LOOKUP TABLE
@@ -163,10 +163,7 @@ bool APU::Write(uint16_t addr, uint8_t data) {
     case 0x4011:
         // Samples can use full range of the audio, so we
         // divide by 127 here
-        // FIXME: LOAD THE DELTA COUNTER
-        // SDL_Log("Direct write to PCM\n");
         sample.sample = 1.0f/127.0f * (data & 0x7f);
-        // FIXME: IT MAY NOT BE THE SHIFTER, BUT IN FACT ANOTHER REGISTER??
         sample.dmc_delta = data & 0x7e;
         sample.dmc_lsb = data & 1;
         break;
@@ -186,8 +183,6 @@ bool APU::Write(uint16_t addr, uint8_t data) {
         triangle.enable = data & 4;
         noise.enable = data & 8;
         sample.enable = data & 16;
-        // if (sample.enable)
-            // SDL_Log("DPCM CHANNEL ENABLED\n");
         if (!triangle.enable)
             triangle.length = 0;
         if (!pulse1.enable)

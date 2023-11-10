@@ -15,8 +15,6 @@
  */
 #include "Mapper003.h"
 
-#include <SDL_log.h>
-
 #include "../Cart.h"
 
 namespace NESCLE {
@@ -47,8 +45,8 @@ uint8_t Mapper003::MapPPURead(uint16_t addr) {
 bool Mapper003::MapPPUWrite(uint16_t addr, uint8_t data) {
     // TODO: LEAVE THIS ALONE FOR NOW, BUT I PROBABLY NEED TO ACCT FOR
     // RAM HERE
-    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                "Mapper003::MapPPUWrite() attempt to write to chr rom\n");
+    Util_Log(Util_LogLevel::WARN, Util_LogCategory::APPLICATION,
+             "Mapper003::MapPPUWrite() attempt to write to chr rom");
     return false;
 }
 

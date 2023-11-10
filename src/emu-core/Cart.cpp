@@ -15,8 +15,6 @@
  */
 #include "Cart.h"
 
-#include <SDL_log.h>
-
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -37,36 +35,39 @@ bool Cart::LoadROM(const char* path) {
 
     // Check for NULL path or empty string
     if (path == NULL || path == nullptr || path[0] == '\0') {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid path\n");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: invalid path");
         return false;
     }
 
     // Check that file is a .nes file
     const char* ext = strrchr(path, '.');
     if (strcmp(ext, ".nes") != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: file must have extension .nes\n");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: file must have extension .nes");
         return false;
     }
 
     // Open ROM file in read-binary mode
     std::ifstream rom(path, std::ios::binary);
     if (!rom.is_open()) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: Unable to open file %s\n", path);
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: Unable to open file " + std::string(path));
         return false;
     }
 
     rom.read(reinterpret_cast<char*>(&metadata), sizeof(ROMHeader));
     if (rom.gcount() != sizeof(ROMHeader)) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid header\n");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: failed reading header");
         return false;
     }
 
     ROMHeader* header = &metadata;
 
     if (strncmp((char*)header->name, "NES\x1a", 4) != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Cart_LoadROM: invalid header\n");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: invalid header");
         return false;
     }
 
@@ -74,16 +75,16 @@ bool Cart::LoadROM(const char* path) {
     if (header->mapper1 & 0x04) {
         rom.ignore(512);
         if (false) {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                "Cart_LoadROM: error parsing trainer data\n");
+            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+                "Cart_LoadROM: error parsing trainer data");
             return false;
         }
     }
 
     file_type = (header->mapper2 & 0x0c) == 0x08 ? FileType::NES2
         : FileType::INES;
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: file type %d\n", file_type);
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: file type " + std::to_string((int)file_type));
 
     // TODO: HAVE DIFFERENT LOGIC BASED ON THE HEADER TYPE
     // CURRENTLY THIS WILL ONLY WORK WITH iNES AND NES2.0 FILES THAT DO NOT
@@ -95,8 +96,8 @@ bool Cart::LoadROM(const char* path) {
     // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
     rom.read(reinterpret_cast<char*>(&prg_rom[0]), prg_rom_nbytes);
     if (rom.gcount() != static_cast<std::streamsize>(prg_rom_nbytes)) {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-            "Cart_LoadROM: failed reading prg_rom\n");
+        Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+            "Cart_LoadROM: failed reading prg_rom");
         return false;
     }
 
@@ -110,8 +111,8 @@ bool Cart::LoadROM(const char* path) {
         // FIXME: THIS IS EXTREMELY DANGEROUS AND YOU SHOULD NEVER DO THIS
         rom.read(reinterpret_cast<char*>(&chr_rom[0]), chr_rom_nbytes);
         if (rom.gcount() != static_cast<std::streamsize>(chr_rom_nbytes)) {
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                "Cart_LoadROM: failed reading chr_rom\n");
+            Util_Log(Util_LogLevel::ERROR, Util_LogCategory::ERROR,
+                "Cart_LoadROM: failed reading chr_rom");
             return false;
         }
     }
@@ -120,14 +121,14 @@ bool Cart::LoadROM(const char* path) {
     // mapper_id hi 4 bits is the 4 hi bits of mapper 2 and the lo 4 bits
     // are the hi bits of mapper1
     uint8_t mapper_id = (header->mapper2 & 0xf0) | (header->mapper1 >> 4);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: mapper id %d\n", mapper_id);
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: mapper id " + std::to_string(mapper_id));
 
     // Bottom bit of mapper1 determines mirroring mode
     auto mirror_mode = (header->mapper1 & 1) ? Mapper::MirrorMode::VERTICAL
         : Mapper::MirrorMode::HORIZONTAL;
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: mirror mode %d\n", mirror_mode);
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: mirror mode " + std::to_string((int)mirror_mode));
 
     // Initialize cart's mapper (mapper destroy is safe to pass NULL to)
     // We must check NULL return from Mapper_Create, as failing to allocate
@@ -142,12 +143,12 @@ bool Cart::LoadROM(const char* path) {
     // Copy the given path to a std::string for later use
     rom_path = path;
 
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: prg_ram_size %d\n", metadata.prg_ram_size);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: prg_rom_size %d\n", metadata.prg_rom_size);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-        "Cart_LoadROM: chr_rom_size %d\n", metadata.chr_rom_size);
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: prg_ram_size " + std::to_string(metadata.prg_ram_size));
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: prg_rom_size " + std::to_string(metadata.prg_rom_size));
+    Util_Log(Util_LogLevel::DEBUG, Util_LogCategory::APPLICATION,
+        "Cart_LoadROM: chr_ram_size " + std::to_string(metadata.chr_rom_size));
 
     // don't need to call close because ifstream dtor does it for us
     // rom.close();

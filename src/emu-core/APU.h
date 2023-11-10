@@ -19,9 +19,7 @@
 #include <cstdint>
 #include <fstream>
 
-#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
-#endif // EMSCRIPTEN
 
 #include "../NESCLETypes.h"
 

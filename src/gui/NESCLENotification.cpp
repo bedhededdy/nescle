@@ -15,10 +15,10 @@
  */
 #include "NESCLENotification.h"
 
-#include <SDL_log.h>
 #include <SDL_timer.h>
 
 #include "RetroText.h"
+#include "../Util.h"
 
 namespace NESCLE {
 // FIXME: MAY WANT TO MAKE IT A VECTOR TO INSTANCES, NOT POINTERS
@@ -53,12 +53,12 @@ NESCLENotification::NESCLENotification(const char* text, int duration) {
 }
 
 NESCLENotification::~NESCLENotification() {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Deleting notification\n");
+    Util_Log(Util_LogLevel::VERBOSE, Util_LogCategory::APPLICATION, "Deleting notification");
     glDeleteTextures(1, &texture);
 }
 
 void NESCLENotification::MakeNotification(const char* text, int duration) {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Created notification\n");
+    Util_Log(Util_LogLevel::VERBOSE, Util_LogCategory::APPLICATION, "Creating notification");
     notifications.push_back(new NESCLENotification(text, duration));
 }
 

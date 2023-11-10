@@ -21,9 +21,7 @@
 #include <cstdio>
 #include <string>
 
-#ifndef EMSCRIPTEN
 #include <nlohmann/json.hpp>
-#endif EMSCRIPTEN
 
 #include "../NESCLETypes.h"
 
