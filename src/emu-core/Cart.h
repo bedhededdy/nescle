@@ -65,6 +65,7 @@ public:
     static constexpr int PRG_ROM_CHUNK_SIZE = 0x4000;
 
     bool LoadROM(const char* path);
+    bool LoadROMStr(const char* file_as_str);
 
     void SetMapper(uint8_t _id, Mapper::MirrorMode mirror);
 
